@@ -1,0 +1,15 @@
+Parts List: 
+
+* = what I use
+
+- C02 Solenoid *https://growshop.co.nz/products/co2regulatorsolenoidset or equivalent
+- C02 Sensor: *SCD-41, SCD-40 or SCD-30 (all of these are fit for purpose) 
+       Links: 
+          SCD30: (PCB ONLY) https://www.digikey.co.nz/en/products/detail/sensirion-ag/SCD30/8445334
+          SCD40: (M5 STACK GROVE): https://shop.m5stack.com/products/co2-unit-with-temperature-and-humidity-sensor-scd40
+          *SCD41: (M5 STACK GROVE): https://shop.m5stack.com/products/co2l-unit-with-temperature-and-humidity-sensor-scd41
+          
+- Smart Plug controllable by Home Assistant: Any Tuya, TP Link (Kasa etc) smart plug. 
+   (*TP Link Kasa Multi plug: https://www.pbtech.co.nz/product/SURTPL3020/TP-Link-Kasa-KP303-Smart-Wi-Fi-Surge-Strip-3-x-Out
+  
+

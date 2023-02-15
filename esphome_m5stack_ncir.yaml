@@ -1,0 +1,57 @@
+esphome:
+  name: "espatom-ir2"
+  includes:
+    - "mlx90614_sensor.h"
+  libraries:
+    - SPI
+    - Wire
+    - adafruit/Adafruit BusIO @ 1.9.6
+    - "Adafruit MLX90614 Library"
+    
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+#  manual_ip:
+#    static_ip: 192.168.50.138
+#    subnet: 255.255.255.0
+#    gateway: 192.168.50.1
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Web-F6Af28"
+    password: "Zd4NAdI5FSU9"
+
+i2c:
+  id: bus_a
+  scan: True
+  sda: GPIO26
+  scl: GPIO32
+
+sensor:
+  - platform: custom
+    lambda: |-
+      auto mlx90614_sensor = new MLX90614Sensor();
+      App.register_component(mlx90614_sensor);
+      return {mlx90614_sensor->ambient_temperature_sensor, mlx90614_sensor->object_temperature_sensor};
+    sensors:
+      - name: "Ambient Temperature"
+        unit_of_measurement: °C
+        accuracy_decimals: 1
+      - name: "Object Temperature"
+        unit_of_measurement: °C
+        accuracy_decimals: 1

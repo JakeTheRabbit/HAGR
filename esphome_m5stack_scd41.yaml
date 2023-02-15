@@ -1,0 +1,49 @@
+#use this to get the SCD-41 from M5 stack working using an m5stack atom lite and the grove ports. 
+
+esphome:
+  name: "espatom-scd41-1"
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Web-Bfabf8"
+    password: "9OAWRE6HL5BL"
+
+captive_portal:
+
+i2c:
+  id: bus_a
+  scan: True
+  sda: GPIO26
+  scl: GPIO32
+
+sensor:
+  - platform: scd4x
+    co2:
+      name: "SCD41-1 CO2"
+      accuracy_decimals: 1
+    temperature:
+      name: "SCD41-1 Temperature"
+      accuracy_decimals: 2
+    humidity:
+      name: "SCD41-1 Humidity"
+      accuracy_decimals: 1
+    update_interval: 10s
+

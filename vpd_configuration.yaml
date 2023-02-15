@@ -1,0 +1,25 @@
+#this goes in configuration.yaml in home assistant to create Leaf VPD and Environment/Tent VPD entities. This took fuckin ages to figure out. Basically you get a live updated actual real leaf VPD to trigger stuff off. 
+template:
+  - sensor:
+        - name: "Leaf VPD"
+          unit_of_measurement: "kPa"
+          state: >
+            {% set T_Air = states('sensor.temperature') | float %} #replace sensor.temperature with your temp entity that is near as to your NICR temp
+            {% set T_Leaf = states('sensor.ncir_temperature') | float %} #replace ncir temperature with your object temperature/ncir temp from your mlx90614
+            {% set RH = states('sensor.humidity') | float %} #replace sensor.humidity with your temp entity that is near as to your NICR temp
+            {% set e = 2.71828 %}
+            {% set ASVP = 0.61078 * e ** (T_Air / (T_Air + 238.3) * 17.2694) %}
+            {% set LSVP = 0.61078 * e ** (T_Leaf / (T_Leaf + 238.3) * 17.2694) %}
+            {% set AVPD = ASVP - (ASVP * RH/100) %}
+            {% set LVPD = LSVP - (ASVP * RH/100) %}
+            {{ LVPD | round(2) }}
+            
+        - name: "Tent VPD"
+          unit_of_measurement: "kPa"
+          state: >
+            {% set T_Air = states('sensor.temperature') | float %} #replace sensor.temperature with your temp entity
+            {% set RH = states('sensor.humidity') | float %} #replace sensor.humidity with your RH entity
+            {% set e = 2.71828 %}
+            {% set ASVP = 0.61078 * e ** (T_Air / (T_Air + 238.3) * 17.2694) %}
+            {% set AVPD = ASVP * 1 - (ASVP * RH/100) %}
+            {{ AVPD | round(2) }}

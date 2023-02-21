@@ -1,0 +1,55 @@
+esphome:
+  name: espatom-mlx90640
+  friendly_name: espatom-mlx90640
+  includes:
+  libraries:
+    - Wire
+
+external_components:
+  - source: 
+      type: local
+      path: components
+    components: [mlx90640]
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Espatom-Mlx90640"
+    password: "Tz7rmsB41aMv"
+
+captive_portal:
+
+sensor:
+  - platform: mlx90640
+    id: test_mlx9040
+    update_interval: 20s
+    sda: 26  # I2C SDA PIN
+    scl: 32  # I2C SCL PIN
+    frequency: 450000  # I2C Clock Frequency
+    address: 0x33 # MLX90640 Address
+    temperature:
+      name: "MLX90640 Temperature"
+    min_temperature:
+      name: "MLX90640 Min temperature"
+    max_temperature:
+      name: "MLX90640 Max temperature"
+
+    #sensors:
+web_server:
+  port: 80

@@ -327,3 +327,34 @@
         ledColor: red
         vibrationPattern: 100, 1000, 100, 1000, 100
   mode: single
+  
+  
+  #auto irrigation based on moisture level 
+  
+  - id: '1679211699730'
+  alias: 'MT: Irrigation turn on at 30%'
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.plant_sensor_median_moisture #this is the median moisture helper for like 8 different moisturue sensors combined
+    below: 35
+  condition:
+  - condition: time
+    after: input_datetime.time_1_on #this means it will only run if the lights are on
+    before: input_datetime.time_1_off #this means it will only run if the lights are on
+  action:
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.s1_water_pump
+  - delay:
+      hours: 0
+      minutes: 5 #this turns the irrigation off after 5 minutues (this is a test) - but for me, 5 mintues is 1L per plant
+      seconds: 0
+      milliseconds: 0
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.s1_water_pump
+  mode: single
+

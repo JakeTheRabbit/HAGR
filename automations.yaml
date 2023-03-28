@@ -1,0 +1,281 @@
+# Turn a set of switches on / off at a given time determined by a time helper entity
+
+- id: '1652259160062'
+  alias: 'MT LED: 1.5 x 3m Lights On'
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.time_1_on #you need to make this helper
+  condition:
+  - condition: and
+    conditions:
+    - condition: state
+      entity_id: input_boolean.timer_1_on_switch  #you need to make this helper
+      state: 'on'
+  action:
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id:
+      - switch.v3_room_fan
+      - switch.tent2
+      - switch.s4_outside_house_lights
+      - switch.v2_blurple_led
+      - switch.c3_dehumidifier
+      - switch.a1_led
+  mode: single
+- id: '1652259825974'
+  alias: 'MT LED: 1.5 x 3m Lights Off'
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.time_1_off #you need to make this helper
+  condition:
+  - condition: state
+    entity_id: input_boolean.timer_1_off_switch #you need to make this helper
+    state: 'on'
+  action:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id:
+      - switch.v3_room_fan
+      - switch.tent2
+      - switch.s4_outside_house_lights
+      - switch.v2_blurple_led
+      - switch.c3_dehumidifier
+      - switch.a1_led
+      
+      
+# Change co2 input targets for night and day based off the previous automations times
+
+- id: '1655470596692'
+  alias: 'MT Co2: Change target to 100ppm at Night'
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.time_1_off #you need to make this helper as part of the lights on/off automation
+  condition: []
+  action:
+  - service: input_number.set_value
+    data:
+      value: 100
+    target:
+      entity_id: input_number.co2_target #you need to make this helper as part of the node red co2 automation
+  mode: single
+- id: '1655470652471'
+  alias: 'MT Co2: Change target to 1400ppm at Day'
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.time_1_on #you need to make this helper as part of the lights on/off automation
+  condition: []
+  action:
+  - service: input_number.set_value
+    data:
+      value: 1300
+    target:
+      entity_id: input_number.co2_target #you need to make this helper as part of the node red co2 automation
+  mode: single
+  
+  
+  #Irrigation 
+  
+  - id: '1655704996496'
+  alias: Water 1 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.time_3 #need to make a helper
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch #make helpers like these for each watering time to enable/disable the automation
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d #you can delete these bits
+    entity_id: switch.s1_water_pump #this is the switch that turns the pump on/off
+    domain: switch 
+  mode: single
+- id: '1655705049121'
+  alias: Water 1 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_1_off #need to make a helper
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump 
+    domain: switch
+  mode: single
+- id: '1655709663672'
+  alias: Water 2 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_2_off 
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709713552'
+  alias: Water 2 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_2_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_2_switch
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709760494'
+  alias: Water 3 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_3_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_3_off_switch
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709796556'
+  alias: Water 3 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_3_off
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709846778'
+  alias: Water 4 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_4_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_4_off_switch
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709883433'
+  alias: Water 4 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_4_off
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709918165'
+  alias: Water 6 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_6_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_6_off_switch
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709941640'
+  alias: Water 5 Automation - On
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_5_on
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_5_on_switch
+    state: 'on'
+  action:
+  - type: turn_on
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655709985545'
+  alias: Water 5 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_5_off
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump
+    domain: switch
+  mode: single
+- id: '1655710115340'
+  alias: Water 6 Automation - Off
+  description: ''
+  trigger:
+  - platform: time
+    at: input_datetime.water_6_off
+  condition:
+  - condition: state
+    entity_id: input_boolean.water_1_switch
+    state: 'on'
+    enabled: false
+  action:
+  - type: turn_off
+    device_id: ba27102ba26bc74e38f9a538aaa62a2d
+    entity_id: switch.s1_water_pump #this is the switch that turns the pump on/off
+    domain: switch
+  mode: single

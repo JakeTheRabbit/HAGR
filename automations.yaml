@@ -279,3 +279,51 @@
     entity_id: switch.s1_water_pump #this is the switch that turns the pump on/off
     domain: switch
   mode: single
+  
+  
+  
+#co2 safety backup auto off automation
+
+- id: '1660046482999'
+  alias: 'MT Co2: Turn off co2 above 2000'  #this will turn off the co2 solenoid if a co2 sensor goes above 2000ppm
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.co2_1_co2_3 #change this sensor to whatever your backup co2 sensor is i.e. outuside of your tent or grow space
+    above: '2000' 
+  condition: []
+  action:
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.co2_solendoid #the name of your co2 solenoid switch
+  - service: input_number.set_value
+    data:
+      value: 0
+    target:
+      entity_id: input_number.co2_target #this sets the co2 target to 0 so that the node red automation doesnt keep kicking it back on
+  - service: light.turn_on #this turns on a bunch of lights in my house and makes them go red
+    data:
+      brightness: 255 
+      rgb_color:
+      - 238
+      - 0
+      - 255
+    target:
+      entity_id:
+      - light.office_1
+      - light.office_2
+      - light.hue_lightstrip_plus_1
+  - service: notify.mobile_app_xx_s21 #this sends a notification that is high priority ant stick to my phone to let me know there was a co2 problem (but the solenoid should have already been turned off) 
+    data:
+      message: CO2 Above 2000
+      data:
+        color: red
+        sticky: true
+        tag: co2-high
+        channel: co2alert
+        ttl: 0
+        priority: high
+        ledColor: red
+        vibrationPattern: 100, 1000, 100, 1000, 100
+  mode: single

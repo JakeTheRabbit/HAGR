@@ -1,0 +1,13 @@
+alias: Crop steering change phase to P3 at input time helper
+description: ""
+trigger:
+  - platform: time
+    at: input_datetime.phase_3_start_time
+condition: []
+action:
+  - service: input_select.select_option
+    data:
+      option: P3
+    target:
+      entity_id: input_select.crop_steering_phase_updates_automatically
+mode: single

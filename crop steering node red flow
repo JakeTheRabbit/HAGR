@@ -1,0 +1,1211 @@
+[
+    {
+        "id": "90d9114374c8a3f0",
+        "type": "tab",
+        "label": "Crop Steering",
+        "disabled": false,
+        "info": "Controls water pump.\r\n\r\n 1. When lights are on, pump should be off.",
+        "env": []
+    },
+    {
+        "id": "b14ac3afd9286edb",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "sensor.thcsvwc_3",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 410,
+        "y": 60,
+        "wires": [
+            [
+                "26ab010255091f99"
+            ]
+        ]
+    },
+    {
+        "id": "26ab010255091f99",
+        "type": "join",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "1",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "num",
+        "reduceFixup": "",
+        "x": 810,
+        "y": 100,
+        "wires": [
+            [
+                "51885462528464bc"
+            ]
+        ]
+    },
+    {
+        "id": "51885462528464bc",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Calculate average water content",
+        "func": "const values = Object.values(msg.payload);\n\nconst mean = values.reduce((previous, current) => {\n    return previous + current;\n}, 0) / values.length;\n\nreturn {\n    topic: \"averageWaterContent\",\n    payload: mean,\n};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1090,
+        "y": 120,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "d13114b7756a073c",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Are tent lights on",
+        "func": "const areTentLightsOn = msg.payload === \"on\";\n\nreturn {\n    topic: \"areTentLightsOn\",\n    payload: areTentLightsOn,\n};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 180,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "15b95802b6bf1c24",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "switch.s1_water_pump",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "str",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 430,
+        "y": 440,
+        "wires": [
+            [
+                "ecdd739d5706970b"
+            ]
+        ]
+    },
+    {
+        "id": "ecdd739d5706970b",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Is water pump on",
+        "func": "const isWaterPumpOn = msg.payload === \"on\";\n\nreturn {\n    topic: \"isWaterPumpOn\",\n    payload: isWaterPumpOn,\n};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "eb998937841cfbfd",
+        "type": "join",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "10",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1390,
+        "y": 180,
+        "wires": [
+            [
+                "6077f46176437956",
+                "eeb8da6bfbca7ca3"
+            ]
+        ]
+    },
+    {
+        "id": "9ee6c95b95a5a48c",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_select.crop_steering_phase_updates_automatically",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "str",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 540,
+        "y": 520,
+        "wires": [
+            [
+                "7484dc97544b8c0a"
+            ]
+        ]
+    },
+    {
+        "id": "7484dc97544b8c0a",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Get current phase",
+        "func": "return {\n    topic: 'currentPhase',\n    payload: msg.payload,\n};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 300,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "6077f46176437956",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Decide what to do next",
+        "func": "const phase1 = \"P1\";\nconst phase2 = \"P2\";\nconst phase3 = \"P3\";\nconst currentTime = new Date();\nconst currentTimeSeconds = currentTime.getSeconds() + currentTime.getMinutes() * 60 + currentTime.getHours() * 60 * 60;\n\n// *** PHASE 1 ***\nif (isCurrentlyInPhase1()) {\n    // Check if it should change to phase 3\n    if (msg.payload.averageWaterContent >= msg.payload.phase1MaxThreshold && !msg.payload.isWaterPumpOn) {\n        return changePhase(phase2);\n    }\n\n    return triggerShot();\n}\n\n// *** PHASE 2 ***\nif (isCurrentlyInPhase2()) {\n    // Transition to phase 3 is controlled by a separate automation.\n\n    if (msg.payload.averageWaterContent >= msg.payload.phase2MaxThreshold) {\n        // Turn pump off\n        return turnWaterPumpOff();\n    }\n\n    if (msg.payload.averageWaterContent <= msg.payload.phase2MinThreshold) {\n        // Turn pump on\n        return turnWaterPumpOn();\n    }\n}\n\n// *** PHASE 3 ***\nif (isCurrentlyInPhase3()) {\n    // Check if it should change to phase 1\n    if (msg.payload.areTentLightsOn && msg.payload.averageWaterContent <= msg.payload.phase3DryBackTarget) {\n        return changePhase(phase1);\n    }\n\n    return doNothing();\n}\n\n// *** UNKNOWN PHASE ***\nreturn doNothing();\n\nfunction isCurrentlyInPhase1() {\n    return msg.payload.currentPhase === phase1;\n}\n\nfunction isCurrentlyInPhase2() {\n    return msg.payload.currentPhase === phase2;\n}\n\nfunction isCurrentlyInPhase3() {\n    return msg.payload.currentPhase === phase3;\n}\n\nfunction changePhase(newPhase) {\n    return [\n        {\n            payload: {\n                data: {\n                    option: newPhase,\n                },\n            },\n        },\n        null,\n        null,\n        null,\n    ];\n}\n\nfunction triggerShot() {\n    return [\n        null,\n        {\n            payload: {\n                shotTime: msg.payload.phase1ShotTime,\n                timeBetweenShots: msg.payload.phase1TimeBetweenShots,\n            }\n        },\n        null,\n        null\n        ]\n}\n\nfunction turnWaterPumpOn() {\n    return [\n        null,\n        null,\n        {\n            payload: {}\n        },\n        null\n    ]\n}\n\nfunction turnWaterPumpOff() {\n    return [\n        null,\n        null,\n        null,\n        {\n            payload: {}\n        },\n    ]\n}\n\nfunction doNothing() {\n    return [null, null, null, null];\n}",
+        "outputs": 4,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1620,
+        "y": 180,
+        "wires": [
+            [
+                "a612950f7dc14f93"
+            ],
+            [
+                "2163206871eb9cb9",
+                "06346fbce8c25840"
+            ],
+            [
+                "b35106fc4795b89d"
+            ],
+            [
+                "73add4d2dc45cd36"
+            ]
+        ]
+    },
+    {
+        "id": "282b44ea4b5d6405",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_1_max_threshold",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 530,
+        "y": 620,
+        "wires": [
+            [
+                "4c636a1bfb8f0c3c"
+            ]
+        ]
+    },
+    {
+        "id": "4c636a1bfb8f0c3c",
+        "type": "function",
+        "z": "90d9114374c8a3f0",
+        "name": "Get phase 1 max threshold",
+        "func": "return {\n    topic: 'phase1MaxThreshold',\n    payload: msg.payload,\n};",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1080,
+        "y": 380,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "a612950f7dc14f93",
+        "type": "api-call-service",
+        "z": "90d9114374c8a3f0",
+        "name": "Set new phase",
+        "server": "463c1165.0f163",
+        "version": 5,
+        "debugenabled": false,
+        "domain": "input_select",
+        "service": "select_option",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_select.crop_steering_phase_updates_automatically"
+        ],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1940,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "eb3c97bde3f4b5fa",
+        "type": "api-call-service",
+        "z": "90d9114374c8a3f0",
+        "name": "Turn water pump on",
+        "server": "463c1165.0f163",
+        "version": 5,
+        "debugenabled": false,
+        "domain": "switch",
+        "service": "turn_on",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "switch.s1_water_pump"
+        ],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [
+            {
+                "property": "delay",
+                "propertyType": "msg",
+                "value": "payload.shotTime",
+                "valueType": "msg"
+            }
+        ],
+        "queue": "none",
+        "x": 2460,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ce92478b32cc7591",
+        "type": "api-call-service",
+        "z": "90d9114374c8a3f0",
+        "name": "Turn water pump on",
+        "server": "463c1165.0f163",
+        "version": 5,
+        "debugenabled": false,
+        "domain": "switch",
+        "service": "turn_on",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "switch.s1_water_pump"
+        ],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 2200,
+        "y": 500,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b35106fc4795b89d",
+        "type": "api-current-state",
+        "z": "90d9114374c8a3f0",
+        "name": "If water pump is off",
+        "server": "463c1165.0f163",
+        "version": 3,
+        "outputs": 2,
+        "halt_if": "off",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "switch.s1_water_pump",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 1950,
+        "y": 500,
+        "wires": [
+            [
+                "ce92478b32cc7591"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "2ca2aa8d87947b5f",
+        "type": "api-call-service",
+        "z": "90d9114374c8a3f0",
+        "name": "Turn water pump off",
+        "server": "463c1165.0f163",
+        "version": 5,
+        "debugenabled": false,
+        "domain": "switch",
+        "service": "turn_off",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "switch.s1_water_pump"
+        ],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 2460,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e1f044d934fe0b85",
+        "type": "api-call-service",
+        "z": "90d9114374c8a3f0",
+        "name": "Turn water pump off",
+        "server": "463c1165.0f163",
+        "version": 5,
+        "debugenabled": false,
+        "domain": "switch",
+        "service": "turn_off",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "switch.s1_water_pump"
+        ],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 2200,
+        "y": 580,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "73add4d2dc45cd36",
+        "type": "api-current-state",
+        "z": "90d9114374c8a3f0",
+        "name": "If water pump is on",
+        "server": "463c1165.0f163",
+        "version": 3,
+        "outputs": 2,
+        "halt_if": "on",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "switch.s1_water_pump",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 1950,
+        "y": 580,
+        "wires": [
+            [
+                "e1f044d934fe0b85"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "afcf5e4a97beed8d",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_2_max_threshold",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "phase2MaxThreshold",
+                "valueType": "str"
+            }
+        ],
+        "x": 530,
+        "y": 720,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "239f55131d3aa8d4",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_2_min_threshold",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "phase2MinThreshold",
+                "valueType": "str"
+            }
+        ],
+        "x": 520,
+        "y": 800,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "dbb82392b5967ccd",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_3_dry_back_target",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "phase3DryBackTarget",
+                "valueType": "str"
+            }
+        ],
+        "x": 530,
+        "y": 880,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "2163206871eb9cb9",
+        "type": "api-current-state",
+        "z": "90d9114374c8a3f0",
+        "name": "If water pump has been off for <time between shots>",
+        "server": "463c1165.0f163",
+        "version": 3,
+        "outputs": 2,
+        "halt_if": "off",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "switch.s1_water_pump",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "payload.timeBetweenShots",
+        "forType": "msg",
+        "forUnits": "seconds",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 2060,
+        "y": 260,
+        "wires": [
+            [
+                "eb3c97bde3f4b5fa"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "d8c24f3097eb86f6",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_1_shot_time",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "phase1ShotTime",
+                "valueType": "str"
+            }
+        ],
+        "x": 510,
+        "y": 980,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "9c84c8738b9e32bd",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_number.crop_steering_phase_1_time_between_shots",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "num",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "phase1TimeBetweenShots",
+                "valueType": "str"
+            }
+        ],
+        "x": 550,
+        "y": 1060,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "cd4f43c10ffef299",
+        "type": "inject",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "timestamp",
+        "payload": "",
+        "payloadType": "date",
+        "x": 1400,
+        "y": 40,
+        "wires": [
+            [
+                "eb998937841cfbfd"
+            ]
+        ]
+    },
+    {
+        "id": "06346fbce8c25840",
+        "type": "api-current-state",
+        "z": "90d9114374c8a3f0",
+        "name": "If water pump has been on for <shot time>",
+        "server": "463c1165.0f163",
+        "version": 3,
+        "outputs": 2,
+        "halt_if": "on",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "switch.s1_water_pump",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "payload.shotTime",
+        "forType": "msg",
+        "forUnits": "seconds",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 2020,
+        "y": 340,
+        "wires": [
+            [
+                "2ca2aa8d87947b5f"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "eeb8da6bfbca7ca3",
+        "type": "debug",
+        "z": "90d9114374c8a3f0",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1560,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "d16c3203c7741364",
+        "type": "server-state-changed",
+        "z": "90d9114374c8a3f0",
+        "name": "",
+        "server": "463c1165.0f163",
+        "version": 4,
+        "exposeToHomeAssistant": false,
+        "haConfig": [
+            {
+                "property": "name",
+                "value": ""
+            },
+            {
+                "property": "icon",
+                "value": ""
+            }
+        ],
+        "entityidfilter": "input_boolean.crop_steer_are_lights_on",
+        "entityidfiltertype": "exact",
+        "outputinitially": true,
+        "state_type": "str",
+        "haltifstate": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "outputs": 1,
+        "output_only_on_state_change": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 480,
+        "y": 200,
+        "wires": [
+            [
+                "d13114b7756a073c"
+            ]
+        ]
+    },
+    {
+        "id": "463c1165.0f163",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 5,
+        "addon": true,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": "y|yes|true|on|home|open",
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": "at: ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "h23",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": true
+    }
+]

@@ -1,0 +1,34 @@
+# \\\\\\ Template Sensors for THC-S pwEC   *This is for Coco Coir not rockwool** 
+    
+  - platform: template
+    sensors:
+      thcspwec_1:
+        friendly_name: "THC-S pwEC 1"
+        unit_of_measurement: "ms/cm"
+        value_template: >
+         {% set soil_ec = states('sensor.espatom_mtec_w1_conductivity_1_ds_m_1_ms_cm') | float * 100 %}
+          {% set soil_ec = 1.93 * soil_ec - 270.8 %}
+          {% set soil_temp = states('sensor.espatom_mtec_w1_temp') | float %}
+          {% set soil_hum = states('sensor.espatom_mtec_w1_moisture_wc') | float %}
+          {% set soil_ec = soil_ec / (1.0 + 0.019 * (soil_temp -25 )) %}
+          {% set soil_apparent_dieletric_constant = 1.3088 + 0.1439 * soil_hum + 0.0076 * soil_hum * soil_hum | float %}
+          {% set soil_bulk_permittivity = soil_apparent_dieletric_constant | float %}
+          {% set soil_pore_permittivity = 80.3 - 0.37 * (soil_temp - 20) | float %}
+          {% if soil_bulk_permittivity > 4.1 %}
+            {% set pw_ec = (soil_pore_permittivity * soil_ec) / (soil_bulk_permittivity - 4.1) / 1000 | float %}
+          {% else %}
+            {% set pw_ec = 0 %}
+          {% endif %}
+          {{ pw_ec | round(1) }}
+
+
+
+# \\\\\\ Template Sensors for THC-S VWC  *** This is for Coco coir not rockwool***   
+          
+  - platform: template
+    sensors:
+      thcsvwc_1:
+        friendly_name: "THC-S VWC-1"
+        unit_of_measurement: "%"
+        value_template: >
+         {% set soil_hum = states('sensor.espatom_mtec_w1_moisture_wc') | float %}{% set soil_hum = -0.0134 * soil_hum * soil_hum + 1.6659 * soil_hum - 6.1095 %}{{  soil_hum | round(1) }}

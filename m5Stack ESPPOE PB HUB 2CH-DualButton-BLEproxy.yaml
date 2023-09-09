@@ -1,0 +1,100 @@
+esphome:
+  name: esppoe-1
+  friendly_name: esppoe-1
+  name_add_mac_suffix: true
+  project:
+    name: esphome.bluetooth-proxy
+    version: "1.0"
+  libraries:
+    - Wire
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+logger:
+
+ota:
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO5
+  #manual_ip:
+  #  static_ip: 192.168.50.145
+  #  gateway: 192.168.50.1
+  #  subnet: 255.255.255.0
+
+api:
+  encryption:
+    key: "rpb7ti0n2FXj/8aJZaRLkGd+kjpADMQ7jcYi8rsrNnM="
+
+external_components:
+  - source: github://dentra/esphome-components
+  - source:
+      type: git
+      url: https://github.com/chill-Division/M5Stack-ESPHome/
+      ref: main
+    components: m5stack_pbhub
+
+dashboard_import:
+  package_import_url: github://esphome/bluetooth-proxies/m5stack-atom-lite.yaml@main
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+button:
+  - platform: safe_mode
+    name: Safe Mode Boot
+    entity_category: diagnostic
+
+m5stack_pbhub:
+  - id: 'M5Stack_HUB'
+    address: 0x61
+    sda: 16
+    scl: 17
+
+switch:
+  - platform: gpio
+    name: "Relay1"
+    pin:
+      m5stack_pbhub: M5Stack_HUB
+      number: 30
+      mode:
+        output: true
+    inverted: false
+  - platform: gpio
+    name: "Relay2"
+    pin:
+      m5stack_pbhub: M5Stack_HUB
+      number: 31
+      mode:
+        output: true
+    inverted: false
+binary_sensor:
+  - platform: gpio
+    name: "BlueButton Door"
+    pin:
+      m5stack_pbhub: M5Stack_HUB
+      number: 21  # I'm assuming the channel and pin number here. Please adjust as needed.
+      inverted: true
+    id: "BlueButton"
+    on_press:
+      - logger.log: "Blue button door pressed"
+  - platform: gpio
+    name: "RedButton Door"
+    pin:
+      m5stack_pbhub: M5Stack_HUB
+      number: 20  # I'm assuming the channel and pin number here. Please adjust as needed.
+      inverted: true
+    id: "RedButton"
+    on_press:
+      - logger.log: "Red button door pressed"

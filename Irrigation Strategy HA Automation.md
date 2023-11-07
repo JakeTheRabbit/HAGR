@@ -28,8 +28,134 @@ The automation no longer relies on a hardcoded delay for the P1 phase but instea
 
 Additionally, the P1 phase uses a template condition to ensure that the pump doesn't turn back on until the interval specified by input_datetime.1_5_p1_shot_interval has passed since the last pump off time.
 
+Dashboard helpers / control. This is very primitive but enough to get me going. 
 
+![image](https://github.com/JakeTheRabbit/HAGR/assets/123831499/9fea4d92-4586-4c8d-b9c4-12e1a6ac3fd6)
 
+Here is the template to copy into configuration.yaml to create the helpers. 
+
+```
+input_select:
+  1_5_irrigation_phase:
+    name: '1.5 Irrigation Phase'
+    options:
+      - 'P0'
+      - 'P1'
+      - 'P2'
+      - 'P3'
+    initial: 'P0'
+    icon: mdi:water-pump
+
+input_datetime:
+  1_5_p1_start_time:
+    name: 'P1 Start Time (Override)'
+    has_date: false
+    has_time: true
+    initial: '05:00'
+
+  1_5_last_pump_off_time:
+    name: 'Last Pump Off Time'
+    has_date: false
+    has_time: true
+    initial: '00:00'
+
+  1_5_p3_start_time:
+    name: 'P3 Start Time'
+    has_date: false
+    has_time: true
+    initial: '21:00'
+
+input_number:
+  1_5_number_of_plants:
+    name: 'Number of Plants'
+    initial: 10
+    min: 1
+    max: 100
+    step: 1
+
+  1_5_field_capacity:
+    name: '1.5 Field Capacity (triggers P2)'
+    initial: 20
+    min: 0
+    max: 100
+    step: 0.1
+
+  1_5_p1_shot_size:
+    name: 'P1 Shot Size'
+    initial: 5
+    min: 1
+    max: 100
+    step: 0.1
+
+  1_5_p1_shot_volume:
+    name: '1.5 P1 Shot Volume (Updates automatically)'
+    initial: 1
+    min: 0
+    max: 1000
+    step: 0.1
+
+  1_5_p2_dryback_vwc:
+    name: 'P2 Dryback VWC'
+    initial: 10
+    min: 0
+    max: 100
+    step: 0.1
+
+  1_5_p2_field_capacity:
+    name: 'P2 Field Capacity'
+    initial: 15
+    min: 0
+    max: 100
+    step: 0.1
+
+  1_5_p3_dryback_target:
+    name: 'P3 Dryback Target'
+    initial: 5
+    min: 0
+    max: 100
+    step: 0.1
+```
+
+You can copy this card to your dashboard with all of the entities you just configured. 
+
+```
+
+type: entities
+entities:
+  - entity: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
+    secondary_info: last-changed
+    icon: mdi:water-percent
+    name: Volumetric Water Content (VWC)
+  - entity: sensor.espatom_mtec_w2_rockwool_pwec_2
+    secondary_info: last-changed
+    name: pwEC (Pore Water Electrical Conductivity)
+    icon: mdi:omega
+  - entity: switch.tp_link_m_m3
+  - entity: input_select.1_5_irrigation_phase
+  - entity: input_datetime.1_5_p1_start_time
+    name: P1 Start Time (Override)
+    secondary_info: last-updated
+  - entity: input_number.1_5_number_of_plants
+  - entity: input_number.1_5_field_capacity
+    name: 1.5 Field Capacity (triggers P2)
+  - entity: input_datetime.1_5_p1_shot_interval
+  - entity: input_number.1_5_p1_shot_size
+  - entity: input_number.1_5_p1_shot_volume
+    name: 1.5 P1 Shot Volume (Updates automatically)
+    icon: mdi:needle
+  - entity: input_number.1_5_p2_dryback_vwc
+  - entity: input_number.1_5_p2_field_capacity
+  - entity: input_datetime.1_5_p3_start_time
+  - entity: input_number.1_5_p3_dryback_target
+  - entity: automation.turn_off_1_5_tent_water_after_3_minutes
+  - entity: input_datetime.1_5_last_pump_off_time
+
+```
+
+Āutomation:
+(This is beta as fuck aka don't trust it)
+
+```
 alias: 1.5 Combined Nutrient and Irrigation Automation
 description: >
   This automation manages nutrient dosing and irrigation for P0 (ramp up from
@@ -145,5 +271,12 @@ action:
                     entity_id: switch.tp_link_m_m3
 
 mode: single
+```
+
+## Contributing 
+Feel free to fork this repository and submit pull requests with your own improvements to the automation script.
+
+For any issues or suggestions, please open an issue in the repository.
+
 
 

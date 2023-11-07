@@ -162,7 +162,6 @@ description: >
   lights on to P3 dryback), P1 (initial irrigation phase), P2 (maintenance
   phase), and P3 (dryback phase).
 trigger:
-  # Triggers for the automation based on time or sensor state changes
   - platform: time
     at: input_datetime.1_5_lights_on_time
   - platform: time
@@ -175,34 +174,52 @@ trigger:
     entity_id: input_number.1_5_p1_shot_size
   - platform: state
     entity_id: input_select.1_5_irrigation_phase
-  # Additional trigger for P1 phase based on the pump's off state and the interval helper
   - platform: state
     entity_id: switch.tp_link_m_m3
-    to: 'off'
-    for: 
+    to: "off"
+    for:
       hours: "{{ states('input_datetime.1_5_p1_shot_interval')[0:2] | int }}"
       minutes: "{{ states('input_datetime.1_5_p1_shot_interval')[3:5] | int }}"
       seconds: "{{ states('input_datetime.1_5_p1_shot_interval')[6:8] | int }}"
+  - platform: time
+    at: input_datetime.1_5_lights_on_time
+  - platform: numeric_state
+    entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
+    below: input_number.1_5_p3_dryback_target
 condition: []
 action:
   - choose:
-      # Actions for P0 Phase
-      - conditions:
-          - condition: state
-            entity_id: input_select.1_5_irrigation_phase
-            state: 'P0'
+      - conditions: # This condition checks if it's the lights on time to set phase to P0
+          - condition: template
+            value_template: "{{ now().time() == states('input_datetime.1_5_lights_on_time') }}"
         sequence:
-          # Sequence of actions for P0 phase
-
-      # Actions for P1 Phase
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.1_5_irrigation_phase
+              option: 'P0'
+      - conditions: # This condition checks if the VWC is below target to set phase to P1
+          - condition: numeric_state
+            entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
+            below: input_number.1_5_p3_dryback_target
+        sequence:
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.1_5_irrigation_phase
+              option: 'P1'
+  - choose:
       - conditions:
           - condition: state
             entity_id: input_select.1_5_irrigation_phase
-            state: 'P1'
-          # Additional condition to ensure the interval has passed after the pump turns off
+            state: P0
+        sequence: null
+      - conditions:
+          - condition: state
+            entity_id: input_select.1_5_irrigation_phase
+            state: P1
           - condition: template
             value_template: >
-              {{ as_timestamp(now()) - as_timestamp(states('input_datetime.1_5_last_pump_off_time')) >
+              {{ as_timestamp(now()) -
+              as_timestamp(states('input_datetime.1_5_last_pump_off_time')) >
                  (states('input_datetime.1_5_p1_shot_interval').hour * 3600 +
                   states('input_datetime.1_5_p1_shot_interval').minute * 60 +
                   states('input_datetime.1_5_p1_shot_interval').second) }}
@@ -213,22 +230,18 @@ action:
               seconds: "{{ states('input_number.1_5_p1_shot_size') | float * 35 }}"
           - service: switch.turn_off
             entity_id: switch.tp_link_m_m3
-          # Now, the delay is set by the input_datetime helper
           - delay:
               hours: "{{ states('input_datetime.1_5_p1_shot_interval')[0:2] | int }}"
               minutes: "{{ states('input_datetime.1_5_p1_shot_interval')[3:5] | int }}"
               seconds: "{{ states('input_datetime.1_5_p1_shot_interval')[6:8] | int }}"
-          # Update the last pump off time after the delay
           - service: input_datetime.set_datetime
             entity_id: input_datetime.1_5_last_pump_off_time
             data:
               timestamp: "{{ as_timestamp(now()) }}"
-
-      # Actions for P2 Phase
       - conditions:
           - condition: state
             entity_id: input_select.1_5_irrigation_phase
-            state: 'P2'
+            state: P2
         sequence:
           - choose:
               - conditions:
@@ -245,12 +258,10 @@ action:
                 sequence:
                   - service: switch.turn_off
                     entity_id: switch.tp_link_m_m3
-
-      # Actions for P3 Phase
       - conditions:
           - condition: state
             entity_id: input_select.1_5_irrigation_phase
-            state: 'P3'
+            state: P3
         sequence:
           - choose:
               - conditions:
@@ -269,8 +280,8 @@ action:
                         }}
                   - service: switch.turn_off
                     entity_id: switch.tp_link_m_m3
-
 mode: single
+
 ```
 
 ## Contributing 

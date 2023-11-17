@@ -114,6 +114,16 @@ input_number:
     min: 0
     max: 100
     step: 0.1
+  vwc_reading_after_last_shot:
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
+  vwc_reading_before_last_shot:
+    min: 0
+    max: 100
+    step: 0.1
+    mode: box
 ```
 
 You can copy this card to your dashboard with all of the entities you just configured. 
@@ -149,6 +159,8 @@ entities:
   - entity: input_number.1_5_p3_dryback_target
   - entity: automation.turn_off_1_5_tent_water_after_3_minutes
   - entity: input_datetime.1_5_last_pump_off_time
+  - entity: input_number.vwc_reading_after_last_shot
+  - entity: inpit_number.vwc_reading_before_last_shot
 
 ```
 
@@ -156,18 +168,14 @@ entities:
 (This is beta as fuck aka don't trust it)
 
 ```
-alias: 1.5 Combined Nutrient and Irrigation Automation
+alias: "1.5 Combined Nutrient and Irrigation Automation"
 description: >
   This automation manages nutrient dosing and irrigation for P0 (ramp up from
   lights on to P3 dryback), P1 (initial irrigation phase), P2 (maintenance
   phase), and P3 (dryback phase).
 trigger:
-  - platform: time
-    at: input_datetime.1_5_lights_on_time
-  - platform: time
-    at: input_datetime.1_5_p1_start_time
-  - platform: time
-    at: input_datetime.1_5_p3_start_time
+  - platform: state
+    entity_id: sensor.time
   - platform: state
     entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
   - platform: state
@@ -177,49 +185,78 @@ trigger:
   - platform: state
     entity_id: switch.tp_link_m_m3
     to: "off"
-    for:
-      hours: "{{ states('input_datetime.1_5_p1_shot_interval')[0:2] | int }}"
-      minutes: "{{ states('input_datetime.1_5_p1_shot_interval')[3:5] | int }}"
-      seconds: "{{ states('input_datetime.1_5_p1_shot_interval')[6:8] | int }}"
-  - platform: time
-    at: input_datetime.1_5_lights_on_time
-  - platform: numeric_state
-    entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
-    below: input_number.1_5_p3_dryback_target
+    for: "{{ states('input_datetime.1_5_p1_shot_interval') }}"
 condition: []
 action:
   - choose:
-      - conditions: # This condition checks if it's the lights on time to set phase to P0
+      # P0 Triggered at lights on time
+      - conditions:
           - condition: template
-            value_template: "{{ now().time() == states('input_datetime.1_5_lights_on_time') }}"
+            value_template: "{{ states('sensor.time') == states('input_datetime.1_5_lights_on_time')[0:5] }}"
         sequence:
           - service: input_select.select_option
             data:
               entity_id: input_select.1_5_irrigation_phase
-              option: 'P0'
-      - conditions: # This condition checks if the VWC is below target to set phase to P1
-          - condition: numeric_state
-            entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
-            below: input_number.1_5_p3_dryback_target
-        sequence:
-          - service: input_select.select_option
-            data:
-              entity_id: input_select.1_5_irrigation_phase
-              option: 'P1'
-  - choose:
+              option: P0
+      
+      # Transition to P1 based on VWC or fixed time
       - conditions:
           - condition: state
             entity_id: input_select.1_5_irrigation_phase
             state: P0
-        sequence: null
+          - condition: or
+            conditions:
+              - condition: numeric_state
+                entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
+                below: states('input_number.1_5_p3_dryback_target')
+              - condition: template
+                value_template: "{{ states('sensor.time') == states('input_datetime.1_5_p1_start_time')[0:5] }}"
+        sequence:
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.1_5_irrigation_phase
+              option: P1
+
+      # Transition from P1 to P2 based on VWC readings
+      - conditions:
+          - condition: state
+            entity_id: input_select.1_5_irrigation_phase
+            state: P1
+          - condition: or
+            conditions:
+              - condition: template
+                value_template: "{{ states('input_number.vwc_reading_after_last_shot') | float <= states('input_number.vwc_reading_before_last_shot') | float }}"
+              - condition: numeric_state
+                entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
+                above: states('input_number.1_5_field_capacity')
+        sequence:
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.1_5_irrigation_phase
+              option: P2
+
+      # Transition to P3 at specific time
+      - conditions:
+          - condition: template
+            value_template: "{{ states('sensor.time') == states('input_datetime.1_5_p3_start_time')[0:5] }}"
+          - condition: state
+            entity_id: input_select.1_5_irrigation_phase
+            state: P2
+        sequence:
+          - service: input_select.select_option
+            data:
+              entity_id: input_select.1_5_irrigation_phase
+              option: P3
+
+  # Pump Control Logic for P1
+  - choose:
       - conditions:
           - condition: state
             entity_id: input_select.1_5_irrigation_phase
             state: P1
           - condition: template
             value_template: >
-              {{ as_timestamp(now()) -
-              as_timestamp(states('input_datetime.1_5_last_pump_off_time')) >
+              {{ as_timestamp(now()) - as_timestamp(states('input_datetime.1_5_last_pump_off_time')) >
                  (states('input_datetime.1_5_p1_shot_interval').hour * 3600 +
                   states('input_datetime.1_5_p1_shot_interval').minute * 60 +
                   states('input_datetime.1_5_p1_shot_interval').second) }}
@@ -238,49 +275,9 @@ action:
             entity_id: input_datetime.1_5_last_pump_off_time
             data:
               timestamp: "{{ as_timestamp(now()) }}"
-      - conditions:
-          - condition: state
-            entity_id: input_select.1_5_irrigation_phase
-            state: P2
-        sequence:
-          - choose:
-              - conditions:
-                  - condition: numeric_state
-                    entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
-                    below: input_number.1_5_p2_dryback_vwc
-                sequence:
-                  - service: switch.turn_on
-                    entity_id: switch.tp_link_m_m3
-              - conditions:
-                  - condition: numeric_state
-                    entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
-                    above: input_number.1_5_p2_field_capacity
-                sequence:
-                  - service: switch.turn_off
-                    entity_id: switch.tp_link_m_m3
-      - conditions:
-          - condition: state
-            entity_id: input_select.1_5_irrigation_phase
-            state: P3
-        sequence:
-          - choose:
-              - conditions:
-                  - condition: numeric_state
-                    entity_id: sensor.espatom_mtec_w2_rockwool_calibrated_humidity_2
-                    below: input_number.1_5_p3_dryback_target
-                sequence:
-                  - service: switch.turn_off
-                    entity_id: switch.tp_link_m_m3
-                  - delay: "00:00:01"
-                  - service: switch.turn_on
-                    entity_id: switch.tp_link_m_m3
-                  - delay:
-                      seconds: >-
-                        {{ states('input_number.1_5_p1_shot_size') | float * 35
-                        }}
-                  - service: switch.turn_off
-                    entity_id: switch.tp_link_m_m3
+
 mode: single
+
 
 ```
 

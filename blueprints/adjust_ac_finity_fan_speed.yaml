@@ -84,14 +84,12 @@ trigger:
       - !input time_pattern_for_fan_speed_adjustment
       - !input interval_minutes
       - !input delay_minutes
-  - platform: time_pattern
-    minutes: "/1"
 
 condition:
   - condition: template
     value_template: >
       {% set current_time = now().replace(second=0, microsecond=0) %}
-      {% set desired_time = state_attr('input_datetime.time_pattern_for_fan_speed_adjustment', 'timestamp') %}
+      {% set desired_time = state_attr('input_datetime.time_pattern_for_fan_speed_adjustment', 'timestamp') | as_datetime %}
       {{ current_time.hour == desired_time.hour and current_time.minute == desired_time.minute }}
 
 action:
@@ -130,7 +128,7 @@ action:
                     data:
                       value: "{{ new_speed }}"
                   - delay:
-                      minutes: !input delay_minutes
+                      minutes: "{{ states('input_number.delay_minutes') | float }}"
               - conditions:
                   - condition: template
                     value_template: >
@@ -141,6 +139,8 @@ action:
                       entity_id: !input fan_speed_entity
                     data:
                       value: "{{ current_speed }}"
+          - delay:
+              minutes: "{{ states('input_number.interval_minutes') | float }}"
       - conditions:
           - condition: template
             value_template: "{{ states('input_datetime.time_pattern_for_fan_speed_adjustment') == 'unknown' }}"
@@ -149,3 +149,5 @@ action:
             data:
               message: "Please set the time pattern for fan speed adjustment."
               title: "Fan Speed Adjustment"
+mode: single
+max_exceeded: silent

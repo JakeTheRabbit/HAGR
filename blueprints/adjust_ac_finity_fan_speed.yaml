@@ -1,0 +1,142 @@
+blueprint:
+  name: Adjust Fan Speed Based on Temperature
+  description: |
+    Adjusts fan speed based on temperature and time of day. 
+    - Select the current temperature sensor.
+    - Set the day and night temperature targets.
+    - Define the fan speed control entity (0-10).
+    - Specify the lights on and off times.
+
+    This automation adjusts the fan speed to maintain the desired temperature range during the day and night, with a delay to prevent rapid changes.
+  domain: automation
+  input:
+    current_temp_entity:
+      name: Current Temperature Sensor
+      description: The entity ID of the current temperature sensor (e.g., sensor.esppoe_3_scd_41_poe3_temperature).
+      selector:
+        entity:
+          domain: sensor
+    day_temp_target:
+      name: Day Temperature Target
+      description: The entity ID of the input number for the day temperature target (e.g., input_number.1_5_day_temperature_target).
+      selector:
+        entity:
+          domain: input_number
+    night_temp_target:
+      name: Night Temperature Target
+      description: The entity ID of the input number for the night temperature target (e.g., input_number.1_5_night_temperature_target).
+      selector:
+        entity:
+          domain: input_number
+    fan_speed_entity:
+      name: Fan Speed Control
+      description: The entity ID of the fan speed control (0-10) (e.g., number.1_5_port_1_on_speed).
+      selector:
+        entity:
+          domain: number
+    lights_on_time:
+      name: Lights On Time
+      description: The entity ID of the input datetime for lights on time (e.g., input_datetime.1_5_lights_on_time).
+      selector:
+        entity:
+          domain: input_datetime
+    lights_off_time:
+      name: Lights Off Time
+      description: The entity ID of the input datetime for lights off time (e.g., input_datetime.1_5_lights_off_time).
+      selector:
+        entity:
+          domain: input_datetime
+
+trigger:
+  - platform: state
+    entity_id: !input current_temp_entity
+  - platform: time_pattern
+    minutes: "/5"  # Adjusts every 5 minutes
+  - platform: state
+    entity_id: !input day_temp_target
+  - platform: state
+    entity_id: !input night_temp_target
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: time
+            after: !input lights_on_time
+            before: !input lights_off_time
+        sequence:
+          - service: script.adjust_fan_speed
+            data:
+              current_temp_entity: !input current_temp_entity
+              target_temp_entity: !input day_temp_target
+              fan_speed_entity: !input fan_speed_entity
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: time
+                before: !input lights_on_time
+              - condition: time
+                after: !input lights_off_time
+        sequence:
+          - service: script.adjust_fan_speed
+            data:
+              current_temp_entity: !input current_temp_entity
+              target_temp_entity: !input night_temp_target
+              fan_speed_entity: !input fan_speed_entity
+
+script:
+  adjust_fan_speed:
+    alias: Adjust Fan Speed
+    sequence:
+      - variables:
+          current_temp_entity: "{{ current_temp_entity }}"
+          target_temp_entity: "{{ target_temp_entity }}"
+          fan_speed_entity: "{{ fan_speed_entity }}"
+          current_temp: "{{ states(current_temp_entity) | float(default=0) }}"
+          target_temp: "{{ states(target_temp_entity) | float(default=0) }}"
+          current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
+            sequence:
+              - variables:
+                  current_temp: "{{ current_temp | float }}"
+                  target_temp: "{{ target_temp | float }}"
+                  new_speed: >
+                    {% if current_temp > target_temp + 1 %}
+                      {{ [current_speed + 1, 10] | min }}
+                    {% elif current_temp < target_temp - 1 %}
+                      {{ [current_speed - 1, 0] | max }}
+                    {% else %}
+                      {{ current_speed }}
+                    {% endif %}
+              - service: number.set_value
+                target:
+                  entity_id: "{{ fan_speed_entity }}"
+                data:
+                  value: "{{ new_speed }}"
+              - delay: '00:01:00'  # Add a 1 minute delay between adjustments
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
+            sequence:
+              - service: number.set_value
+                target:
+                  entity_id: "{{ fan_speed_entity }}"
+                data:
+                  value: "{{ current_speed }}"
+    fields:
+      current_temp_entity:
+        description: "The entity_id of the current temperature sensor"
+        example: "sensor.esppoe_3_scd_41_poe3_temperature"
+      target_temp_entity:
+        description: "The entity_id of the target temperature (day or night)"
+        example: "input_number.1_5_day_temperature_target"
+      fan_speed_entity:
+        description: "The entity_id of the fan speed control"
+        example: "number.1_5_port_1_on_speed"
+    mode: single

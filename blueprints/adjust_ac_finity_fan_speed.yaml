@@ -49,6 +49,12 @@ blueprint:
       selector:
         entity:
           domain: number
+    time_pattern_for_fan_speed_adjustment:
+      name: Time Pattern for Fan Speed Adjustment
+      description: The time pattern for triggering fan speed adjustments.
+      selector:
+        entity:
+          domain: input_datetime
     interval_minutes:
       name: Interval Minutes
       description: The interval in minutes for periodically checking the temperature and adjusting the fan speed.
@@ -67,18 +73,17 @@ blueprint:
           max: 10
           unit_of_measurement: "minutes"
           step: 1
-    time_pattern_for_fan_speed_adjustment:
-      name: Time Pattern for Fan Speed Adjustment
-      description: The time pattern for triggering fan speed adjustments.
-      selector:
-        entity:
-          domain: input_datetime
 
 trigger:
   - platform: state
-    entity_id: !input current_temp_entity
-  - platform: time_pattern
-    minutes: "/1"
+    entity_id:
+      - !input current_temp_entity
+      - !input day_temp_target
+      - !input night_temp_target
+      - !input fan_speed_entity
+      - !input time_pattern_for_fan_speed_adjustment
+      - !input interval_minutes
+      - !input delay_minutes
 
 condition:
   - condition: template

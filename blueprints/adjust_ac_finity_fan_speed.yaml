@@ -66,11 +66,46 @@ action:
             after: !input lights_on_time
             before: !input lights_off_time
         sequence:
-          - service: script.adjust_fan_speed
-            data:
+          - variables:
               current_temp_entity: !input current_temp_entity
               target_temp_entity: !input day_temp_target
               fan_speed_entity: !input fan_speed_entity
+              current_temp: "{{ states(current_temp_entity) | float(default=0) }}"
+              target_temp: "{{ states(target_temp_entity) | float(default=0) }}"
+              current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
+                sequence:
+                  - variables:
+                      current_temp: "{{ current_temp | float }}"
+                      target_temp: "{{ target_temp | float }}"
+                      new_speed: >
+                        {% if current_temp > target_temp + 1 %}
+                          {{ [current_speed + 1, 10] | min }}
+                        {% elif current_temp < target_temp - 1 %}
+                          {{ [current_speed - 1, 0] | max }}
+                        {% else %}
+                          {{ current_speed }}
+                        {% endif %}
+                  - service: number.set_value
+                    target:
+                      entity_id: !input fan_speed_entity
+                    data:
+                      value: "{{ new_speed }}"
+                  - delay: '00:01:00'  # Add a 1 minute delay between adjustments
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
+                sequence:
+                  - service: number.set_value
+                    target:
+                      entity_id: !input fan_speed_entity
+                    data:
+                      value: "{{ current_speed }}"
       - conditions:
           - condition: or
             conditions:
@@ -79,64 +114,45 @@ action:
               - condition: time
                 after: !input lights_off_time
         sequence:
-          - service: script.adjust_fan_speed
-            data:
+          - variables:
               current_temp_entity: !input current_temp_entity
               target_temp_entity: !input night_temp_target
               fan_speed_entity: !input fan_speed_entity
+              current_temp: "{{ states(current_temp_entity) | float(default=0) }}"
+              target_temp: "{{ states(target_temp_entity) | float(default=0) }}"
+              current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
+                sequence:
+                  - variables:
+                      current_temp: "{{ current_temp | float }}"
+                      target_temp: "{{ target_temp | float }}"
+                      new_speed: >
+                        {% if current_temp > target_temp + 1 %}
+                          {{ [current_speed + 1, 10] | min }}
+                        {% elif current_temp < target_temp - 1 %}
+                          {{ [current_speed - 1, 0] | max }}
+                        {% else %}
+                          {{ current_speed }}
+                        {% endif %}
+                  - service: number.set_value
+                    target:
+                      entity_id: !input fan_speed_entity
+                    data:
+                      value: "{{ new_speed }}"
+                  - delay: '00:01:00'  # Add a 1 minute delay between adjustments
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
+                sequence:
+                  - service: number.set_value
+                    target:
+                      entity_id: !input fan_speed_entity
+                    data:
+                      value: "{{ current_speed }}"
 
-script:
-  adjust_fan_speed:
-    alias: Adjust Fan Speed
-    sequence:
-      - variables:
-          current_temp_entity: "{{ current_temp_entity }}"
-          target_temp_entity: "{{ target_temp_entity }}"
-          fan_speed_entity: "{{ fan_speed_entity }}"
-          current_temp: "{{ states(current_temp_entity) | float(default=0) }}"
-          target_temp: "{{ states(target_temp_entity) | float(default=0) }}"
-          current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
-      - choose:
-          - conditions:
-              - condition: template
-                value_template: >
-                  {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
-            sequence:
-              - variables:
-                  current_temp: "{{ current_temp | float }}"
-                  target_temp: "{{ target_temp | float }}"
-                  new_speed: >
-                    {% if current_temp > target_temp + 1 %}
-                      {{ [current_speed + 1, 10] | min }}
-                    {% elif current_temp < target_temp - 1 %}
-                      {{ [current_speed - 1, 0] | max }}
-                    {% else %}
-                      {{ current_speed }}
-                    {% endif %}
-              - service: number.set_value
-                target:
-                  entity_id: "{{ fan_speed_entity }}"
-                data:
-                  value: "{{ new_speed }}"
-              - delay: '00:01:00'  # Add a 1 minute delay between adjustments
-          - conditions:
-              - condition: template
-                value_template: >
-                  {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
-            sequence:
-              - service: number.set_value
-                target:
-                  entity_id: "{{ fan_speed_entity }}"
-                data:
-                  value: "{{ current_speed }}"
-    fields:
-      current_temp_entity:
-        description: "The entity_id of the current temperature sensor"
-        example: "sensor.esppoe_3_scd_41_poe3_temperature"
-      target_temp_entity:
-        description: "The entity_id of the target temperature (day or night)"
-        example: "input_number.1_5_day_temperature_target"
-      fan_speed_entity:
-        description: "The entity_id of the fan speed control"
-        example: "number.1_5_port_1_on_speed"
-    mode: single
+mode: single

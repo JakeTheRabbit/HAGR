@@ -31,3 +31,10 @@ input_datetime:
     has_date: false
     has_time: true
 #    initial: '20:00:00'
+
+
+input_datetime:
+  time_pattern_for_fan_speed_adjustment:
+    name: Time Pattern for Fan Speed Adjustment
+    has_date: false
+    has_time: true

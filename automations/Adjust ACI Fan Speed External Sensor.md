@@ -4,10 +4,10 @@ This automation adjusts the fan speed based on the current temperature and targe
 
 ## Required Entities
 
-1. **Current Temperature Sensor:** `sensor.temp`
+1. **Current Temperature Sensor:** `sensor.temp` any temperature sensor
 2. **Day Temperature Target:** `input_number.day_temp`
 3. **Night Temperature Target:** `input_number.night_temp`
-4. **Fan Speed Control:** `number.fan_speed`
+4. **Fan Speed Control:** `number.fan_speed` this is for AC Infinity fans 0-10
 5. **Lights On Time:** `input_datetime.lights_on`
 6. **Lights Off Time:** `input_datetime.lights_off`
 
@@ -15,7 +15,46 @@ This automation adjusts the fan speed based on the current temperature and targe
 
 The automation triggers every 5 minutes or when the temperature or target temperature changes. It checks whether the current time is during the day or night and adjusts the fan speed accordingly. The fan speed is adjusted to ensure the temperature stays within 1 degree of the target temperature.
 
+## Helpers: Add these to your configuaration.yaml file before creating the automation or script. You can use your own.
+
+```
+# Input Number: Day Temperature Target
+input_number:
+  day_temp:
+    name: "Day Temperature Target"
+    min: 0
+    max: 50
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer"
+
+# Input Number: Night Temperature Target
+  night_temp:
+    name: "Night Temperature Target"
+    min: 0
+    max: 50
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: "mdi:thermometer"
+
+# Input Datetime: Lights On Time
+input_datetime:
+  lights_on:
+    name: "Lights On Time"
+    has_date: false
+    has_time: true
+    icon: "mdi:lightbulb-on"
+
+# Input Datetime: Lights Off Time
+  lights_off:
+    name: "Lights Off Time"
+    has_date: false
+    has_time: true
+    icon: "mdi:lightbulb-off"
+```
+
 ## Automation: Adjust Fan Speed Based on Temperature
+Add this to automations through the gui. 
 
 ```yaml
 alias: Adjust Fan Speed Based on Temperature
@@ -59,6 +98,8 @@ mode: single
 ```
 
 ## Script: Adjust Fan Speed
+
+Add this to the scripts through the gui.
 
 ```yaml
 alias: Adjust Fan Speed
@@ -116,50 +157,4 @@ fields:
 mode: single
 ```
 
-## Helpers: Add these to your configuaration.yaml
 
-```
-# Input Number: Day Temperature Target
-input_number:
-  day_temp:
-    name: "Day Temperature Target"
-    min: 0
-    max: 50
-    step: 0.5
-    unit_of_measurement: "°C"
-    icon: "mdi:thermometer"
-
-# Input Number: Night Temperature Target
-  night_temp:
-    name: "Night Temperature Target"
-    min: 0
-    max: 50
-    step: 0.5
-    unit_of_measurement: "°C"
-    icon: "mdi:thermometer"
-
-# Number: Fan Speed Control
-number:
-  fan_speed:
-    name: "Fan Speed"
-    min: 0
-    max: 10
-    step: 1
-    unit_of_measurement: "speed"
-    icon: "mdi:fan"
-
-# Input Datetime: Lights On Time
-input_datetime:
-  lights_on:
-    name: "Lights On Time"
-    has_date: false
-    has_time: true
-    icon: "mdi:lightbulb-on"
-
-# Input Datetime: Lights Off Time
-  lights_off:
-    name: "Lights Off Time"
-    has_date: false
-    has_time: true
-    icon: "mdi:lightbulb-off"
-```

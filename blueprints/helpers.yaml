@@ -1,0 +1,33 @@
+#add this to the configuration.yaml file if you don't already have similar. You can pick your own if you already have. 
+#Input numbers for day and night temperature targets.
+#Input datetimes for lights on and off times.
+
+
+input_number:
+  1_5_day_temperature_target:
+    name: Day Temperature Target
+    initial: 25
+    min: 15
+    max: 35
+    step: 0.5
+    unit_of_measurement: '°C'
+    
+  1_5_night_temperature_target:
+    name: Night Temperature Target
+    initial: 18
+    min: 15
+    max: 35
+    step: 0.5
+    unit_of_measurement: '°C'
+
+input_datetime:
+  1_5_lights_on_time:
+    name: Lights On Time
+    has_date: false
+    has_time: true
+#    initial: '08:00:00'
+  1_5_lights_off_time:
+    name: Lights Off Time
+    has_date: false
+    has_time: true
+#    initial: '20:00:00'

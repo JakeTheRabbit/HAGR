@@ -23,13 +23,6 @@ blueprint:
     - The automation triggers at the specified interval to ensure the fan speed is checked and adjusted periodically.
     - Additional triggers are set for changes in the current temperature and the day/night temperature targets.
 
-    ## Configuration:
-    - Select the current temperature sensor.
-    - Set the day and night temperature targets.
-    - Define the fan speed control entity (0-10).
-    - Specify the lights on and off times.
-    - Set the interval for checking the temperature and adjusting the fan speed.
-    - Set the delay time between successive fan speed adjustments.
   domain: automation
   input:
     current_temp_entity:
@@ -56,18 +49,6 @@ blueprint:
       selector:
         entity:
           domain: number
-    lights_on_time:
-      name: Lights On Time
-      description: The entity ID of the input datetime for lights on time (e.g., input_datetime.1_5_lights_on_time).
-      selector:
-        entity:
-          domain: input_datetime
-    lights_off_time:
-      name: Lights Off Time
-      description: The entity ID of the input datetime for lights off time (e.g., input_datetime.1_5_lights_off_time).
-      selector:
-        entity:
-          domain: input_datetime
     interval_minutes:
       name: Interval Minutes
       description: The interval in minutes for periodically checking the temperature and adjusting the fan speed.
@@ -86,25 +67,31 @@ blueprint:
           max: 10
           unit_of_measurement: "minutes"
           step: 1
+    time_pattern_for_fan_speed_adjustment:
+      name: Time Pattern for Fan Speed Adjustment
+      description: The time pattern for triggering fan speed adjustments.
+      selector:
+        entity:
+          domain: input_datetime
 
 trigger:
-  # Triggers the automation when the current temperature changes
   - platform: state
     entity_id: !input current_temp_entity
-  # Triggers the automation every minute and checks the interval condition
   - platform: time_pattern
     minutes: "/1"
+
 condition:
   - condition: template
-    value_template: "{{ (now().minute % states('input_number.interval_minutes') | int) == 0 }}"
+    value_template: >
+      {% set current_time = now().replace(second=0, microsecond=0) %}
+      {% set desired_time = state_attr('input_datetime.time_pattern_for_fan_speed_adjustment', 'timestamp') %}
+      {{ current_time.hour == desired_time.hour and current_time.minute == desired_time.minute }}
 
 action:
   - choose:
-      # Checks if the current time is during the day (between lights on and off times)
       - conditions:
-          - condition: time
-            after: !input lights_on_time
-            before: !input lights_off_time
+          - condition: template
+            value_template: "{{ states('input_datetime.time_pattern_for_fan_speed_adjustment') != 'unknown' }}"
         sequence:
           - variables:
               current_temp_entity: !input current_temp_entity
@@ -115,7 +102,6 @@ action:
               current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
           - choose:
               - conditions:
-                  # Check if the current temperature and target temperature are valid
                   - condition: template
                     value_template: >
                       {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
@@ -125,11 +111,11 @@ action:
                       target_temp: "{{ target_temp | float }}"
                       new_speed: >
                         {% if current_temp > target_temp + 1 %}
-                          {{ [current_speed + 1, 10] | min }}  # Increase fan speed if current temperature is more than 1°C above target
+                          {{ [current_speed + 1, 10] | min }}
                         {% elif current_temp < target_temp - 1 %}
-                          {{ [current_speed - 1, 0] | max }}  # Decrease fan speed if current temperature is more than 1°C below target
+                          {{ [current_speed - 1, 0] | max }}
                         {% else %}
-                          {{ current_speed }}  # Keep fan speed unchanged if current temperature is within 1°C of target
+                          {{ current_speed }}
                         {% endif %}
                   - service: number.set_value
                     target:
@@ -137,9 +123,8 @@ action:
                     data:
                       value: "{{ new_speed }}"
                   - delay:
-                      minutes: !input delay_minutes  # Add a delay between adjustments to prevent rapid changes
+                      minutes: !input delay_minutes
               - conditions:
-                  # Check if the current temperature or target temperature is invalid
                   - condition: template
                     value_template: >
                       {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
@@ -149,57 +134,11 @@ action:
                       entity_id: !input fan_speed_entity
                     data:
                       value: "{{ current_speed }}"
-      # Checks if the current time is during the night (outside lights on and off times)
       - conditions:
-          - condition: or
-            conditions:
-              - condition: time
-                before: !input lights_on_time
-              - condition: time
-                after: !input lights_off_time
+          - condition: template
+            value_template: "{{ states('input_datetime.time_pattern_for_fan_speed_adjustment') == 'unknown' }}"
         sequence:
-          - variables:
-              current_temp_entity: !input current_temp_entity
-              target_temp_entity: !input night_temp_target
-              fan_speed_entity: !input fan_speed_entity
-              current_temp: "{{ states(current_temp_entity) | float(default=0) }}"
-              target_temp: "{{ states(target_temp_entity) | float(default=0) }}"
-              current_speed: "{{ states(fan_speed_entity) | float(default=0) }}"
-          - choose:
-              - conditions:
-                  # Check if the current temperature and target temperature are valid
-                  - condition: template
-                    value_template: >
-                      {{ current_temp not in ['unknown', 'unavailable'] and target_temp not in ['unknown', 'unavailable'] }}
-                sequence:
-                  - variables:
-                      current_temp: "{{ current_temp | float }}"
-                      target_temp: "{{ target_temp | float }}"
-                      new_speed: >
-                        {% if current_temp > target_temp + 1 %}
-                          {{ [current_speed + 1, 10] | min }}  # Increase fan speed if current temperature is more than 1°C above target
-                        {% elif current_temp < target_temp - 1 %}
-                          {{ [current_speed - 1, 0] | max }}  # Decrease fan speed if current temperature is more than 1°C below target
-                        {% else %}
-                          {{ current_speed }}  # Keep fan speed unchanged if current temperature is within 1°C of target
-                        {% endif %}
-                  - service: number.set_value
-                    target:
-                      entity_id: !input fan_speed_entity
-                    data:
-                      value: "{{ new_speed }}"
-                  - delay:
-                      minutes: !input delay_minutes  # Add a delay between adjustments to prevent rapid changes
-              - conditions:
-                  # Check if the current temperature or target temperature is invalid
-                  - condition: template
-                    value_template: >
-                      {{ current_temp in ['unknown', 'unavailable'] or target_temp in ['unknown', 'unavailable'] }}
-                sequence:
-                  - service: number.set_value
-                    target:
-                      entity_id: !input fan_speed_entity
-                    data:
-                      value: "{{ current_speed }}"
-
-mode: single
+          - service: persistent_notification.create
+            data:
+              message: "Please set the time pattern for fan speed adjustment."
+              title: "Fan Speed Adjustment"

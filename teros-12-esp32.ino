@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include <esp32-sdi12.h>
+#include <esp32-sdi12.h> # available here https://github.com/HarveyBates/ESP32-SDI12
 
 // WiFi credentials
 const char* ssid = "Wifi 420 69";

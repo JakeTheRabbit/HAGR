@@ -72,7 +72,9 @@ Did a bit of really scientific testing using the previous arduino code.
 |                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
 |                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
 
-The new calibration below seems to get the EC of the Teros China and Teros 12 using ESP32 closer to the Teros 12 Solus Bluetooth app readingbut not perfect more work needs to be done. 
+The new calibration below uses the Teros12 manual pages 15 16 17 https://www.labcell.com/media/140632/teros12%20manual.pdf
+
+Raw VWC: 3051.500000, VWC: 58.600784%, Temperature: 21.500000°C, Raw EC: 1.376000, Calibrated EC: 4.134000 dS/m 
 
 ```
 #include <WiFi.h>
@@ -98,6 +100,10 @@ float values[10]; // Buffer to hold values from a measurement
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+// Rockwool specific constants
+const float ROCKWOOL_TOTAL_POROSITY = 0.95; // Adjust this value based on your specific rockwool type
+const float OFFSET_PERMITTIVITY = 4.1; // This might need adjustment for rockwool
 
 void setup_wifi() {
     delay(10);
@@ -133,29 +139,32 @@ void reconnect() {
 
 void setup() {
     Serial.begin(115200);
-
-    // Initialize SDI-12 pin definition
     sdi12.begin();
-
-    // Connect to WiFi
     setup_wifi();
-
-    // Set MQTT server
     client.setServer(mqtt_server, mqtt_port);
-
-    // Initial delay to stabilize
     delay(1000);
 }
 
-// Function to calculate VWC for non-soil substrates
 float calculateVWC(float raw) {
-    float vwc = (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
-    return constrain(vwc * 100.0, 0.0, 100.0);  // Convert to percentage and constrain between 0% and 100%
+    // This is a generic equation. You might need to adjust this for rockwool.
+    return (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
 }
 
-// EC calibration function
-float calibrateEC(float rawEC) {
-    return -0.1959 * rawEC + 4.4033;
+float calculateBulkPermittivity(float raw) {
+    return pow(2.887e-9 * pow(raw, 3) - 2.080e-5 * pow(raw, 2) + 5.276e-2 * raw - 43.39, 2);
+}
+
+float calculatePoreWaterEC(float bulkEC, float soilTemp, float bulkPermittivity) {
+    float waterPermittivity = 80.3 - 0.37 * (soilTemp - 20);
+    return (waterPermittivity * bulkEC) / (bulkPermittivity - OFFSET_PERMITTIVITY);
+}
+
+float compensateECForTemperature(float ec, float temperature) {
+    return ec / (1 + 0.02 * (temperature - 25));
+}
+
+float calculateSaturationExtractEC(float poreWaterEC, float vwc) {
+    return (poreWaterEC * vwc) / ROCKWOOL_TOTAL_POROSITY;
 }
 
 void loop() {
@@ -164,7 +173,6 @@ void loop() {
     }
     client.loop();
 
-    // Measure (will populate values array with data)
     ESP32_SDI12::Status res = sdi12.measure(DEVICE_ADDRESS, values, sizeof(values) / sizeof(values[0]));
     
     if (res != ESP32_SDI12::SDI12_OK) {
@@ -172,26 +180,36 @@ void loop() {
     } else {
         float raw_vwc = values[0];
         float vwc = calculateVWC(raw_vwc);
-        float temperature = values[1]; // Temperature as is since it's assumed correct (in °C)
+        float temperature = values[1];
+        float bulk_ec = values[2] / 1000.0; // Convert µS/cm to dS/m
+
+        float bulk_permittivity = calculateBulkPermittivity(raw_vwc);
+        float temp_compensated_ec = compensateECForTemperature(bulk_ec, temperature);
         
-        // EC calculation with new calibration
-        float ec_raw = values[2] / 1000.0;  // Convert µS/cm to dS/m
-        float ec = calibrateEC(ec_raw);
+        float pore_water_ec = 0;
+        float saturation_extract_ec = 0;
         
-        // Ensure EC is within the specified range and round to 3 decimal places
-        ec = constrain(ec, 0.0, 23.0);
-        ec = round(ec * 1000.0) / 1000.0;
+        if (vwc >= 0.10) {
+            pore_water_ec = calculatePoreWaterEC(temp_compensated_ec, temperature, bulk_permittivity);
+            saturation_extract_ec = calculateSaturationExtractEC(pore_water_ec, vwc);
+        } else {
+            Serial.println("Warning: VWC too low for accurate EC calculation");
+        }
 
         // Print values for debugging
-        Serial.printf("Raw VWC: %f, VWC: %f%%, Temperature: %f°C, Raw EC: %f, Calibrated EC: %f dS/m\n", 
-                      raw_vwc, vwc, temperature, ec_raw, ec);
+        Serial.printf("Raw VWC: %f, VWC: %f%%, Temperature: %f°C, Bulk EC: %f dS/m\n", 
+                      raw_vwc, vwc * 100, temperature, bulk_ec);
+        Serial.printf("Temp Compensated EC: %f dS/m, Pore Water EC: %f dS/m, Saturation Extract EC: %f dS/m\n", 
+                      temp_compensated_ec, pore_water_ec, saturation_extract_ec);
 
         // Create JSON payload
         String payload = "{\"raw_vwc\": " + String(raw_vwc) + 
-                         ", \"vwc\": " + String(vwc) + 
+                         ", \"vwc\": " + String(vwc * 100) + 
                          ", \"temperature\": " + String(temperature) + 
-                         ", \"raw_ec\": " + String(ec_raw) + 
-                         ", \"ec\": " + String(ec) + "}";
+                         ", \"bulk_ec\": " + String(bulk_ec) + 
+                         ", \"temp_comp_ec\": " + String(temp_compensated_ec) + 
+                         ", \"pore_water_ec\": " + String(pore_water_ec) + 
+                         ", \"saturation_extract_ec\": " + String(saturation_extract_ec) + "}";
         client.publish(mqtt_topic, payload.c_str());
     }
 

@@ -32,25 +32,41 @@ Assumming you have mqtt setup in Home Assistant add this to your configuration.y
 ```
 mqtt:
   sensor:
-    - name: "SDI12 Raw Sensor"
-      state_topic: "sdi12/sensor"
-      unit_of_measurement: "%"  # Replace with the appropriate unit if needed
-      value_template: "{{ value_json.raw }}"
+    - name: "Rockwool Raw VWC"
+      state_topic: "sdi12/teros-12"
+      value_template: "{{ value_json.raw_vwc }}"
+      unit_of_measurement: "raw"
 
-    - name: "SDI12 VWC Sensor"
-      state_topic: "sdi12/sensor"
-      unit_of_measurement: "%"
+    - name: "Rockwool VWC"
+      state_topic: "sdi12/teros-12"
       value_template: "{{ value_json.vwc }}"
+      unit_of_measurement: "%"
 
-    - name: "SDI12 Temperature Sensor"
-      state_topic: "sdi12/sensor"
-      unit_of_measurement: "°C"
+    - name: "Rockwool Temperature"
+      state_topic: "sdi12/teros-12"
       value_template: "{{ value_json.temperature }}"
+      unit_of_measurement: "°C"
+      device_class: temperature
 
-    - name: "SDI12 EC Sensor"
-      state_topic: "sdi12/sensor"
-      unit_of_measurement: "ms/cm"
-      value_template: "{{ value_json.ec }}"
+    - name: "Rockwool Bulk EC"
+      state_topic: "sdi12/teros-12"
+      value_template: "{{ value_json.bulk_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "Rockwool Temperature Compensated EC"
+      state_topic: "sdi12/teros-12"
+      value_template: "{{ value_json.temp_comp_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "Rockwool Pore Water EC"
+      state_topic: "sdi12/teros-12"
+      value_template: "{{ value_json.pore_water_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "Rockwool Saturation Extract EC"
+      state_topic: "sdi12/teros-12"
+      value_template: "{{ value_json.saturation_extract_ec }}"
+      unit_of_measurement: "dS/m"
 ```
 
 Arduino sketch: (Updated 03/007 with an attempt at callibrating the EC to the Teros 12 Solus Bluetooth dongle which I am using as benchmark).

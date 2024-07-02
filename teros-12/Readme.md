@@ -53,7 +53,26 @@ mqtt:
       value_template: "{{ value_json.ec }}"
 ```
 
-Arduino sketch: 
+Arduino sketch: (Updated 03/007 with an attempt at callibrating the EC to the Teros 12 Solus Bluetooth dongle which I am using as benchmark).
+
+Did a bit of really scientific testing using the previous arduino code. 
+
+| Cup of 3.2 EC Athena   |                                                    | VWC   | EC   |
+| ---------------------- | -------------------------------------------------- | ----- | ---- |
+|                        | Teros 12 (using actual factory readings)           | 86    | 3.8  |
+|                        | Teros China (using arduino code esp32)             | 92.86 | 3.08 |
+|                        | Teros 12 ESP32 (using this arduino code and esp32) | 86    | 5.7  |
+| Rockwool Cube          | Teros 12 (using actual factory readings)           | 70.42 | 3.81 |
+|                        | Teros China (using arduino code esp32)             | 69.74 | 2.29 |
+|                        | Teros 12 ESP32 (using this arduino code and esp32) | 71.76 | 4.21 |
+| Rockwool Cube Side 2   | Teros 12 (using actual factory readings)           | 68.41 | 3.92 |
+|                        | Teros China (using arduino code esp32)             | 64.64 | 1.96 |
+|                        | Teros 12 ESP32 (using this arduino code and esp32) | 69.61 | 4.12 |
+| Rockwool Cube half way | Teros 12 (using actual factory readings)           | 49.5  | 4.18 |
+|                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
+|                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
+
+The new calibration below seems to get the EC of the Teros China and Teros 12 using ESP32 closer to the Teros 12 Solus Bluetooth app readingbut not perfect more work needs to be done. 
 
 ```
 #include <WiFi.h>
@@ -71,7 +90,7 @@ const char* mqtt_user = "mqtt";
 const char* mqtt_password = "ttqm";
 const char* mqtt_topic = "sdi12/teros-12";
 
-#define SDI12_DATA_PIN 26 // Change based on the pin you are using
+#define SDI12_DATA_PIN 2 // Change based on the pin you are using
 #define DEVICE_ADDRESS uint8_t(0) // SDI-12 Address of device
 
 ESP32_SDI12 sdi12(SDI12_DATA_PIN);
@@ -79,9 +98,6 @@ float values[10]; // Buffer to hold values from a measurement
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
-// Calibration factor for EC (assuming correct value is double the current reading)
-const float EC_CALIBRATION_FACTOR = 1.0;
 
 void setup_wifi() {
     delay(10);
@@ -133,7 +149,13 @@ void setup() {
 
 // Function to calculate VWC for non-soil substrates
 float calculateVWC(float raw) {
-    return (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
+    float vwc = (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
+    return constrain(vwc * 100.0, 0.0, 100.0);  // Convert to percentage and constrain between 0% and 100%
+}
+
+// EC calibration function
+float calibrateEC(float rawEC) {
+    return -0.1959 * rawEC + 4.4033;
 }
 
 void loop() {
@@ -148,18 +170,28 @@ void loop() {
     if (res != ESP32_SDI12::SDI12_OK) {
         Serial.printf("Error: %d\n", res);
     } else {
-        // Assuming values[0] is Raw VWC, values[1] is Temperature, values[2] is EC
         float raw_vwc = values[0];
-        float vwc = calculateVWC(raw_vwc) * 100; // VWC calculation and then multiply by 100
-        float temperature = values[1]; // Temperature as is since it's correct (in °C)
-        float ec = (values[2] / 1000.0) * EC_CALIBRATION_FACTOR; // EC in µS/cm divided by 1000 to get dS/m and then apply calibration factor
+        float vwc = calculateVWC(raw_vwc);
+        float temperature = values[1]; // Temperature as is since it's assumed correct (in °C)
+        
+        // EC calculation with new calibration
+        float ec_raw = values[2] / 1000.0;  // Convert µS/cm to dS/m
+        float ec = calibrateEC(ec_raw);
+        
+        // Ensure EC is within the specified range and round to 3 decimal places
+        ec = constrain(ec, 0.0, 23.0);
+        ec = round(ec * 1000.0) / 1000.0;
 
         // Print values for debugging
-        Serial.printf("VWC: %f%%, Temperature: %f°C, EC: %f dS/m\n", vwc, temperature, ec);
+        Serial.printf("Raw VWC: %f, VWC: %f%%, Temperature: %f°C, Raw EC: %f, Calibrated EC: %f dS/m\n", 
+                      raw_vwc, vwc, temperature, ec_raw, ec);
 
         // Create JSON payload
-        String payload = "{\"raw\": " + String(raw_vwc) + ", \"vwc\": " + String(vwc) + 
-                         ", \"temperature\": " + String(temperature) + ", \"ec\": " + String(ec) + "}";
+        String payload = "{\"raw_vwc\": " + String(raw_vwc) + 
+                         ", \"vwc\": " + String(vwc) + 
+                         ", \"temperature\": " + String(temperature) + 
+                         ", \"raw_ec\": " + String(ec_raw) + 
+                         ", \"ec\": " + String(ec) + "}";
         client.publish(mqtt_topic, payload.c_str());
     }
 

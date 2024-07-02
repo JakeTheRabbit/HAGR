@@ -72,6 +72,8 @@ Did a bit of really scientific testing using the previous arduino code.
 |                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
 |                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
 
+Hmmmm definitely not getting the kind of readings we want so went and looked at the manual...
+
 The new calibration below uses the Teros12 manual pages 15 16 17 https://www.labcell.com/media/140632/teros12%20manual.pdf
 
 Raw VWC: 3051.500000, VWC: 58.600784%, Temperature: 21.500000°C, Raw EC: 1.376000, Calibrated EC: 4.134000 dS/m 

@@ -210,6 +210,8 @@ mqtt:
       value_template: "{{ value_json.saturation_extract_ec }}"
       unit_of_measurement: "dS/m"
 
+```
+
 ### Home Assistant Card
 
 Here's a Home Assistant card that uses the `multiple-entity-row` and `fold-entity-row` HACS cards:
@@ -313,7 +315,7 @@ entities:
         name: "Saturation Extract EC"
       - entity: sensor.teros_usa_1_5_temp_comp_ec
         name: "Temp Comp EC"
-
+```
 You can also use template sensors in your `configuration.yaml` to simplify sensor naming and make it easier to update automations. Add the following to your `configuration.yaml`:
 
 ```yaml
@@ -345,7 +347,7 @@ sensor:
         value_template: "{{ states('sensor.teros_usa_1_5_pore_water_ec') }}"
         unit_of_measurement: "mdS/m"
         icon_template: "mdi:flash"
-
+```
 ## Sensor Comparison
 
 Before the most recent iteration, some scientific testing was conducted to compare the EC and VWC readings of the Teros 12 Solus (benchmark) vs the Teros 12 USA and the Teros 12 China connected by ESP32. Note that the ESP32-only solution isn't perfect; there were slight discrepancies between the Solus data and the ESP32 data, but not significant enough to matter for the purposes of this project.

@@ -1,85 +1,87 @@
-# HAGR
-Home Assistant Grow Room
+# HAGR: Home Assistant Grow Room
 
-Here is a repository for grow automation related things for Home Assistant.
+Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended.
 
-Some things might not work, there are basically no instructions. Its all pretty self explanatory if you are familiar with home assistant. 
+## Useful Links
 
-Features integrated into Home Assistant:
+- ESPHome sensors from M5stack.com used for indoor gardenining with configuration files: [Chill-Division/M5Stack-ESPHome](https://github.com/Chill-Division/M5Stack-ESPHome)
+- Excellent Home Assistant and ESP Home crop steering / garden automation repo: https://github.com/jeemers/Homegrown-Assistant/blob/main/README.md
+- THC-S: [kromadg/soil-sensor](https://github.com/kromadg/soil-sensor)
+- Killerherts HA growing functions: [Killerherts/nodeRed-HA-GrowingFunctions](https://github.com/Killerherts/nodeRed-HA-GrowingFunctions)
+- Awesome Crop Steering: https://github.com/Intergalactic-XYZ/awesome-cropsteering
+- If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
 
-This list is not exhaustive and I'm in the process of consolodating multiple setups into one shiny finished config and uploading here as I work through it.
 
-- Co2 control with setpoints for day/night in Node Red using an SCD-41 and ESPAtom
-- ESP32 Thermal Camera Leaf Temperature live readings into HA using MLX90641
-- Live leaf and environment VPD calculations for ideal humidity target to maintain optimal VPD with varying temperature.
-- Automatic VPD control (Leaf VPD) - set the target VPD and the automation will hold the leaf VPD steady with temp and humidity fluctuations
-- Integrate THC-S, Teros 12 and the Alibaba Teros 12 Compatable VWC/EC Sensors
-- Dosing nute tank with peristaltic pumps and Athena pro line nutes
-- LED lights and drivers controlled with PWM as dimmable light entities in HA
-- Tank level using Ultrasonic distance sensor
-- Notifications
-  - Hourly sensor updates
-  - Alerts for low/high setpoints i.e. Temperature, VWC, CO2
-- Automatic fan speed control
-- ESP32 Controlled AC wall unit
-- Irrigation Strategy / Crop Steering (still need to upload)
-  - Multiple sensor triggers for redundancy without steering to an average
-  - P1 Dosing and auto shot size calculator based off %
-  - P1 substrate reset
-  - P2 Minx/Max dosing and automatic field capacity adjustment
-  - P3 emergency shot
-  - P0 dryback % calculated based on current p3 VWC
-  - Various transitions and fail safes
-- Automatic lights on/off
-- Day/night setpoints for temperature control
-- Low CO2 auto light dimming
+## Features
 
-Home Assistant Addons: 
-- ESP Home
+The integrated features include but are not limited to:
+
+- **CO2 Control**: Setpoints for day/night using Node-Red with SCD-41 and ESPAtom.
+- **Thermal Camera**: Live leaf temperature readings using ESP32 and MLX90641 in Home Assistant.
+- **VPD Calculations**: Live leaf and environment calculations to maintain optimal humidity and temperature.
+- **Automatic VPD Control**: Adjusts leaf VPD to maintain steady conditions despite temperature and humidity fluctuations.
+- **Sensor Integrations**: Includes THC-S, Teros 12, and Alibaba Teros 12 compatible VWC/EC sensors.
+- **Nutrient Dosing**: Automated dosing with peristaltic pumps using Athena Pro line nutrients.
+- **Lighting Control**: LED lights and drivers controlled via PWM as dimmable entities in Home Assistant.
+- **Tank Level Monitoring**: Ultrasonic distance sensor for tank levels.
+- **Notifications**: Hourly sensor updates and alerts for high/low setpoints (e.g., Temperature, VWC, CO2).
+- **Fan Speed Control**: Automatically adjusts fan speed.
+- **AC Control**: ESP32-controlled AC wall unit.
+- **Irrigation Strategy & Crop Steering**: (still in progress)
+  - Multiple sensor triggers for redundancy
+  - Dosing calculations and adjustments
+  - Emergency shots and dryback percentage calculations
+  - Various transitions and fail-safes
+- **Lighting Automation**: Automatic lights on/off.
+- **Temperature Control**: Day/night setpoints.
+- **CO2-Triggered Light Dimming**: Low CO2 auto light dimming.
+
+## Home Assistant Addons
+
+I use these Home Assistant Addons:
+
+- ESPHome
 - SSH & Web Terminal
 - File Editor
 - Samba
-- Home Assistant Google Drive backup (do this first before)
+- Home Assistant Google Drive Backup
 - InfluxDB
 - Grafana
 - Node-Red
 - Mosquito Broker
 
+## Integrations
 
-Integrations: 
-  - HACS
-  - AC Infinity
-  - Blue Iris NVR
-  - Bluetooth
-  - ESPHome
-  - Google Calendar
-  - HASS.Agent
-  - LocalTuya
-  - Node-Red Companion
-  - Passive BLE Monitor
-  - RuuviTag BLE
-  - TP-Link Kasa Smart
-  - Tuya
-  - Xiaomi BLE
-  - Zigbee2Mqtt
+Integrations:
 
-HACS Frontend:
- - Mushroom
- - Multiple Entity Row
- - Notify Card
- - Slider Button Card
- - Layout-card
- - Card-mod
- - VPD Chart card (lags out your HA)
- - Slider-entity-row
- - Mushroom - Better Sliders
- - Plotly Graph Card
- - card-tools
- - mini-graph-card
+- HACS
+- AC Infinity
+- Blue Iris NVR
+- Bluetooth
+- ESPHome
+- Google Calendar
+- HASS.Agent
+- LocalTuya
+- Node-Red Companion
+- Passive BLE Monitor
+- RuuviTag BLE
+- TP-Link Kasa Smart
+- Tuya
+- Xiaomi BLE
+- Zigbee2Mqtt
 
-Useful links: 
-ESPHome sensors from M5stack.com with configuration files: https://github.com/Chill-Division/M5Stack-ESPHome
-A non m5stack way to setup the THC-S sensor  https://github.com/kromadg/soil-sensor
-Killerherts HA growing Github https://github.com/Killerherts/nodeRed-HA-GrowingFunctions
+## HACS Frontend Components
 
+- Mushroom
+- Multiple Entity Row
+- Notify Card
+- Slider Button Card
+- Layout-card
+- Card-mod
+- VPD Chart Card (may cause lag)
+- Slider-entity-row
+- Mushroom - Better Sliders
+- Plotly Graph Card
+- card-tools
+- mini-graph-card
 

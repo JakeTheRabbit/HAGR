@@ -18,7 +18,7 @@ References/Resources I fed the GPT:
 How to setup: (this assumes you have basic knowledge of using Arduino IDE (ask Chat GPT for help its really good at it): 
 
 1. Download Arduino IDE
-2. Download https://github.com/HarveyBates/ESP32-SDI12 and install the library through zip in the arduino IDE or I have included it in the libraries folder (won't get updated). This is the library for connecting SDI-12 to ESP32 directly. 
+2. Download https://github.com/HarveyBates/ESP32-SDI12 and install the library through zip in the arduino IDE or I have included it in the libraries folder (won't get updated). This is the library for connecting SDI-12 to ESP32 directly. You need it to compile the Arduino IDE the rest of the libraries are available in the Arduino libary by default. 
 3. Get an m5 stack grove cable and connect the cables see below image for what I did.
 4. Get your ESP32 (I have tested with M5 Atom, M5 Atom S3, M5 PoEESP32 and M5 Dial).
 5. Connect the Teros China 12 to the ESP32 and plug into your computer

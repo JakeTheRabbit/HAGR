@@ -1,0 +1,52 @@
+#Example ESP Home yaml for connecting an LED grow light with an m5 stack PWM module for dimming in HA. I have connected the two wires coming out of the potentiometer to the PWM module. 
+
+
+esphome:
+  name: espatom-480w-pwm
+  friendly_name: espatom-480w-pwm
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "yourapikey"
+
+ota:
+  password: "yourotapass"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Espatom-480W-Pwm"
+    password: "2tOY0t1e4kz1"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+output:
+
+#480w LED with meanwell driver connected to M5 Stack PWM Module and M5 Stack Atom. 
+  - platform: ledc
+    pin: GPIO22
+    frequency: 1000 hz
+    id: pwm_outputg22
+    inverted: true
+
+light:
+  - platform: monochromatic
+    output: pwm_outputg22
+    gamma_correct: 1.0
+    name: "LED 480w PWM"
+    id: "Light_480wpwm"

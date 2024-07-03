@@ -1,6 +1,8 @@
 
 I usually try and connect all my IoT devices through ESP Home to work with Home Assistant however the Arduino libraries for all the m5stack esp32 devices are far more comprehensive than the Esphome. Thankfully we have MQTT. 
 
+This is NOT a step by step guide and there may be unobvious steps you need to take that I just assume or have already setup for other things. 
+
 This whole thing was made using Chat GPT/Claude I don't really have a working understanding so don't ask me for help. 
 
 References/Resources I fed the GPT: 

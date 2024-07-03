@@ -1,0 +1,23 @@
+{
+    "name": "ESP32-SDI12",
+    "version": "0.0.1",
+    "description": "SDI-12 library for ESP32 microcontrollers.",
+    "keywords": [
+        "esp32", "sdi-12", "sdi12", "digital-agriculture"
+    ],
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/HarveyBates/ESP32-SDI12"
+    },
+    "authors": [
+        {
+            "name": "Harvey Bates"
+        }
+    ],
+    "license": "LGPL-2.1+",
+    "frameworks": "arduino",
+    "platforms": [
+        "espressif32"
+    ]
+}

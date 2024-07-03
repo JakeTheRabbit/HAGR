@@ -2,6 +2,10 @@
 
 Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended.
 
+## Update 04/07/24
+
+I am in the process of rebuilding this deleted the mess it was and am adding automations back in as I reconcile 3 separate instances grow automation setups into one for a commercial licensed grow. Cherry picking the best bits from each iteration. Most of the features aren't uplaoded yet. 
+
 ## Useful Links
 
 - ESPHome sensors from M5stack.com used for indoor gardenining with configuration files: [Chill-Division/M5Stack-ESPHome](https://github.com/Chill-Division/M5Stack-ESPHome)

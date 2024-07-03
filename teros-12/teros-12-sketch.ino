@@ -6,8 +6,8 @@
 #include <time.h>
 
 // Configuration Section
-const char* ssid = "FreeSpacesF5";                      // WiFi SSID
-const char* password = "p0lyview";                      // WiFi Password
+const char* ssid = "Wifi AP";                      // WiFi SSID
+const char* password = "Wifi AP Password";                      // WiFi Password
 const char* mqtt_server = "192.168.50.196";             // MQTT Broker IP
 const int mqtt_port = 1883;                             // MQTT Broker Port
 const char* mqtt_user = "mqtt";                         // MQTT Username

@@ -36,39 +36,38 @@ Assumming you have mqtt setup in Home Assistant add this to your configuration.y
 ```
 mqtt:
   sensor:
-    - name: "Rockwool Raw VWC"
-      state_topic: "sdi12/teros-12"
+    - name: "Teros-China-2 Raw VWC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.raw_vwc }}"
       unit_of_measurement: "raw"
-
-    - name: "Rockwool VWC"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 VWC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.vwc }}"
       unit_of_measurement: "%"
-
-    - name: "Rockwool Temperature"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 Temperature"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.temperature }}"
       unit_of_measurement: "°C"
-      device_class: temperature
-
-    - name: "Rockwool Bulk EC"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 Bulk EC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.bulk_ec }}"
       unit_of_measurement: "dS/m"
-
-    - name: "Rockwool Temperature Compensated EC"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 Temperature Compensated EC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.temp_comp_ec }}"
       unit_of_measurement: "dS/m"
-
-    - name: "Rockwool Pore Water EC"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 Pore Water EC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.pore_water_ec }}"
       unit_of_measurement: "dS/m"
-
-    - name: "Rockwool Saturation Extract EC"
-      state_topic: "sdi12/teros-12"
+      
+    - name: "Teros-China-2 Saturation Extract EC"
+      state_topic: "sdi12/mtec-w2"
       value_template: "{{ value_json.saturation_extract_ec }}"
       unit_of_measurement: "dS/m"
 ```

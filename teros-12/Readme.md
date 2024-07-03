@@ -1,84 +1,87 @@
+# TEROS-12 Soil Moisture Sensor with ESP32 and MQTT
 
-I usually try and connect all my IoT devices through ESP Home to work with Home Assistant however the Arduino libraries for all the m5stack esp32 devices are far more comprehensive than the Esphome. Thankfully we have MQTT. 
+This project integrates TEROS-12 soil moisture sensors (and compatible alternatives) with ESP32 microcontrollers, sending data to Home Assistant via MQTT.
 
-Public notice: 
-- I made this while erm over tired at 2am and or stoned so if there is shit that is wrong let me know
-- Don't trust this until you have done proper testing yourself don't just trust this blindly
-- Still a work in progress I haven't put it to the test yet.
+## Table of Contents
+1. [Overview](#overview)
+2. [Disclaimer](#disclaimer)
+3. [Hardware](#hardware)
+4. [Setup](#setup)
+5. [Wiring](#wiring)
+6. [TEROS-12 Compatible Sensor: BGT-SEC(Z2)](#teros-12-compatible-sensor-bgt-secz2)
+7. [Home Assistant Configuration](#home-assistant-configuration)
+8. [Sensor Comparison](#sensor-comparison)
+9. [Web Interface](#web-interface)
+10. [References](#references)
 
-This is NOT a step by step guide and there may be unobvious steps you need to take that I just assume or have already setup for other things. 
+## Overview
 
-This whole thing was made using Chat GPT/Claude I don't really have a working understanding so don't ask me for help. 
+This project connects TEROS-12 compatible soil moisture sensors to ESP32 microcontrollers and sends the data to Home Assistant using MQTT. It supports both the original TEROS-12 and a Chinese alternative (BGT-SEC(Z2)).
 
-References/Resources I fed the GPT: 
-- https://github.com/HarveyBates/ESP32-SDI12
-- https://www.labcell.com/media/140632/teros12%20manual.pdf
-- https://github.com/faiz-shukri/teros-12
-- 
+## Disclaimer
 
-How to setup: (this assumes you have basic knowledge of using Arduino IDE (ask Chat GPT for help its really good at it): 
+- This project was created during late-night coding sessions and may contain errors.
+- Do not trust this implementation blindly; perform proper testing before relying on it.
+- This is a work in progress and has not been fully tested yet.
+- This guide assumes basic knowledge of Arduino IDE and may skip some steps.
+- The project was developed using AI assistance (ChatGPT/Claude), so the creator may not have a complete understanding of all aspects.
 
-1. Download Arduino IDE
-2. Download https://github.com/HarveyBates/ESP32-SDI12 and install the library through zip in the arduino IDE or I have included it in the libraries folder (won't get updated). This is the library for connecting SDI-12 to ESP32 directly. You need it to compile the Arduino IDE the rest of the libraries are available in the Arduino libary by default. 
-3. Get an m5 stack grove cable and connect the cables see below image for what I did.
-4. Get your ESP32 (I have tested with M5 Atom, M5 Atom S3, M5 PoEESP32 and M5 Dial).
-5. Connect the Teros China 12 to the ESP32 and plug into your computer
-7. Copy the .ino file into the Arduino IDE and flash the ESP32. Update all the variables at the top of ino and I think you need to download the .h and .cpp files as well. 
-8. Any errors paste into chat gpt or claude for trouble shooting
-9. Profit?
+## Hardware
 
+- ESP32 (tested with M5 Atom, M5 Atom S3, M5 PoEESP32, and M5 Dial)
+- TEROS-12 soil moisture sensor or BGT-SEC(Z2) compatible sensor
+- M5 Stack grove cable
 
-##Teros 12 Solus: 
+## Setup
 
-Image of the Teros-12 Solus connected with a 3.5mm jack adapter to an ESP32 PoE
-<img width="1109" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/6e8107e2-4be7-4fe8-b744-577949a88612">
-Image of screenshot from the Teros 12 Manual showing the 3.5mm pin labels
-<img width="744" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/767efecf-1174-4a88-aeeb-df83142dacce">
+1. Download and install Arduino IDE
+2. Download and install the [ESP32-SDI12 library](https://github.com/HarveyBates/ESP32-SDI12)
+3. Get an M5 Stack grove cable and connect the cables (see [Wiring](#wiring) section)
+4. Connect the Teros China 12 to the ESP32 and plug into your computer
+5. Copy the .ino file into the Arduino IDE and flash the ESP32. Update all the variables at the top of the .ino file
+6. Download the .h and .cpp files as well
+7. For any errors, use ChatGPT or Claude for troubleshooting
 
+## Wiring
 
-##Teros 12 Compatable Sensor: BGT-SEC(Z2)
+### TEROS-12 Solus
 
-Our dear friends from China have produced a formidible alternative compatable and cost effective option called the BGT-SEC(Z2). For the sake of this Reademe I will refer to this sensor as Teros China and the other to Teros USA.
+![TEROS-12 Solus Wiring](https://github.com/JakeTheRabbit/HAGR/assets/123831499/6e8107e2-4be7-4fe8-b744-577949a88612)
 
-Image of the sensor and front page of the Manual
-<img width="327" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e1ecafbd-6714-4711-8370-85854ece9f82">
+![TEROS-12 Manual 3.5mm pin labels](https://github.com/JakeTheRabbit/HAGR/assets/123831499/767efecf-1174-4a88-aeeb-df83142dacce)
 
-Some stunning wiring diagrams that are OBVIOUS AS FUCK. Thank you. 
-<img width="390" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/ca8fb432-2bd9-4ed3-9a15-d025028a4ff1">
+### BGT-SEC(Z2) (Chinese TEROS-12 compatible)
 
-Technical specs
-<img width="374" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/846fea80-770f-48f2-a648-5776f9c4c94a">
+| Sensor Wire | Grove Cable |
+|-------------|-------------|
+| Red         | Yellow (Data) |
+| White       | Red (Power) |
+| Ground wire - needs extra wrapping to isolate | Black (Ground) |
+| N/A         | White (Cut off and isolate) |
 
-They have even included VWC calibration info! But there is no EC calibration info. 
-<img width="383" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0df29d1f-5ede-48f9-87fc-102fb1d49f6a">
+![BGT-SEC(Z2) Wiring](https://github.com/JakeTheRabbit/HAGR/assets/123831499/e233d3d0-7c3c-494e-95d3-3f13e804ed6c)
 
+![Finished Connection](https://github.com/JakeTheRabbit/HAGR/assets/123831499/47168f2c-3daa-4163-83a8-019859e2bcde)
 
-Where I got mine (make sure to choose the SDI-12 version I also chose the 5m cable): https://www.alibaba.com/product-detail/China-low-price-CE-IP68-SID12_1600643601689.html
+## TEROS-12 Compatible Sensor: BGT-SEC(Z2)
 
-Wiring for connecting the Chinese Teros to the Grove cable: 
+Our Chinese friends have produced a formidable alternative called the BGT-SEC(Z2). For this README, we'll refer to this sensor as Teros China and the original as Teros USA.
 
-If you are using the sensor in the Alibaba link and connecting to an M5 Stack ESP32 with a Grove cable: 
+![BGT-SEC(Z2) Sensor and Manual](https://github.com/JakeTheRabbit/HAGR/assets/123831499/e1ecafbd-6714-4711-8370-85854ece9f82)
 
-|Teros China|Grove Cable|
-|-----------|---------|
-|Red        | Yellow (Data) |
-|White      | Red (Power)   |
-|Ground wire - needs extra wrapping to isolate| Black (Ground) |
-|N/A        | White just cut it off and isolate it    |
- 
+![Wiring Diagram](https://github.com/JakeTheRabbit/HAGR/assets/123831499/ca8fb432-2bd9-4ed3-9a15-d025028a4ff1)
 
-Image of rough test wiring connecting the Teros China to an m5 Stack Grove cable
-<img width="444" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e233d3d0-7c3c-494e-95d3-3f13e804ed6c">
+![Technical Specs](https://github.com/JakeTheRabbit/HAGR/assets/123831499/846fea80-770f-48f2-a648-5776f9c4c94a)
 
-Image of finished connection heat wrapped between the Teros China and the ESP32
-<img width="1003" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/47168f2c-3daa-4163-83a8-019859e2bcde">
+![VWC Calibration Info](https://github.com/JakeTheRabbit/HAGR/assets/123831499/0df29d1f-5ede-48f9-87fc-102fb1d49f6a)
 
+Where to buy: [Alibaba Link](https://www.alibaba.com/product-detail/China-low-price-CE-IP68-SID12_1600643601689.html) (choose the SDI-12 version, 5m cable recommended)
 
-Assumming you have mqtt setup in Home Assistant add this to your configuration.yaml file. Ive got two of the chinese ones and one of the Teros 12s.
+## Home Assistant Configuration
 
-state_topic must match watch you've configured in the esp32 .ino file when you flash the esp32. These need to be different for each device otherwise mqttt doesn't like it. 
+Add the following to your `configuration.yaml`:
 
-```
+```yaml
 mqtt:
   sensor:
     - name: "TEROS USA 1-5 Raw VWC"
@@ -206,14 +209,14 @@ mqtt:
       state_topic: "sdi12/teros-china-1-2"
       value_template: "{{ value_json.saturation_extract_ec }}"
       unit_of_measurement: "dS/m"
-```
 
-Here is a home assistant card that uses the multiplle-entity-row and fold-entity-row HACS cards. 
+### Home Assistant Card
 
-<img width="361" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/6714a9b4-8ddf-495c-a57c-3325b54895a2">
+Here's a Home Assistant card that uses the `multiple-entity-row` and `fold-entity-row` HACS cards:
 
+![Home Assistant Card](https://github.com/JakeTheRabbit/HAGR/assets/123831499/6714a9b4-8ddf-495c-a57c-3325b54895a2)
 
-```
+```yaml
 type: entities
 title: TEROS Sensors
 show_header_toggle: false
@@ -310,16 +313,11 @@ entities:
         name: "Saturation Extract EC"
       - entity: sensor.teros_usa_1_5_temp_comp_ec
         name: "Temp Comp EC"
-```
 
-<img width="952" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0b421f90-f178-4f13-826c-1d44bc067ab6">
+You can also use template sensors in your `configuration.yaml` to simplify sensor naming and make it easier to update automations. Add the following to your `configuration.yaml`:
 
-You can also use template sensors in your configuration.yaml so that instead of having to go throughg all your automations and update sensor names you can just change which sensor names you are using and home assistant renames them. This goes in your configuration.yaml as well. 
-
-```
+```yaml
 sensor:
-
-
   - platform: template
     sensors:
       1_5_vwc:
@@ -347,18 +345,20 @@ sensor:
         value_template: "{{ states('sensor.teros_usa_1_5_pore_water_ec') }}"
         unit_of_measurement: "mdS/m"
         icon_template: "mdi:flash"
-```
 
-Before the most recent iteration I did some scientific testing to see how the EC and VWC compared with the Teros 12 Solus (benchmark) vs the Teros 12 USA and the Teros 12 China connected by ESP32. One thing I will say is that the ESP32 only solution isn't perfect there were slight discrepancies between using the Solus data and the ESP32 data but for my purposes not enough to matter. After seeing the massive difference in the EC (the Teros 12 uses pore water EC I believe) whereas the Chinese just output raw EC (like what an EC pen would read) I used the Teros 12 manual to add some calibrations.
-I have used the Teros12 manual pages 15 16 17 https://www.labcell.com/media/140632/teros12%20manual.pdf
+## Sensor Comparison
 
-The numbers I'm getting using the pwEC calibration from the manual are very similar and are following the same lines on the graph as the USA Teros 12. You could do this in Home Assistant as well with tempalate sensor would be easier to tweak that way. 
+Before the most recent iteration, some scientific testing was conducted to compare the EC and VWC readings of the Teros 12 Solus (benchmark) vs the Teros 12 USA and the Teros 12 China connected by ESP32. Note that the ESP32-only solution isn't perfect; there were slight discrepancies between the Solus data and the ESP32 data, but not significant enough to matter for the purposes of this project.
 
-This was the initial readings before I added calibration and extra EC end points:  
+After observing a substantial difference in EC readings (the Teros 12 uses pore water EC, whereas the Chinese version outputs raw EC similar to an EC pen), calibrations were added using the Teros 12 manual (pages 15-16-17) https://www.labcell.com/media/140632/teros12%20manual.pdf
 
-| Cup of 3.2 EC Athena   |                                                    | VWC   | EC   |
-| ---------------------- | -------------------------------------------------- | ----- | ---- |
-|                        | Teros 12 (using actual factory readings)           | 86    | 3.8  |
+The numbers obtained using the pwEC calibration from the manual are very similar and follow the same trend lines on the graph as the USA Teros 12. This calibration could also be implemented in Home Assistant using template sensors for easier tweaking.
+
+Initial readings before calibration and extra EC endpoints were added:
+
+| Test Condition         | Sensor                                             | VWC   | EC   |
+|------------------------|---------------------------------------------------|-------|------|
+| Cup of 3.2 EC Athena   | Teros 12 (using actual factory readings)           | 86    | 3.8  |
 |                        | Teros China (using arduino code esp32)             | 92.86 | 3.08 |
 |                        | Teros 12 ESP32 (using this arduino code and esp32) | 86    | 5.7  |
 | Rockwool Cube          | Teros 12 (using actual factory readings)           | 70.42 | 3.81 |
@@ -371,13 +371,21 @@ This was the initial readings before I added calibration and extra EC end points
 |                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
 |                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
 
+## Web Interface
 
-Added a webserver, tried adding OTA but it was shitting bricks with MQTT so left it out. You can view the readings live with a timestamp at the ESP32 device IP address on your network: 
+A webserver has been added to the ESP32 sketch. An attempt was made to add OTA (Over-The-Air) updates, but it caused issues with MQTT, so it was omitted. You can view the live readings with a timestamp at the ESP32 device's IP address on your network:
 
-<img width="603" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/16d8e5f2-2c06-455c-91d6-cc21170beb43">
+![Web Interface](https://github.com/JakeTheRabbit/HAGR/assets/123831499/16d8e5f2-2c06-455c-91d6-cc21170beb43)
 
+## Arduino Sketch
 
-Arduino .ino file: https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/teros-12-sketch.ino
+The Arduino sketch for this project can be found [here](https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/teros-12-sketch.ino).
 
+## Contributing
 
+If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+
+## License
+
+This project is open-source and available under the [MIT License](LICENSE).
 

@@ -10,6 +10,7 @@ Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses 
 - Killerherts HA growing functions: [Killerherts/nodeRed-HA-GrowingFunctions](https://github.com/Killerherts/nodeRed-HA-GrowingFunctions)
 - Awesome Crop Steering: https://github.com/Intergalactic-XYZ/awesome-cropsteering
 - If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
+- Teros-12 / Teros-12 Compatable SDI-12 to ESP32 https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
 
 
 ## Features

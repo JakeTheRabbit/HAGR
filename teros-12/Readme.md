@@ -25,7 +25,7 @@ Originally inspired by https://github.com/kromadg/soil-sensor connecting the THC
 - Do not trust this implementation blindly; perform proper testing before relying on it.
 - This is a work in progress and has not been fully tested yet.
 - This guide assumes basic knowledge of Arduino IDE and may skip some steps.
-- The project was developed using AI assistance (ChatGPT/Claude), so the creator may not have a complete understanding of all aspects.
+- The project was developed using AI assistance (ChatGPT/Claude), so I don't have a full understanding and may have made blatant errors.
 
 ## Hardware
 

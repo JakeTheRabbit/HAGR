@@ -3,14 +3,19 @@ I usually try and connect all my IoT devices through ESP Home to work with Home 
 
 This whole thing was made using Chat GPT/Claude I don't really have a working understanding so don't ask me for help. 
 
-How to setup (this assumes you have basic knowledge of using Arduino IDE (ask Chat GPT for help its really good at it): 
+References/Resources I fed the GPT: 
+- https://github.com/HarveyBates/ESP32-SDI12
+- https://www.labcell.com/media/140632/teros12%20manual.pdf
+- https://github.com/faiz-shukri/teros-12
+
+How to setup: (this assumes you have basic knowledge of using Arduino IDE (ask Chat GPT for help its really good at it): 
 
 1. Download Arduino IDE
 2. Download https://github.com/HarveyBates/ESP32-SDI12 and install the library through zip in the arduino IDE. This enables SDI-12 communication directly with the ESP32.
 3. Get an m5 stack grove cable and connect the cables see below image for what I did.
 4. Get your ESP32 (I have tested with M5 Atom, M5 Atom S3, M5 PoEESP32 and M5 Dial).
-5. Connect the Teros 12 to the ESP32 and plug into your computer
-7. Copy the .ino file into the Arduino IDE and flash the ESP32. Change the #define SDI12_DATA_PIN 26 to whatever pin the yellow grove cable is connected to on your esp32.
+5. Connect the Teros China 12 to the ESP32 and plug into your computer
+7. Copy the .ino file into the Arduino IDE and flash the ESP32. Update all the variables at the top of ino and I think you need to download the .h and .cpp files as well. 
 8. Any errors paste into chat gpt or claude for trouble shooting
 9. Profit?
 
@@ -33,7 +38,7 @@ If you are using the sensor in the Alibaba link and connecting to an M5 Stack ES
 |Ground wire - needs extra wrapping to isolate| Black (Ground) |
 |N/A        | White just cut it off and isolate it    |
 
-You can apply the same logic to the Teros 12 USA.
+You can apply the same logic to the Teros 12 USA but ising a 3.5mm to 3 pin converter thing. 
 
 
 <img width="444" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e233d3d0-7c3c-494e-95d3-3f13e804ed6c">
@@ -45,7 +50,7 @@ Bit of shrink wrap and thats it...
 
 Assumming you have mqtt setup in Home Assistant add this to your configuration.yaml file. Ive got two of the chinese ones and one of the Teros 12s.
 
-state_topic must match watch you've configured in the esp32 .ino file when you flash the esp32. 
+state_topic must match watch you've configured in the esp32 .ino file when you flash the esp32. These need to be different for each device otherwise mqttt doesn't like it. 
 
 ```
 mqtt:
@@ -318,9 +323,12 @@ sensor:
         icon_template: "mdi:flash"
 ```
 
-Arduino sketch: (Updated 03/007 with an attempt at callibrating the EC to the Teros 12 Solus Bluetooth dongle which I am using as benchmark).
+Before the most recent iteration I did some scientific testing to see how the EC and VWC compared with the Teros 12 Solus (benchmark) vs the Teros 12 USA and the Teros 12 China connected by ESP32. One thing I will say is that the ESP32 only solution isn't perfect there were slight discrepancies between using the Solus data and the ESP32 data but for my purposes not enough to matter. After seeing the massive difference in the EC (the Teros 12 uses pore water EC I believe) whereas the Chinese just output raw EC (like what an EC pen would read) I used the Teros 12 manual to add some calibrations.
+I have used the Teros12 manual pages 15 16 17 https://www.labcell.com/media/140632/teros12%20manual.pdf
 
-Did a bit of really scientific testing using the previous arduino code. 
+The numbers I'm getting using the pwEC calibration from the manual are very similar and are following the same lines on the graph as the USA Teros 12. You could do this in Home Assistant as well with tempalate sensor would be easier to tweak that way. 
+
+This was the initial readings before I added calibration and extra EC end points:  
 
 | Cup of 3.2 EC Athena   |                                                    | VWC   | EC   |
 | ---------------------- | -------------------------------------------------- | ----- | ---- |
@@ -337,13 +345,8 @@ Did a bit of really scientific testing using the previous arduino code.
 |                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
 |                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
 
-Hmmmm definitely not getting the kind of readings we want so went and looked at the manual...
 
-I have used the Teros12 manual pages 15 16 17 https://www.labcell.com/media/140632/teros12%20manual.pdf
-
-Now getting these outputs calculated on board the esp32 (these could also be calculated in Home Assistant using templates for easier tweaking). 
-
-Added a webserver and OTA so you can view the readings live with a timestamp at the ESP32 device IP address on your network: 
+Added a webserver, tried adding OTA but it was shitting bricks with MQTT so left it out. You can view the readings live with a timestamp at the ESP32 device IP address on your network: 
 
 <img width="603" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/16d8e5f2-2c06-455c-91d6-cc21170beb43">
 

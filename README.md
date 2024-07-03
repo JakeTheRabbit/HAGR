@@ -22,6 +22,15 @@ For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP
 - If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
 - Teros-12 / Teros-12 Compatable SDI-12 to ESP32 https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
 
+Resources for autoamations:
+- Grodan Grow guide: https://www.grodan101.com/siteassets/downloads/downloads-na-101/grow-guide-2023/grow-guide---cannabis-edition-2024.pdf
+- Athena Grow Guide: https://issuu.com/athenaag/docs/athena_hb_me
+- Growlink Crop Steering: https://www.growlink.ag/crop-steering
+
+Links:
+- Open THC https://github.com/openthc
+- Farm OS: https://github.com/farmOS/farmOS
+
 
 ## Features
 

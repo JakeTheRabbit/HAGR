@@ -24,6 +24,18 @@ If you want to use the Chinese Teros-12 rip off that also works with this code f
 
 Wiring for connecting the Chinese Teros to the Grove cable: 
 
+If you are using the sensor in the Alibaba link and connecting to an M5 Stack ESP32 with a Grove cable: 
+
+|Teros China|Grove Cable|
+|-----------|---------|
+|Red        | Yellow (Data) |
+|White      | Red (Power)   |
+|Ground wire - needs extra wrapping to isolate| Black (Ground) |
+|N/A        | White just cut it off and isolate it    |
+
+You can apply the same logic to the Teros 12 USA.
+
+
 <img width="444" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e233d3d0-7c3c-494e-95d3-3f13e804ed6c">
 
 Bit of shrink wrap and thats it...

@@ -37,6 +37,18 @@ The integrated features include but are not limited to:
 - **Temperature Control**: Day/night setpoints.
 - **CO2-Triggered Light Dimming**: Low CO2 auto light dimming.
 
+## Screenshots
+
+<a href="https://github.com/JakeTheRabbit/HAGR/assets/123831499/673f8f7f-dcf0-4fb1-9b35-9f19ce383b5e" target="_blank">
+    <img src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/673f8f7f-dcf0-4fb1-9b35-9f19ce383b5e" alt="1_5_dashboard2" width="200">
+</a>
+<a href="https://github.com/JakeTheRabbit/HAGR/assets/123831499/847fe601-8523-45e5-9813-8af4eafff33d" target="_blank">
+    <img src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/847fe601-8523-45e5-9813-8af4eafff33d" alt="environment config" width="200">
+</a>
+<a href="https://github.com/JakeTheRabbit/HAGR/assets/123831499/f788d65a-31c6-459c-a08a-5912b7a1fba6" target="_blank">
+    <img src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/f788d65a-31c6-459c-a08a-5912b7a1fba6" alt="crop steering config" width="200">
+</a>
+
 ## Home Assistant Addons
 
 I use these Home Assistant Addons:

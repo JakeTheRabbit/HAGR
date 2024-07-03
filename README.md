@@ -5,10 +5,8 @@ Here is a repository for grow automation related things for Home Assistant.
 
 Some things might not work, there are basically no instructions. Its all pretty self explanatory if you are familiar with home assistant. 
 
-If you have the THC-S (a cheap version like Aroya, GrowLink coco/rockwool humidity/ec/temp for 100$) here is how to integrate it into Home Assistant with ESP Home: https://github.com/JakeTheRabbit/TDR-Sensor/blob/f01d88421085d922dd9abb14dc89586b4b1563c4/README.md
-
-
 Features integrated into Home Assistant:
+
 This list is not exhaustive and I'm in the process of consolodating multiple setups into one shiny finished config and uploading here as I work through it.
 
 - Co2 control with setpoints for day/night in Node Red using an SCD-41 and ESPAtom

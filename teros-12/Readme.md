@@ -72,6 +72,9 @@ mqtt:
       unit_of_measurement: "dS/m"
 ```
 
+<img width="952" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0b421f90-f178-4f13-826c-1d44bc067ab6">
+
+
 Arduino sketch: (Updated 03/007 with an attempt at callibrating the EC to the Teros 12 Solus Bluetooth dongle which I am using as benchmark).
 
 Did a bit of really scientific testing using the previous arduino code. 

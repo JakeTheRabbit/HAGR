@@ -31,45 +31,242 @@ Bit of shrink wrap and thats it...
 <img width="1003" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/47168f2c-3daa-4163-83a8-019859e2bcde">
 
 
-Assumming you have mqtt setup in Home Assistant add this to your configuration.yaml file. 
+Assumming you have mqtt setup in Home Assistant add this to your configuration.yaml file. Ive got two of the chinese ones and one of the Teros 12s.
+
+state_topic must match watch you've configured in the esp32 .ino file when you flash the esp32. 
 
 ```
 mqtt:
   sensor:
-    - name: "Teros-China-2 Raw VWC"
-      state_topic: "sdi12/mtec-w2"
+    - name: "TEROS USA 1-5 Raw VWC"
+      unique_id: "teros_usa_1_5_raw_vwc"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.raw_vwc }}"
-      unit_of_measurement: "raw"
-      
-    - name: "Teros-China-2 VWC"
-      state_topic: "sdi12/mtec-w2"
+      unit_of_measurement: "Raw VWC"
+
+    - name: "TEROS USA 1-5 VWC"
+      unique_id: "teros_usa_1_5_vwc"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.vwc }}"
       unit_of_measurement: "%"
-      
-    - name: "Teros-China-2 Temperature"
-      state_topic: "sdi12/mtec-w2"
+
+    - name: "TEROS USA 1-5 Temperature"
+      unique_id: "teros_usa_1_5_temperature"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.temperature }}"
       unit_of_measurement: "°C"
-      
-    - name: "Teros-China-2 Bulk EC"
-      state_topic: "sdi12/mtec-w2"
+
+    - name: "TEROS USA 1-5 Bulk EC"
+      unique_id: "teros_usa_1_5_bulk_ec"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.bulk_ec }}"
       unit_of_measurement: "dS/m"
-      
-    - name: "Teros-China-2 Temperature Compensated EC"
-      state_topic: "sdi12/mtec-w2"
+
+    - name: "TEROS USA 1-5 Temp Comp EC"
+      unique_id: "teros_usa_1_5_temp_comp_ec"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.temp_comp_ec }}"
       unit_of_measurement: "dS/m"
-      
-    - name: "Teros-China-2 Pore Water EC"
-      state_topic: "sdi12/mtec-w2"
+
+    - name: "TEROS USA 1-5 Pore Water EC"
+      unique_id: "teros_usa_1_5_pore_water_ec"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.pore_water_ec }}"
       unit_of_measurement: "dS/m"
-      
-    - name: "Teros-China-2 Saturation Extract EC"
-      state_topic: "sdi12/mtec-w2"
+
+    - name: "TEROS USA 1-5 Saturation Extract EC"
+      unique_id: "teros_usa_1_5_saturation_extract_ec"
+      state_topic: "sdi12/teros-usa-1-5"
       value_template: "{{ value_json.saturation_extract_ec }}"
       unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-5-2 Raw VWC"
+      unique_id: "teros_china_1_5_2_raw_vwc"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.raw_vwc }}"
+      unit_of_measurement: "Raw VWC"
+
+    - name: "TEROS China 1-5-2 VWC"
+      unique_id: "teros_china_1_5_2_vwc"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.vwc }}"
+      unit_of_measurement: "%"
+
+    - name: "TEROS China 1-5-2 Temperature"
+      unique_id: "teros_china_1_5_2_temperature"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.temperature }}"
+      unit_of_measurement: "°C"
+
+    - name: "TEROS China 1-5-2 Bulk EC"
+      unique_id: "teros_china_1_5_2_bulk_ec"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.bulk_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-5-2 Temp Comp EC"
+      unique_id: "teros_china_1_5_2_temp_comp_ec"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.temp_comp_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-5-2 Pore Water EC"
+      unique_id: "teros_china_1_5_2_pore_water_ec"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.pore_water_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-5-2 Saturation Extract EC"
+      unique_id: "teros_china_1_5_2_saturation_extract_ec"
+      state_topic: "sdi12/teros-china-1-5-2"
+      value_template: "{{ value_json.saturation_extract_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-2 Raw VWC"
+      unique_id: "teros_china_1_2_raw_vwc"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.raw_vwc }}"
+      unit_of_measurement: "Raw VWC"
+
+    - name: "TEROS China 1-2 VWC"
+      unique_id: "teros_china_1_2_vwc"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.vwc }}"
+      unit_of_measurement: "%"
+
+    - name: "TEROS China 1-2 Temperature"
+      unique_id: "teros_china_1_2_temperature"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.temperature }}"
+      unit_of_measurement: "°C"
+
+    - name: "TEROS China 1-2 Bulk EC"
+      unique_id: "teros_china_1_2_bulk_ec"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.bulk_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-2 Temp Comp EC"
+      unique_id: "teros_china_1_2_temp_comp_ec"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.temp_comp_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-2 Pore Water EC"
+      unique_id: "teros_china_1_2_pore_water_ec"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.pore_water_ec }}"
+      unit_of_measurement: "dS/m"
+
+    - name: "TEROS China 1-2 Saturation Extract EC"
+      unique_id: "teros_china_1_2_saturation_extract_ec"
+      state_topic: "sdi12/teros-china-1-2"
+      value_template: "{{ value_json.saturation_extract_ec }}"
+      unit_of_measurement: "dS/m"
+```
+
+Here is a home assistant card that uses the multiplle-entity-row and fold-entity-row HACS cards. 
+
+<img width="361" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/6714a9b4-8ddf-495c-a57c-3325b54895a2">
+
+
+```
+type: entities
+title: TEROS Sensors
+show_header_toggle: false
+entities:
+
+  - type: custom:fold-entity-row
+    head:
+      type: section
+      label: "Grouped by Sensor"
+    open: true
+    items:
+      - type: custom:multiple-entity-row
+        entity: sensor.teros_china_1_2_pore_water_ec
+        name: "TEROS China 1-2"
+        entities:
+          - entity: sensor.teros_china_1_2_vwc
+            name: "VWC"
+          - entity: sensor.teros_china_1_2_temperature
+            name: "Temperature"
+
+      - type: custom:multiple-entity-row
+        entity: sensor.teros_china_1_5_2_pore_water_ec
+        name: "TEROS China 1-5-2"
+        entities:
+          - entity: sensor.teros_china_1_5_2_vwc
+            name: "VWC"
+          - entity: sensor.teros_china_1_5_2_temperature
+            name: "Temperature"
+
+      - type: custom:multiple-entity-row
+        entity: sensor.teros_usa_1_5_pore_water_ec
+        name: "TEROS USA 1-5"
+        entities:
+          - entity: sensor.teros_usa_1_5_vwc
+            name: "VWC"
+          - entity: sensor.teros_usa_1_5_temperature
+            name: "Temperature"
+  - type: custom:fold-entity-row
+    head:
+      type: section
+      label: "TEROS China 1-2"
+    items:
+      - entity: sensor.teros_china_1_2_pore_water_ec
+        name: "Pore Water EC"
+      - entity: sensor.teros_china_1_2_vwc
+        name: "VWC"
+      - entity: sensor.teros_china_1_2_temperature
+        name: "Temperature"
+      - entity: sensor.teros_china_1_2_bulk_ec
+        name: "Bulk EC"
+      - entity: sensor.teros_china_1_2_raw_vwc
+        name: "Raw VWC"
+      - entity: sensor.teros_china_1_2_saturation_extract_ec
+        name: "Saturation Extract EC"
+      - entity: sensor.teros_china_1_2_temp_comp_ec
+        name: "Temp Comp EC"
+
+  - type: custom:fold-entity-row
+    head:
+      type: section
+      label: "TEROS China 1-5-2"
+    items:
+      - entity: sensor.teros_china_1_5_2_pore_water_ec
+        name: "Pore Water EC"
+      - entity: sensor.teros_china_1_5_2_vwc
+        name: "VWC"
+      - entity: sensor.teros_china_1_5_2_temperature
+        name: "Temperature"
+      - entity: sensor.teros_china_1_5_2_bulk_ec
+        name: "Bulk EC"
+      - entity: sensor.teros_china_1_5_2_raw_vwc
+        name: "Raw VWC"
+      - entity: sensor.teros_china_1_5_2_saturation_extract_ec
+        name: "Saturation Extract EC"
+      - entity: sensor.teros_china_1_5_2_temp_comp_ec
+        name: "Temp Comp EC"
+
+  - type: custom:fold-entity-row
+    head:
+      type: section
+      label: "TEROS USA 1-5"
+    items:
+      - entity: sensor.teros_usa_1_5_pore_water_ec
+        name: "Pore Water EC"
+      - entity: sensor.teros_usa_1_5_vwc
+        name: "VWC"
+      - entity: sensor.teros_usa_1_5_temperature
+        name: "Temperature"
+      - entity: sensor.teros_usa_1_5_bulk_ec
+        name: "Bulk EC"
+      - entity: sensor.teros_usa_1_5_raw_vwc
+        name: "Raw VWC"
+      - entity: sensor.teros_usa_1_5_saturation_extract_ec
+        name: "Saturation Extract EC"
+      - entity: sensor.teros_usa_1_5_temp_comp_ec
+        name: "Temp Comp EC"
 ```
 
 <img width="952" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0b421f90-f178-4f13-826c-1d44bc067ab6">

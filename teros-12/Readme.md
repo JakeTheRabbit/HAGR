@@ -14,6 +14,7 @@ References/Resources I fed the GPT:
 - https://github.com/HarveyBates/ESP32-SDI12
 - https://www.labcell.com/media/140632/teros12%20manual.pdf
 - https://github.com/faiz-shukri/teros-12
+- 
 
 How to setup: (this assumes you have basic knowledge of using Arduino IDE (ask Chat GPT for help its really good at it): 
 
@@ -27,12 +28,32 @@ How to setup: (this assumes you have basic knowledge of using Arduino IDE (ask C
 9. Profit?
 
 
-If you have a Teros-12 Solus with the 3.5mm jack this is the pinout:
+##Teros 12 Solus: 
 
+Image of the Teros-12 Solus connected with a 3.5mm jack adapter to an ESP32 PoE
 <img width="1109" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/6e8107e2-4be7-4fe8-b744-577949a88612">
+Image of screenshot from the Teros 12 Manual showing the 3.5mm pin labels
 <img width="744" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/767efecf-1174-4a88-aeeb-df83142dacce">
 
-If you want to use the Chinese Teros-12 rip off that also works with this code for about 1/3 the price. https://www.alibaba.com/product-detail/China-low-price-CE-IP68-SID12_1600643601689.html
+
+##Teros 12 Compatable Sensor: BGT-SEC(Z2)
+
+Our dear friends from China have produced a formidible alternative compatable and cost effective option called the BGT-SEC(Z2). For the sake of this Reademe I will refer to this sensor as Teros China and the other to Teros USA.
+
+Image of the sensor and front page of the Manual
+<img width="327" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e1ecafbd-6714-4711-8370-85854ece9f82">
+
+Some stunning wiring diagrams that are OBVIOUS AS FUCK. Thank you. 
+<img width="390" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/ca8fb432-2bd9-4ed3-9a15-d025028a4ff1">
+
+Technical specs
+<img width="374" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/846fea80-770f-48f2-a648-5776f9c4c94a">
+
+They have even included VWC calibration info! But there is no EC calibration info. 
+<img width="383" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0df29d1f-5ede-48f9-87fc-102fb1d49f6a">
+
+
+Where I got mine (make sure to choose the SDI-12 version I also chose the 5m cable): https://www.alibaba.com/product-detail/China-low-price-CE-IP68-SID12_1600643601689.html
 
 Wiring for connecting the Chinese Teros to the Grove cable: 
 
@@ -44,14 +65,12 @@ If you are using the sensor in the Alibaba link and connecting to an M5 Stack ES
 |White      | Red (Power)   |
 |Ground wire - needs extra wrapping to isolate| Black (Ground) |
 |N/A        | White just cut it off and isolate it    |
+ 
 
-You can apply the same logic to the Teros 12 USA but ising a 3.5mm to 3 pin converter thing. 
-
-
+Image of rough test wiring connecting the Teros China to an m5 Stack Grove cable
 <img width="444" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/e233d3d0-7c3c-494e-95d3-3f13e804ed6c">
 
-Bit of shrink wrap and thats it...
-
+Image of finished connection heat wrapped between the Teros China and the ESP32
 <img width="1003" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/47168f2c-3daa-4163-83a8-019859e2bcde">
 
 

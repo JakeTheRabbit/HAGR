@@ -17,6 +17,7 @@ This project integrates TEROS-12 soil moisture sensors (and compatible alternati
 ## Overview
 
 This project connects TEROS-12 compatible soil moisture sensors to ESP32 microcontrollers and sends the data to Home Assistant using MQTT. It supports both the original TEROS-12 and a Chinese alternative (BGT-SEC(Z2)).
+Originally inspired by https://github.com/kromadg/soil-sensor connecting the THC-S to Home Assistant. 
 
 ## Disclaimer
 

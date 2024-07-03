@@ -271,6 +271,40 @@ entities:
 
 <img width="952" alt="image" src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/0b421f90-f178-4f13-826c-1d44bc067ab6">
 
+You can also use template sensors in your configuration.yaml so that instead of having to go throughg all your automations and update sensor names you can just change which sensor names you are using and home assistant renames them. This goes in your configuration.yaml as well. 
+
+```
+sensor:
+
+
+  - platform: template
+    sensors:
+      1_5_vwc:
+        friendly_name: "1.5 VWC Sensor"
+        value_template: "{{ states('sensor.teros_china_1_5_2_vwc') }}"
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+
+      1_5_ec:
+        friendly_name: "1.5 EC Sensor"
+        value_template: "{{ states('sensor.teros_china_1_5_2_pore_water_ec') }}"
+        unit_of_measurement: "dS/m"
+        icon_template: "mdi:flash"
+
+  - platform: template
+    sensors:
+      1_5_vwc_2:
+        friendly_name: "1.5 VWC Sensor 2"
+        value_template: "{{ states('sensor.teros_usa_1_5_vwc') }}"
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+
+      1_5_ec_2:
+        friendly_name: "1.5 EC Sensor 2"
+        value_template: "{{ states('sensor.teros_usa_1_5_pore_water_ec') }}"
+        unit_of_measurement: "mdS/m"
+        icon_template: "mdi:flash"
+```
 
 Arduino sketch: (Updated 03/007 with an attempt at callibrating the EC to the Teros 12 Solus Bluetooth dongle which I am using as benchmark).
 

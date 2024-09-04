@@ -357,23 +357,6 @@ After observing a substantial difference in EC readings (the Teros 12 uses pore 
 
 The numbers obtained using the pwEC calibration from the manual are very similar and follow the same trend lines on the graph as the USA Teros 12. This calibration could also be implemented in Home Assistant using template sensors for easier tweaking.
 
-Initial readings before calibration and extra EC endpoints were added:
-
-| Test Condition         | Sensor                                             | VWC   | EC   |
-|------------------------|---------------------------------------------------|-------|------|
-| Cup of 3.2 EC Athena   | Teros 12 (using actual factory readings)           | 86    | 3.8  |
-|                        | Teros China (using arduino code esp32)             | 92.86 | 3.08 |
-|                        | Teros 12 ESP32 (using this arduino code and esp32) | 86    | 5.7  |
-| Rockwool Cube          | Teros 12 (using actual factory readings)           | 70.42 | 3.81 |
-|                        | Teros China (using arduino code esp32)             | 69.74 | 2.29 |
-|                        | Teros 12 ESP32 (using this arduino code and esp32) | 71.76 | 4.21 |
-| Rockwool Cube Side 2   | Teros 12 (using actual factory readings)           | 68.41 | 3.92 |
-|                        | Teros China (using arduino code esp32)             | 64.64 | 1.96 |
-|                        | Teros 12 ESP32 (using this arduino code and esp32) | 69.61 | 4.12 |
-| Rockwool Cube half way | Teros 12 (using actual factory readings)           | 49.5  | 4.18 |
-|                        | Teros China (using arduino code esp32)             | 51    | 1.14 |
-|                        | Teros 12 ESP32 (using this arduino code and esp32) | 50.59 | 2.44 |
-
 ## Web Interface
 
 A webserver has been added to the ESP32 sketch. An attempt was made to add OTA (Over-The-Air) updates, but it caused issues with MQTT, so it was omitted. You can view the live readings with a timestamp at the ESP32 device's IP address on your network:

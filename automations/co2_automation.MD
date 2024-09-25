@@ -1,68 +1,76 @@
+# Your Document Title
+
+## Section Heading
+
+Some introductory text or description about the diagram below.
+
 ```mermaid
 graph TD
-    A[Start] -->|Trigger| B{Which Trigger?}
+    Start[Start] -->|Trigger| WhichTrigger{Which Trigger?}
 
-    B -->|"CO2 Sensor State Change\nco2_sensor_state_change"| C[CO2 Control Logic]
-    B -->|"CO2 Target Input Change\nco2_target_state_change"| C
-    B -->|"CO2 Tolerance Input Change\nco2_tolerance_state_change"| C
-    B -->|"CO2 On Time Trigger\nco2_on_time_trigger"| D[Daytime CO2 Target Adjustment]
-    B -->|"CO2 Off Time Trigger\nco2_off_time_trigger"| E[Nighttime CO2 Target Adjustment]
-    B -->|"Low CO2 Alert Trigger\nlow_co2_alert_trigger"| F[Low CO2 Alert]
-    B -->|"High CO2 Alert Trigger\nhigh_co2_alert_trigger"| G[High CO2 Alert (Primary Sensor)]
-    B -->|"High CO2 Alert Trigger Secondary\nhigh_co2_alert_trigger_secondary"| H[High CO2 Alert (Secondary Sensor)]
+    WhichTrigger -->|"CO2 Sensor State Change<br>co2_sensor_state_change"| CO2ControlLogic[CO2 Control Logic]
+    WhichTrigger -->|"CO2 Target Input Change<br>co2_target_state_change"| CO2ControlLogic
+    WhichTrigger -->|"CO2 Tolerance Input Change<br>co2_tolerance_state_change"| CO2ControlLogic
+    WhichTrigger -->|"CO2 On Time Trigger<br>co2_on_time_trigger"| DaytimeAdjustment[Daytime CO2 Target Adjustment]
+    WhichTrigger -->|"CO2 Off Time Trigger<br>co2_off_time_trigger"| NighttimeAdjustment[Nighttime CO2 Target Adjustment]
+    WhichTrigger -->|"Low CO2 Alert Trigger<br>low_co2_alert_trigger"| LowCO2Alert[Low CO2 Alert]
+    WhichTrigger -->|"High CO2 Alert Trigger<br>high_co2_alert_trigger"| HighCO2AlertPrimary[High CO2 Alert (Primary Sensor)]
+    WhichTrigger -->|"High CO2 Alert Trigger Secondary<br>high_co2_alert_trigger_secondary"| HighCO2AlertSecondary[High CO2 Alert (Secondary Sensor)]
 
     %% Daytime CO2 Target Adjustment
-    D --> D1[Get Daytime Target Value]
-    D1 --> D2{Is Target Value Valid?}
-    D2 -->|Yes| D3[Set CO2 Target Input Number]
-    D2 -->|No| I[End]
+    DaytimeAdjustment --> GetDaytimeTarget[Get Daytime Target Value]
+    GetDaytimeTarget --> ValidateDaytimeTarget{Is Target Value Valid?}
+    ValidateDaytimeTarget -->|Yes| SetDaytimeTarget[Set CO2 Target Input Number]
+    ValidateDaytimeTarget -->|No| End[End]
 
     %% Nighttime CO2 Target Adjustment
-    E --> E1[Get Nighttime Target Value]
-    E1 --> E2{Is Target Value Valid?}
-    E2 -->|Yes| E3[Set CO2 Target Input Number]
-    E2 -->|No| I
+    NighttimeAdjustment --> GetNighttimeTarget[Get Nighttime Target Value]
+    GetNighttimeTarget --> ValidateNighttimeTarget{Is Target Value Valid?}
+    ValidateNighttimeTarget -->|Yes| SetNighttimeTarget[Set CO2 Target Input Number]
+    ValidateNighttimeTarget -->|No| End
 
     %% Low CO2 Alert
-    F --> F1{Is Current Time Within Alert Window?}
-    F1 -->|Yes| F2{Is CO2 Value Valid?}
-    F1 -->|No| I
-    F2 -->|Yes| F3[Send Low CO2 Notification]
-    F3 --> F4[Adjust Lights to Low Brightness]
-    F2 -->|No| I
+    LowCO2Alert --> CheckLowCO2Time{Is Current Time Within Alert Window?}
+    CheckLowCO2Time -->|Yes| ValidateLowCO2Value{Is CO2 Value Valid?}
+    CheckLowCO2Time -->|No| End
+    ValidateLowCO2Value -->|Yes| SendLowCO2Notification[Send Low CO2 Notification]
+    SendLowCO2Notification --> AdjustLightsLow[Adjust Lights to Low Brightness]
+    ValidateLowCO2Value -->|No| End
 
     %% High CO2 Alert (Primary Sensor)
-    G --> G1{Is CO2 Level Valid?}
-    G1 -->|Yes| G2[Send High CO2 Notification]
-    G2 --> G3[Turn Off CO2 Control Switch]
-    G3 --> G4[Create Persistent Notification]
-    G4 --> G5[Send TTS Message]
-    G1 -->|No| I
+    HighCO2AlertPrimary --> ValidateHighCO2Primary{Is CO2 Level Valid?}
+    ValidateHighCO2Primary -->|Yes| SendHighCO2NotificationPrimary[Send High CO2 Notification]
+    SendHighCO2NotificationPrimary --> TurnOffControlSwitchPrimary[Turn Off CO2 Control Switch]
+    TurnOffControlSwitchPrimary --> CreatePersistentNotificationPrimary[Create Persistent Notification]
+    CreatePersistentNotificationPrimary --> SendTTSPMessagePrimary[Send TTS Message]
+    ValidateHighCO2Primary -->|No| End
 
     %% High CO2 Alert (Secondary Sensor)
-    H --> H1{Is Secondary Sensor Defined?}
-    H1 -->|Yes| H2{Is CO2 Level Valid?}
-    H1 -->|No| I
-    H2 -->|Yes| H3[Send High CO2 Notification]
-    H3 --> H4[Turn Off CO2 Control Switch]
-    H4 --> H5[Create Persistent Notification]
-    H5 --> H6[Send TTS Message]
-    H2 -->|No| I
+    HighCO2AlertSecondary --> CheckSecondarySensor{Is Secondary Sensor Defined?}
+    CheckSecondarySensor -->|Yes| ValidateHighCO2Secondary{Is CO2 Level Valid?}
+    CheckSecondarySensor -->|No| End
+    ValidateHighCO2Secondary -->|Yes| SendHighCO2NotificationSecondary[Send High CO2 Notification]
+    SendHighCO2NotificationSecondary --> TurnOffControlSwitchSecondary[Turn Off CO2 Control Switch]
+    TurnOffControlSwitchSecondary --> CreatePersistentNotificationSecondary[Create Persistent Notification]
+    CreatePersistentNotificationSecondary --> SendTTSPMessageSecondary[Send TTS Message]
+    ValidateHighCO2Secondary -->|No| End
 
     %% CO2 Control Logic
-    C --> C1{Are CO2 Values Valid?}
-    C1 -->|Yes| C2{"Is CO2 Below Lower Limit\n(co2_target - co2_tolerance)?"}
-    C1 -->|No| I
-    C2 -->|Yes| C3{Is CO2 Control Switch Off?}
-    C3 -->|Yes| C4[Turn On CO2 Control Switch]
-    C3 -->|No| I
-    C2 -->|No| C5{"Is CO2 Above Upper Limit\n(co2_target + co2_tolerance)?"}
-    C5 -->|Yes| C6{Is CO2 Control Switch On?}
-    C6 -->|Yes| C7[Turn Off CO2 Control Switch]
-    C6 -->|No| I
-    C5 -->|No| I
+    CO2ControlLogic --> ValidateCO2Values{Are CO2 Values Valid?}
+    ValidateCO2Values -->|Yes| CheckCO2LowerLimit{"Is CO2 Below Lower Limit<br>(co2_target - co2_tolerance)?"}
+    ValidateCO2Values -->|No| End
+    CheckCO2LowerLimit -->|Yes| CheckControlSwitchOff{Is CO2 Control Switch Off?}
+    CheckControlSwitchOff -->|Yes| TurnOnControlSwitch[Turn On CO2 Control Switch]
+    CheckControlSwitchOff -->|No| End
+    CheckCO2LowerLimit -->|No| CheckCO2UpperLimit{"Is CO2 Above Upper Limit<br>(co2_target + co2_tolerance)?"}
+    CheckCO2UpperLimit -->|Yes| CheckControlSwitchOn{Is CO2 Control Switch On?}
+    CheckCO2UpperLimit -->|No| End
+    CheckControlSwitchOn -->|Yes| TurnOffControlSwitch[Turn Off CO2 Control Switch]
+    CheckControlSwitchOn -->|No| End
+    CheckCO2UpperLimit -->|No| End
 
-    I[End]
+    End[End]
+
 
 ```
 

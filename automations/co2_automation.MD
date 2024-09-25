@@ -1,8 +1,3 @@
-# Your Document Title
-
-## Section Heading
-
-Some introductory text or description about the diagram below.
 
 ```mermaid
 graph TD
@@ -14,8 +9,8 @@ graph TD
     WhichTrigger -->|"CO2 On Time Trigger<br>co2_on_time_trigger"| DaytimeAdjustment[Daytime CO2 Target Adjustment]
     WhichTrigger -->|"CO2 Off Time Trigger<br>co2_off_time_trigger"| NighttimeAdjustment[Nighttime CO2 Target Adjustment]
     WhichTrigger -->|"Low CO2 Alert Trigger<br>low_co2_alert_trigger"| LowCO2Alert[Low CO2 Alert]
-    WhichTrigger -->|"High CO2 Alert Trigger<br>high_co2_alert_trigger"| HighCO2AlertPrimary[High CO2 Alert (Primary Sensor)]
-    WhichTrigger -->|"High CO2 Alert Trigger Secondary<br>high_co2_alert_trigger_secondary"| HighCO2AlertSecondary[High CO2 Alert (Secondary Sensor)]
+    WhichTrigger -->|"High CO2 Alert Trigger<br>high_co2_alert_trigger"| HighCO2AlertPrimary[High CO2 Alert Primary Sensor]
+    WhichTrigger -->|"High CO2 Alert Trigger Secondary<br>high_co2_alert_trigger_secondary"| HighCO2AlertSecondary[High CO2 Alert Secondary Sensor]
 
     %% Daytime CO2 Target Adjustment
     DaytimeAdjustment --> GetDaytimeTarget[Get Daytime Target Value]
@@ -70,12 +65,7 @@ graph TD
     CheckCO2UpperLimit -->|No| End
 
     End[End]
-
-
 ```
-
-
-
 ### **Explanation of the Diagram:**
 
 - **Start:** The automation begins when any of the specified triggers occur.

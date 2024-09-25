@@ -1,68 +1,69 @@
 ```mermaid
 graph TD
     A[Start] -->|Trigger| B{Which Trigger?}
-    
-    B -->|"CO₂ Sensor State Change\nco2_sensor_state_change"| C[CO₂ Control Logic]
-    B -->|"CO₂ Target Input Change\nco2_target_state_change"| C
-    B -->|"CO₂ Tolerance Input Change\nco2_tolerance_input_change"| C
-    B -->|"CO₂ On Time Trigger\nco2_on_time_trigger"| D[Daytime CO₂ Target Adjustment]
-    B -->|"CO₂ Off Time Trigger\nco2_off_time_trigger"| E[Nighttime CO₂ Target Adjustment]
-    B -->|"Low CO₂ Alert Trigger\nlow_co2_alert_trigger"| F[Low CO₂ Alert]
-    B -->|"High CO₂ Alert Trigger\nhigh_co2_alert_trigger"| G[High CO₂ Alert (Primary Sensor)]
-    B -->|"High CO₂ Alert Trigger Secondary\nhigh_co2_alert_trigger_secondary"| H[High CO₂ Alert (Secondary Sensor)]
-    
-    %% Daytime CO₂ Target Adjustment
+
+    B -->|"CO2 Sensor State Change\nco2_sensor_state_change"| C[CO2 Control Logic]
+    B -->|"CO2 Target Input Change\nco2_target_state_change"| C
+    B -->|"CO2 Tolerance Input Change\nco2_tolerance_state_change"| C
+    B -->|"CO2 On Time Trigger\nco2_on_time_trigger"| D[Daytime CO2 Target Adjustment]
+    B -->|"CO2 Off Time Trigger\nco2_off_time_trigger"| E[Nighttime CO2 Target Adjustment]
+    B -->|"Low CO2 Alert Trigger\nlow_co2_alert_trigger"| F[Low CO2 Alert]
+    B -->|"High CO2 Alert Trigger\nhigh_co2_alert_trigger"| G[High CO2 Alert (Primary Sensor)]
+    B -->|"High CO2 Alert Trigger Secondary\nhigh_co2_alert_trigger_secondary"| H[High CO2 Alert (Secondary Sensor)]
+
+    %% Daytime CO2 Target Adjustment
     D --> D1[Get Daytime Target Value]
     D1 --> D2{Is Target Value Valid?}
-    D2 -->|Yes| D3[Set CO₂ Target Input Number]
+    D2 -->|Yes| D3[Set CO2 Target Input Number]
     D2 -->|No| I[End]
-    
-    %% Nighttime CO₂ Target Adjustment
+
+    %% Nighttime CO2 Target Adjustment
     E --> E1[Get Nighttime Target Value]
     E1 --> E2{Is Target Value Valid?}
-    E2 -->|Yes| E3[Set CO₂ Target Input Number]
+    E2 -->|Yes| E3[Set CO2 Target Input Number]
     E2 -->|No| I
-    
-    %% Low CO₂ Alert
+
+    %% Low CO2 Alert
     F --> F1{Is Current Time Within Alert Window?}
-    F1 -->|Yes| F2{Is CO₂ Value Valid?}
+    F1 -->|Yes| F2{Is CO2 Value Valid?}
     F1 -->|No| I
-    F2 -->|Yes| F3[Send Low CO₂ Notification]
+    F2 -->|Yes| F3[Send Low CO2 Notification]
     F3 --> F4[Adjust Lights to Low Brightness]
     F2 -->|No| I
-    
-    %% High CO₂ Alert (Primary Sensor)
-    G --> G1{Is CO₂ Level Valid?}
-    G1 -->|Yes| G2[Send High CO₂ Notification]
-    G2 --> G3[Turn Off CO₂ Control Switch]
+
+    %% High CO2 Alert (Primary Sensor)
+    G --> G1{Is CO2 Level Valid?}
+    G1 -->|Yes| G2[Send High CO2 Notification]
+    G2 --> G3[Turn Off CO2 Control Switch]
     G3 --> G4[Create Persistent Notification]
     G4 --> G5[Send TTS Message]
     G1 -->|No| I
-    
-    %% High CO₂ Alert (Secondary Sensor)
+
+    %% High CO2 Alert (Secondary Sensor)
     H --> H1{Is Secondary Sensor Defined?}
-    H1 -->|Yes| H2{Is CO₂ Level Valid?}
+    H1 -->|Yes| H2{Is CO2 Level Valid?}
     H1 -->|No| I
-    H2 -->|Yes| H3[Send High CO₂ Notification]
-    H3 --> H4[Turn Off CO₂ Control Switch]
+    H2 -->|Yes| H3[Send High CO2 Notification]
+    H3 --> H4[Turn Off CO2 Control Switch]
     H4 --> H5[Create Persistent Notification]
     H5 --> H6[Send TTS Message]
     H2 -->|No| I
-    
-    %% CO₂ Control Logic
-    C --> C1{Are CO₂ Values Valid?}
-    C1 -->|Yes| C2{"Is CO₂ Below Lower Limit\n(co2_target - co2_tolerance)?"}
+
+    %% CO2 Control Logic
+    C --> C1{Are CO2 Values Valid?}
+    C1 -->|Yes| C2{"Is CO2 Below Lower Limit\n(co2_target - co2_tolerance)?"}
     C1 -->|No| I
-    C2 -->|Yes| C3{Is CO₂ Control Switch Off?}
-    C3 -->|Yes| C4[Turn On CO₂ Control Switch]
+    C2 -->|Yes| C3{Is CO2 Control Switch Off?}
+    C3 -->|Yes| C4[Turn On CO2 Control Switch]
     C3 -->|No| I
-    C2 -->|No| C5{"Is CO₂ Above Upper Limit\n(co2_target + co2_tolerance)?"}
-    C5 -->|Yes| C6{Is CO₂ Control Switch On?}
-    C6 -->|Yes| C7[Turn Off CO₂ Control Switch]
+    C2 -->|No| C5{"Is CO2 Above Upper Limit\n(co2_target + co2_tolerance)?"}
+    C5 -->|Yes| C6{Is CO2 Control Switch On?}
+    C6 -->|Yes| C7[Turn Off CO2 Control Switch]
     C6 -->|No| I
     C5 -->|No| I
-    
+
     I[End]
+
 ```
 
 

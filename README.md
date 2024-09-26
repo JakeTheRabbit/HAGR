@@ -2,14 +2,6 @@
 
 Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended.
 
-## Update 04/07/24
-
-I am currently in the process of rebuilding my grow automation setup. I deleted the previous messy setup and am now integrating automations from three separate instances into one system for a commercial licensed grow. I am cherry-picking the best features from each iteration. Most of the features have not been uploaded yet.
-
-I've also made an update to my sensors. I switched from using the THC-S sensor to the Teros-12 and the BGT-SEC(Z2) Teros 12 Compatible sensor. The THC-S sensors were not working reliably for me, likely due to incorrect calibration. I relied on online calibrations without doing a manual one myself, and I had no benchmark for accuracy. Additionally, many of the sensors broke and responded erratically. When I started verifying them with a Teros-12 Solus kit, I noticed significant discrepancies, which explained many of the issues I was encountering.
-
-I found a weekly manual reset to input EC, especially for 6" rockwool Grodan cubes is prett critical, even on the THC-S I could see that any slight error and the drippers no matter how hard p1 was pushed just couldn't claw back. It was also pretty fuckin frustrating when a THC-S would just randomly stop working. I couldn’t rely on the THC-S sensors to accurately indicate when my cubes were reset, which I confirmed after verifying with the Teros Solus kit. Since then, I’ve tested two Chinese-compatible sensors, and they provide readings very close to the Teros Solus. This is encouraging and offers me much more precision (and confidence) in monitoring dryback and subtrate ec in rockwool.
-
 For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP32, visit: Teros-12 / Teros-12 Compatible SDI-12 to ESP32.
 
 ## Useful Links
@@ -22,7 +14,7 @@ For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP
 - If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
 - Teros-12 / Teros-12 Compatable SDI-12 to ESP32 https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
 
-Resources for autoamations:
+Resources for automations:
 - Grodan Grow guide: https://www.grodan101.com/siteassets/downloads/downloads-na-101/grow-guide-2023/grow-guide---cannabis-edition-2024.pdf
 - Athena Grow Guide: https://issuu.com/athenaag/docs/athena_hb_me
 - Growlink Crop Steering: https://www.growlink.ag/crop-steering
@@ -36,7 +28,8 @@ Links:
 
 The integrated features include but are not limited to:
 
-- **CO2 Control**: Setpoints for day/night using Node-Red with SCD-41 and ESPAtom.
+- **[CO2 Control](automations/co2_automation.MD):** Setpoints for day/night, high / low alerting, safety off, hysteresis, auto-dim lights on low CO2
+- [Teros-12 SDI-12 to ESP32](https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md): Connect your Teros 12 or make a cheap chinese version and connect to Home Assistant with an ESP32
 - **Thermal Camera**: Live leaf temperature readings using ESP32 and MLX90641 in Home Assistant.
 - **VPD Calculations**: Live leaf and environment calculations to maintain optimal humidity and temperature.
 - **Automatic VPD Control**: Adjusts leaf VPD to maintain steady conditions despite temperature and humidity fluctuations.

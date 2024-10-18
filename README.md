@@ -28,7 +28,7 @@ Links:
 
 The integrated features include but are not limited to:
 
-- **[CO2 Control](automations/co2_automation.MD):** Setpoints for day/night, high / low alerting, safety off, hysteresis, auto-dim lights on low CO2
+- **[CO2 Control](blueprints/co2_control_and_alerts.yaml):** Setpoints for day/night, high / low alerting, safety off, hysteresis, auto-dim lights on low CO2
 - [Teros-12 SDI-12 to ESP32](https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md): Connect your Teros 12 or make a cheap chinese version and connect to Home Assistant with an ESP32
 - **Thermal Camera**: Live leaf temperature readings using ESP32 and MLX90641 in Home Assistant.
 - **VPD Calculations**: Live leaf and environment calculations to maintain optimal humidity and temperature.

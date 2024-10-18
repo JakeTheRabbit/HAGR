@@ -48,11 +48,10 @@ Below is a comprehensive table outlining recommended environmental settings for 
 The following diagram shows how PPFD, VPD, CO₂, airflow, temperature, and irrigation EC interact to influence plant processes and yield.
 Here are some flow charts they all kind of say the same thing with different takes on it. 
 
-![2024-10-11_13_55_14-online_flowchart_&_diagrams_editor_-_mermaid_live_editor_and_60_more_pages_-_per.png](/air-flow/2024-10-11_13_55_14-online_flowchart_&_diagrams_editor_-_mermaid_live_editor_and_60_more_pages_-_per.png)
+![image](https://github.com/user-attachments/assets/8d7f44b5-9554-40dc-9c22-6814fd24a8df)
+![image](https://github.com/user-attachments/assets/2b5f4d4d-ca09-4b04-b1da-d6ad754f41e0)
+![image](https://github.com/user-attachments/assets/fd49fb1c-abef-4211-bc02-3962cc1a33b6)
 
-![2024-10-11_13_56_55-librechat.png](/air-flow/2024-10-11_13_56_55-librechat.png)
-
-![2024-10-11_14_01_02-librechat.png](/air-flow/2024-10-11_14_01_02-librechat.png)
 
 
 ## Best Practices for Airflow Management

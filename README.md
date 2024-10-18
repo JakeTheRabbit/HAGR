@@ -8,6 +8,7 @@ My Grow SOPs:
 
 - Cloning/Propagation: [Cloning Guide](growingSOPs/cloning.md)
 - Environment cheat sheet: [Environmental Parameters](growingSOPs/Environment%20reference%20guide.md)
+- Air flow for indoor grow environments: [Air flow requirements](growingSOPs/Indoor%20air%20flow.md)
 
 ## Useful Links
 

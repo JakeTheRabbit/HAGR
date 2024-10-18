@@ -6,8 +6,8 @@ For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP
 
 My Grow SOPs: 
 
-Cloning/Propagation: [Cloning Guide](growingSOPs/cloning.md)
-Environment cheat sheet: [Environmental Parameters](growingSOPs/Environment%20reference%20guide.md)
+- Cloning/Propagation: [Cloning Guide](growingSOPs/cloning.md)
+- Environment cheat sheet: [Environmental Parameters](growingSOPs/Environment%20reference%20guide.md)
 
 ## Useful Links
 

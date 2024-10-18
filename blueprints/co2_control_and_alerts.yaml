@@ -1,0 +1,680 @@
+blueprint:
+  name: CO₂ Control and Alerts
+  description: >
+    This automation manages CO₂ levels in a grow environment by adjusting targets based on time, controlling switches,
+    sending alerts, and adjusting lights. It includes customizable toggles for each feature,
+    allowing you to enable or disable functionalities as needed.
+
+    **How it works:**
+
+    1. CO2 Level Control:
+       - The automation monitors the CO2 level using a primary sensor (and optionally a secondary sensor).
+       - It adjusts the CO2 target based on day/night cycles using the specified on/off times.
+       - The CO2 control switch is turned on when the level falls below the target minus the tolerance,
+         and turned off when it exceeds the target plus the tolerance.
+
+    2. Time-based Target Adjustment:
+       - The CO2 target is automatically adjusted between day and night targets at specified times.
+       - This allows for different CO2 levels during light and dark periods of your grow cycle.
+
+    3. Low CO2 Alerts:
+       - If enabled, the system will send alerts when CO2 levels drop below a specified threshold.
+       - Alerts are only sent during a defined time window and have a cooldown period to prevent spam.
+       - Optionally, lights can be dimmed to a specified brightness when CO2 is low to reduce plant stress.
+
+    4. High CO2 Alerts:
+       - The system monitors for dangerously high CO2 levels using both primary and secondary sensors.
+       - Alerts are sent if levels exceed specified thresholds for a set duration.
+       - The CO2 control switch is turned off in case of high CO2 alerts as a safety measure.
+
+    5. Notifications:
+       - Alerts can be sent via multiple notification services.
+       - Text-to-Speech (TTS) notifications can be enabled for audible alerts.
+       - Persistent notifications are created in Home Assistant for high CO2 alerts.
+
+    **Helpers Explanation:**
+
+    - input_number helpers:
+      - co2_target_input: Stores the current CO2 target.
+      - co2_tolerance_input: Defines the acceptable range around the target.
+      - co2_day_target_input & co2_night_target_input: Store day and night CO2 targets.
+
+    - input_datetime helpers:
+      - co2_on_time & co2_off_time: Define when to switch between day and night targets.
+      - low_co2_time_start & low_co2_time_end: Set the time window for low CO2 alerts.
+      - last_low_co2_alert & last_high_co2_alert: Track when the last alerts were sent for cooldown purposes.
+
+    These helpers allow for easy adjustment of settings through the Home Assistant UI,
+    making the system flexible and user-friendly.
+
+    **Logic Flow:**
+
+    1. The automation triggers on CO2 sensor changes, target/tolerance changes, and regular time intervals.
+    2. It adjusts the CO2 target based on the current time and day/night settings.
+    3. Low and high CO2 conditions are checked, triggering alerts if conditions are met and cooldowns have passed.
+    4. The CO2 control switch is managed based on the current CO2 level, target, and tolerance.
+
+    This comprehensive system provides precise control over CO2 levels while ensuring
+    safety through alerts and automated responses to extreme conditions.
+
+    **Helpers to Add**
+    Please add the following helpers to your `configuration.yaml` or via the Home Assistant UI:
+    ```yaml
+    input_number:
+      co2_target_input:
+        name: CO₂ Target Input
+        min: 0
+        max: 5000
+        step: 1
+        unit_of_measurement: 'ppm'
+        mode: box
+      co2_tolerance_input:
+        name: CO₂ Tolerance Input
+        min: 0
+        max: 1000
+        step: 1
+        unit_of_measurement: 'ppm'
+        mode: box
+      co2_day_target_input:
+        name: Daytime CO₂ Target Input
+        min: 0
+        max: 5000
+        step: 1
+        unit_of_measurement: 'ppm'
+        mode: box
+      co2_night_target_input:
+        name: Nighttime CO₂ Target Input
+        min: 0
+        max: 5000
+        step: 1
+        unit_of_measurement: 'ppm'
+        mode: box
+    input_datetime:
+      co2_on_time:
+        name: CO₂ Target On Time
+        has_time: true
+        has_date: false
+      co2_off_time:
+        name: CO₂ Target Off Time
+        has_time: true
+        has_date: false
+      low_co2_time_start:
+        name: Low CO₂ Alert Start Time
+        has_time: true
+        has_date: false
+      low_co2_time_end:
+        name: Low CO₂ Alert End Time
+        has_time: true
+        has_date: false
+      last_low_co2_alert:
+        name: Last Low CO₂ Alert Time
+        has_time: true
+        has_date: true
+      last_high_co2_alert:
+        name: Last High CO₂ Alert Time
+        has_time: true
+        has_date: true
+    ```
+  domain: automation
+  input:
+    # CO₂ Sensors
+    co2_sensor:
+      name: CO₂ Sensor
+      description: The primary CO₂ sensor to monitor.
+      selector:
+        entity:
+          domain: sensor
+    co2_sensor_secondary:
+      name: Secondary CO₂ Sensor (Optional)
+      description: A secondary sensor for high CO₂ alerts. This could be a backup in the grow area or outside in the lung room.
+      default: ''
+      selector:
+        entity:
+          domain: sensor
+
+    # CO₂ Control Settings
+    co2_control_switch:
+      name: CO₂ Control Switch
+      description: The switch to control based on CO₂ levels.
+      selector:
+        entity:
+          domain: switch
+    co2_target_input:
+      name: CO₂ Target Input Number
+      description: The input_number for the current CO₂ target.
+      selector:
+        entity:
+          domain: input_number
+    co2_tolerance_input:
+      name: CO₂ Tolerance Input Number
+      description: The input_number for CO₂ tolerance.
+      selector:
+        entity:
+          domain: input_number
+    co2_day_target_input:
+      name: Daytime CO₂ Target Input Number
+      description: The input_number for the daytime CO₂ target.
+      selector:
+        entity:
+          domain: input_number
+    co2_night_target_input:
+      name: Nighttime CO₂ Target Input Number
+      description: The input_number for the nighttime CO₂ target. This cannot be 0, pick a number like 100ppm to ensure the CO2 stays off. 
+      selector:
+        entity:
+          domain: input_number
+    co2_on_time:
+      name: CO₂ Target On Time
+      description: When to set the daytime CO₂ target.
+      selector:
+        entity:
+          domain: input_datetime
+    co2_off_time:
+      name: CO₂ Target Off Time
+      description: When to set the nighttime CO₂ target.
+      selector:
+        entity:
+          domain: input_datetime
+
+    # Low CO₂ Alert Settings
+    enable_low_co2_alerts:
+      name: Enable Low CO₂ Alerts
+      description: Toggle low CO₂ alerts.
+      default: true
+      selector:
+        boolean:
+    low_co2_threshold:
+      name: Low CO₂ Threshold
+      description: CO₂ level below which to trigger an alert.
+      default: 600
+      selector:
+        number:
+          min: 0
+          max: 2000
+          unit_of_measurement: ppm
+    low_co2_duration:
+      name: Low CO₂ Duration (Minutes)
+      description: Duration below threshold before alerting.
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: minutes
+    low_co2_time_start:
+      name: Low CO₂ Alert Start Time
+      description: Start time for low CO₂ alerts.
+      selector:
+        entity:
+          domain: input_datetime
+    low_co2_time_end:
+      name: Low CO₂ Alert End Time
+      description: End time for low CO₂ alerts.
+      selector:
+        entity:
+          domain: input_datetime
+    low_co2_alert_cooldown:
+      name: Low CO₂ Alert Cooldown (Seconds)
+      description: Minimum time between alerts.
+      default: 300
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+    # Adjust Lights on Low CO₂
+    adjust_lights_on_low_co2:
+      name: Adjust Lights on Low CO₂
+      description: Toggle adjusting lights when CO₂ is low.
+      default: true
+      selector:
+        boolean:
+    low_co2_lights:
+      name: Lights to Adjust
+      description: Lights to dim when CO₂ is low.
+      selector:
+        target:
+          entity:
+            domain: light
+    low_co2_brightness_pct:
+      name: Low CO₂ Brightness Percentage
+      description: Brightness level for lights. The lights will be changed to this brightness when the CO2 low trigger is activated protecting your plants.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+
+    # High CO₂ Alert Settings
+    enable_high_co2_alerts:
+      name: Enable High CO₂ Alerts
+      description: Toggle high CO₂ alerts.
+      default: true
+      selector:
+        boolean:
+    high_co2_threshold:
+      name: High CO₂ Threshold
+      description: CO₂ level above which to trigger an alert.
+      default: 1800
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: ppm
+    high_co2_duration:
+      name: High CO₂ Duration (Seconds)
+      description: Duration above threshold before alerting.
+      default: 11
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: seconds
+    high_co2_threshold_secondary:
+      name: High CO₂ Threshold (Secondary Sensor)
+      description: Threshold for secondary sensor.
+      default: 2500
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: ppm
+    high_co2_duration_secondary:
+      name: High CO₂ Duration (Secondary Sensor) (Seconds)
+      description: Duration above threshold for secondary sensor.
+      default: 11
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: seconds
+    high_co2_alert_cooldown:
+      name: High CO₂ Alert Cooldown (Seconds)
+      description: Minimum time between alerts.
+      default: 300
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+    # Notification Settings
+    enable_notifications:
+      name: Enable Notifications
+      description: Toggle notifications.
+      default: true
+      selector:
+        boolean:
+    notification_service:
+      name: Notification Service
+      description: Services to send alerts to.
+      selector:
+        entity:
+          domain: notify
+          multiple: true
+    notification_title_low:
+      name: Low CO₂ Notification Title
+      description: Title for low CO₂ notifications.
+      default: "CO₂ LOW"
+      selector:
+        text:
+    notification_message_low:
+      name: Low CO₂ Notification Message
+      description: Message for low CO₂ notifications.
+      default: "CO₂ is low at {{ states(co2_sensor) }} ppm. Lights dimmed to {{ low_co2_brightness_pct }}%."
+      selector:
+        text:
+    notification_title_high:
+      name: High CO₂ Notification Title
+      description: Title for high CO₂ notifications.
+      default: "High CO₂ Alert"
+      selector:
+        text:
+    notification_message_high:
+      name: High CO₂ Notification Message
+      description: Message for high CO₂ notifications.
+      default: "High CO₂ levels detected at {{ states(co2_sensor) }} ppm."
+      selector:
+        text:
+
+    # TTS Notification Settings
+    enable_tts_notifications:
+      name: Enable TTS Notifications
+      description: Toggle TTS notifications.
+      default: true
+      selector:
+        boolean:
+    tts_service_name:
+      name: TTS Service Name
+      description: Enter the TTS service to use (e.g., tts.google_say).
+      default: "tts.google_say"
+      selector:
+        text:
+    tts_media_player:
+      name: TTS Media Player
+      description: The media player to play TTS alerts.
+      selector:
+        entity:
+          domain: media_player
+    tts_message_high:
+      name: High CO₂ TTS Message
+      description: Message for TTS when high CO₂ detected.
+      default: "Attention: CO₂ levels are high at {{ states(co2_sensor) }} ppm."
+      selector:
+        text:
+
+    # Last Alert Datetime Entities
+    last_low_co2_alert:
+      name: Last Low CO₂ Alert Datetime
+      description: The input_datetime entity to store the last low CO₂ alert time.
+      default: input_datetime.last_low_co2_alert
+      selector:
+        entity:
+          domain: input_datetime
+    last_high_co2_alert:
+      name: Last High CO₂ Alert Datetime
+      description: The input_datetime entity to store the last high CO₂ alert time.
+      default: input_datetime.last_high_co2_alert
+      selector:
+        entity:
+          domain: input_datetime
+
+trigger:
+  # Monitor CO₂ levels and settings
+  - platform: state
+    entity_id: !input co2_sensor
+    id: co2_sensor_state_change
+  - platform: state
+    entity_id: !input co2_target_input
+    id: co2_target_state_change
+  - platform: state
+    entity_id: !input co2_tolerance_input
+    id: co2_tolerance_state_change
+  - platform: time_pattern
+    minutes: "/1"
+    seconds: "0"
+    id: time_trigger
+  # Low CO₂ Alert Trigger
+  - platform: numeric_state
+    entity_id: !input co2_sensor
+    below: !input low_co2_threshold
+    for:
+      minutes: !input low_co2_duration
+    id: low_co2_alert_trigger
+  # High CO₂ Alert Triggers
+  - platform: numeric_state
+    entity_id: !input co2_sensor
+    above: !input high_co2_threshold
+    for:
+      seconds: !input high_co2_duration
+    id: high_co2_alert_trigger
+  - platform: numeric_state
+    entity_id: !input co2_sensor_secondary
+    above: !input high_co2_threshold_secondary
+    for:
+      seconds: !input high_co2_duration_secondary
+    id: high_co2_alert_trigger_secondary
+
+variables:
+  # Sensors and Inputs
+  co2_sensor: !input co2_sensor
+  co2_sensor_secondary: !input co2_sensor_secondary
+  co2_target_input: !input co2_target_input
+  co2_tolerance_input: !input co2_tolerance_input
+  co2_day_target_input: !input co2_day_target_input
+  co2_night_target_input: !input co2_night_target_input
+  co2_on_time: !input co2_on_time
+  co2_off_time: !input co2_off_time
+
+  # Low CO₂ Alert Variables
+  enable_low_co2_alerts: !input enable_low_co2_alerts
+  low_co2_threshold: !input low_co2_threshold
+  low_co2_time_start: !input low_co2_time_start
+  low_co2_time_end: !input low_co2_time_end
+  low_co2_alert_cooldown: !input low_co2_alert_cooldown
+  last_low_co2_alert_entity: !input last_low_co2_alert
+  last_low_co2_alert: "{{ states(last_low_co2_alert_entity) }}"
+  adjust_lights_on_low_co2: !input adjust_lights_on_low_co2
+  low_co2_brightness_pct: !input low_co2_brightness_pct
+
+  # High CO₂ Alert Variables
+  enable_high_co2_alerts: !input enable_high_co2_alerts
+  high_co2_threshold: !input high_co2_threshold
+  high_co2_threshold_secondary: !input high_co2_threshold_secondary
+  high_co2_alert_cooldown: !input high_co2_alert_cooldown
+  last_high_co2_alert_entity: !input last_high_co2_alert
+  last_high_co2_alert: "{{ states(last_high_co2_alert_entity) }}"
+
+  # Notification Variables
+  enable_notifications: !input enable_notifications
+  enable_tts_notifications: !input enable_tts_notifications
+  tts_service_name: !input tts_service_name
+
+action:
+  - choose:
+      # Time-based CO₂ Target Adjustment
+      - conditions:
+          - condition: trigger
+            id: time_trigger
+        sequence:
+          - service: input_number.set_value
+            target:
+              entity_id: !input co2_target_input
+            data:
+              value: >
+                {% set co2_on_time_str = states(co2_on_time) | default('00:00:00') %}
+                {% set co2_off_time_str = states(co2_off_time) | default('00:00:00') %}
+                {% set co2_on_time = strptime(co2_on_time_str, '%H:%M:%S').time() %}
+                {% set co2_off_time = strptime(co2_off_time_str, '%H:%M:%S').time() %}
+                {% set now_time = now().time() %}
+                {% if co2_on_time <= co2_off_time %}
+                  {% set is_daytime = co2_on_time <= now_time < co2_off_time %}
+                {% else %}
+                  {% set is_daytime = now_time >= co2_on_time or now_time < co2_off_time %}
+                {% endif %}
+                {{ states(co2_day_target_input) if is_daytime else states(co2_night_target_input) }}
+      # Low CO₂ Alert
+      - conditions:
+          - condition: trigger
+            id: low_co2_alert_trigger
+          - condition: template
+            value_template: "{{ enable_low_co2_alerts }}"
+          - condition: template
+            value_template: >
+              {% set start_time_str = states(low_co2_time_start) | default('00:00:00') %}
+              {% set end_time_str = states(low_co2_time_end) | default('00:00:00') %}
+              {% set start_time = strptime(start_time_str, '%H:%M:%S').time() %}
+              {% set end_time = strptime(end_time_str, '%H:%M:%S').time() %}
+              {% set now_time = now().time() %}
+              {{ start_time <= now_time < end_time if start_time <= end_time else now_time >= start_time or now_time < end_time }}
+          - condition: numeric_state
+            entity_id: !input co2_sensor
+            below: !input low_co2_threshold
+          - condition: template
+            value_template: >
+              {% set last_alert = last_low_co2_alert %}
+              {% if last_alert == '' or last_alert == None %}
+                true
+              {% else %}
+                {% set last_alert_time = as_timestamp(last_alert) %}
+                {{ (as_timestamp(now()) - last_alert_time) > (low_co2_alert_cooldown | int) }}
+              {% endif %}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_notifications }}"
+                sequence:
+                  - repeat:
+                      for_each: !input notification_service
+                      sequence:
+                        - service: "{{ repeat.item }}"
+                          data:
+                            title: !input notification_title_low
+                            message: !input notification_message_low
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ adjust_lights_on_low_co2 }}"
+                sequence:
+                  - service: light.turn_on
+                    target: !input low_co2_lights
+                    data:
+                      brightness_pct: !input low_co2_brightness_pct
+          - service: input_datetime.set_datetime
+            target:
+              entity_id: !input last_low_co2_alert
+            data:
+              timestamp: "{{ as_timestamp(now()) }}"
+
+      # High CO₂ Alert (Primary Sensor)
+      - conditions:
+          - condition: trigger
+            id: high_co2_alert_trigger
+          - condition: template
+            value_template: "{{ enable_high_co2_alerts }}"
+          - condition: numeric_state
+            entity_id: !input co2_sensor
+            above: !input high_co2_threshold
+          - condition: template
+            value_template: >
+              {% set last_alert = last_high_co2_alert %}
+              {% if last_alert == '' or last_alert == None %}
+                true
+              {% else %}
+                {% set last_alert_time = as_timestamp(last_alert) %}
+                {{ (as_timestamp(now()) - last_alert_time) > (high_co2_alert_cooldown | int) }}
+              {% endif %}
+        sequence:
+          - variables:
+              co2_level: "{{ states(co2_sensor) | float(0) }}"
+              co2_sensor_name: "{{ state_attr(co2_sensor, 'friendly_name') or co2_sensor }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_notifications }}"
+                sequence:
+                  - repeat:
+                      for_each: !input notification_service
+                      sequence:
+                        - service: "{{ repeat.item }}"
+                          data:
+                            title: !input notification_title_high
+                            message: >
+                              {{ co2_sensor_name }} CO₂ level: {{ co2_level }} ppm.
+          - service: switch.turn_off
+            target:
+              entity_id: !input co2_control_switch
+          - service: persistent_notification.create
+            data:
+              title: !input notification_title_high
+              message: "{{ co2_sensor_name }} CO₂ level: {{ co2_level }} ppm."
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_tts_notifications }}"
+                sequence:
+                  - service: "{{ tts_service_name }}"
+                    data:
+                      entity_id: !input tts_media_player
+                      message: !input tts_message_high
+          - service: input_datetime.set_datetime
+            target:
+              entity_id: !input last_high_co2_alert
+            data:
+              timestamp: "{{ as_timestamp(now()) }}"
+
+      # High CO₂ Alert (Secondary Sensor)
+      - conditions:
+          - condition: trigger
+            id: high_co2_alert_trigger_secondary
+          - condition: template
+            value_template: "{{ enable_high_co2_alerts }}"
+          - condition: template
+            value_template: "{{ states(co2_sensor_secondary) not in ('', 'unknown', 'unavailable') }}"
+          - condition: numeric_state
+            entity_id: !input co2_sensor_secondary
+            above: !input high_co2_threshold_secondary
+          - condition: template
+            value_template: >
+              {% set last_alert = last_high_co2_alert %}
+              {% if last_alert == '' or last_alert == None %}
+                true
+              {% else %}
+                {% set last_alert_time = as_timestamp(last_alert) %}
+                {{ (as_timestamp(now()) - last_alert_time) > (high_co2_alert_cooldown | int) }}
+              {% endif %}
+        sequence:
+          - variables:
+              co2_level_secondary: "{{ states(co2_sensor_secondary) | float(0) }}"
+              co2_sensor_secondary_name: "{{ state_attr(co2_sensor_secondary, 'friendly_name') or co2_sensor_secondary }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_notifications }}"
+                sequence:
+                  - repeat:
+                      for_each: !input notification_service
+                      sequence:
+                        - service: "{{ repeat.item }}"
+                          data:
+                            title: !input notification_title_high
+                            message: >
+                              {{ co2_sensor_secondary_name }} CO₂ level: {{ co2_level_secondary }} ppm.
+          - service: switch.turn_off
+            target:
+              entity_id: !input co2_control_switch
+          - service: persistent_notification.create
+            data:
+              title: !input notification_title_high
+              message: "{{ co2_sensor_secondary_name }} CO₂ level: {{ co2_level_secondary }} ppm."
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ enable_tts_notifications }}"
+                sequence:
+                  - service: "{{ tts_service_name }}"
+                    data:
+                      entity_id: !input tts_media_player
+                      message: !input tts_message_high
+          - service: input_datetime.set_datetime
+            target:
+              entity_id: !input last_high_co2_alert
+            data:
+              timestamp: "{{ as_timestamp(now()) }}"
+    default: []
+
+  # CO₂ Control Logic
+  - variables:
+      co2_value: "{{ states(co2_sensor) | float(0) }}"
+      co2_target: "{{ states(co2_target_input) | float(0) }}"
+      co2_tolerance: "{{ states(co2_tolerance_input) | float(0) }}"
+  - condition: template
+    value_template: >
+      {{ co2_value > 0 and co2_target > 0 and co2_tolerance > 0 }}
+  - variables:
+      co2_lower_limit: "{{ co2_target - co2_tolerance }}"
+      co2_upper_limit: "{{ co2_target + co2_tolerance }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ co2_value < co2_lower_limit }}"
+          - condition: state
+            entity_id: !input co2_control_switch
+            state: 'off'
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input co2_control_switch
+      - conditions:
+          - condition: template
+            value_template: "{{ co2_value > co2_upper_limit }}"
+          - condition: state
+            entity_id: !input co2_control_switch
+            state: 'on'
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input co2_control_switch

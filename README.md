@@ -4,6 +4,11 @@ Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses 
 
 For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP32, visit: Teros-12 / Teros-12 Compatible SDI-12 to ESP32.
 
+My Grow SOPs: 
+
+Cloning/Propagation: [Cloning Guide](growingSOPs/cloning.md)
+Environment cheat sheet: [Environmental Parameters](growingSOPs/Environment%20reference%20guide.md)
+
 ## Useful Links
 
 - ESPHome sensors from M5stack.com used for indoor gardenining with configuration files: [Chill-Division/M5Stack-ESPHome](https://github.com/Chill-Division/M5Stack-ESPHome)

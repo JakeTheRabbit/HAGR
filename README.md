@@ -25,9 +25,18 @@ Resources for automations:
 - Athena Grow Guide: https://issuu.com/athenaag/docs/athena_hb_me
 - Growlink Crop Steering: https://www.growlink.ag/crop-steering
 
+Tutorials:
+- How to splice wires for sensors the right way: https://www.youtube.com/watch?v=aTpYi5nYjO0
+
+General Info:
+- Airflow simulation in a cannabis grow room: https://youtu.be/TOYe9ZFVRy8?si=7zaU3VCEeO92pmpk&t=11
+- Grow room HVAC guide (commcercial offering documentation but still useful): https://midwestmachinery.net/wp-content/uploads/2020/01/Ultimate-Grow-Room-HVAC-Guide.pdf
+- HydroBuddy v1.100 : The First Free Open Source Hydroponic Nutrient Calculator Program Available Online: https://scienceinhydroponics.com/2016/03/the-first-free-hydroponic-nutrient-calculator-program-o.html
+
 Links:
 - Open THC https://github.com/openthc
 - Farm OS: https://github.com/farmOS/farmOS
+- Open Foam: https://www.openfoam.com/
 
 
 ## Features

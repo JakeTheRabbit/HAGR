@@ -24,37 +24,50 @@
 
 ---
 
-``` mermaid
+```mermaid
 gantt
-    title Daily Maintenance Routine (Days 1-14)
+    title Comprehensive Cannabis Cloning Process
     dateFormat  YYYY-MM-DD
     axisFormat  %d
+    %% Removed 'excludes weekends' to display all days sequentially
 
     %% Define the start date as Day 1 (2024-01-01)
-    section Humidity Management
-    Keep dome closed               :hm1, 2024-01-01, 3d
-    'Burp' dome daily               :hm2, 2024-01-04, 6d
+    section Preparation
+    Water Mother Plant                  :prep1, 2024-01-01, 1d
+    Organize Supplies                   :prep2, 2024-01-01, 0.25d
+    Sterilize Equipment                 :prep3, after prep2, 0.25d
+    Set Up Environment                  :prep4, after prep3, 0.25d
+    Prepare Nutrient Solution           :prep5, after prep4, 0.25d
+    Pre-Soak Growing Medium             :prep6, after prep5, 0.25d
 
-    section Temp & Humidity Monitoring
-    VPDome management               :thm1, 2024-01-01, 14d
-    Check & adjust twice daily      :thm2, 2024-01-01, 14d
+    section Cutting and Planting
+    Select and Take Cuttings             :plant1, 2024-01-02, 1d
+    Manicure and Plant Cuttings          :plant2, after plant1, 1d
 
-    section Irrigation Management
-    Weigh trays & irrigate as needed :im1, 2024-01-01, 14d
+    section Maintenance and Monitoring
+    %% Humidity Management
+    Keep Dome Closed (Day 2-4)          :maint1, 2024-01-03, 3d
+    Burp Dome Daily (Day 5-9)           :maint2, 2024-01-06, 5d
+    Increase Ventilation (Day 10-14)     :maint3, 2024-01-11, 5d
 
-    section Feeding Schedule
-    Feed clones (Day 5)             :fs1, 2024-01-05, 1d
-    Feed clones (Day 7)             :fs2, 2024-01-07, 1d
-    Feed clones (Day 9)             :fs3, 2024-01-09, 1d
-    Feed clones (Day 11)            :fs4, 2024-01-11, 1d
-    Feed clones (Day 13)            :fs5, 2024-01-13, 1d
+    %% Temperature and Humidity Monitoring
+    Temp & Humidity Monitoring           :maint4, 2024-01-03, 12d
 
-    section Hardening Off
-    Increase ventilation & reduce humidity :ho1, 2024-01-10, 5d
+    %% Irrigation Management
+    Weigh Trays Daily                    :maint5, 2024-01-03, 12d
+    Irrigate When Needed                 :maint6, 2024-01-03, 12d
 
-    section Final Assessment
-    Evaluate roots & prepare for transplant :fa1, 2024-01-14, 1d
+    %% Feeding Schedule
+    Provide Nutrient Solution (Day 5)    :maint7, 2024-01-05, 1d
+    Provide Nutrient Solution (Day 7)    :maint8, 2024-01-07, 1d
+    Provide Nutrient Solution (Day 9)    :maint9, 2024-01-09, 1d
+    Provide Nutrient Solution (Day 11)   :maint10, 2024-01-11, 1d
 
+    %% Hardening Off
+    Reduce Humidity Incrementally (Day 10-14) :maint11, 2024-01-11, 5d
+
+    %% Monitoring Root Development
+    Check for Root Emergence (Day 7-14)      :maint12, 2024-01-07, 8d
 ```
 
 ## 1. Introduction

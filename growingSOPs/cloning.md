@@ -24,6 +24,39 @@
 
 ---
 
+``` mermaid
+gantt
+    title Daily Maintenance Routine (Days 1-14)
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d
+
+    %% Define the start date as Day 1 (2024-01-01)
+    section Humidity Management
+    Keep dome closed               :hm1, 2024-01-01, 3d
+    'Burp' dome daily               :hm2, 2024-01-04, 6d
+
+    section Temp & Humidity Monitoring
+    VPDome management               :thm1, 2024-01-01, 14d
+    Check & adjust twice daily      :thm2, 2024-01-01, 14d
+
+    section Irrigation Management
+    Weigh trays & irrigate as needed :im1, 2024-01-01, 14d
+
+    section Feeding Schedule
+    Feed clones (Day 5)             :fs1, 2024-01-05, 1d
+    Feed clones (Day 7)             :fs2, 2024-01-07, 1d
+    Feed clones (Day 9)             :fs3, 2024-01-09, 1d
+    Feed clones (Day 11)            :fs4, 2024-01-11, 1d
+    Feed clones (Day 13)            :fs5, 2024-01-13, 1d
+
+    section Hardening Off
+    Increase ventilation & reduce humidity :ho1, 2024-01-10, 5d
+
+    section Final Assessment
+    Evaluate roots & prepare for transplant :fa1, 2024-01-14, 1d
+
+```
+
 ## 1. Introduction
 
 Cloning is a fundamental technique in cannabis cultivation, enabling growers to replicate their best-performing plants. This guide provides a step-by-step process for successful cloning, referencing Athena Pro Line nutrients with an Electrical Conductivity (EC) baseline of 3.0 millisiemens per centimeter (mS/cm). Adjust EC levels accordingly if using other nutrient brands (e.g., Canna Baseline is around 2.0 mS/cm; 50% strength would be 1.0 mS/cm).

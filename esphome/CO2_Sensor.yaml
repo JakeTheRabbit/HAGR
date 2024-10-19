@@ -1,0 +1,181 @@
+# ESPHome configuration for a roaming CO2 sensor
+# This sensor measures CO2, temperature, humidity, and calculates VPD
+# It also includes adjustable CO2 thresholds and various calculated metrics
+# Uses an M5Stack Atom Lite S3 and an SCD041 Sensor connected with a grove cable *plug and play*
+
+esphome:
+  name: roaming-co2-sensor
+  friendly_name: roaming-co2-sensor
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "YOUR_ENCRYPTION_KEY_HERE"
+
+ota:
+ - platform: esphome
+  password: "YOUR_OTA_PASSWORD_HERE"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Roaming-Co2-Sensor"
+    password: "YOUR_FALLBACK_PASSWORD_HERE"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+i2c:
+  sda: 2
+  scl: 1
+  scan: true
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Global variables for CO2 thresholds
+globals:
+  - id: co2_high_threshold
+    type: float
+    initial_value: '1500'
+  - id: co2_low_threshold
+    type: float
+    initial_value: '800'
+
+number:
+  - platform: template
+    name: "CO2 High Threshold"
+    id: co2_high_input
+    optimistic: true
+    min_value: 1000
+    max_value: 2000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    update_interval: 15s
+    on_value:
+      then:
+        - globals.set:
+            id: co2_high_threshold
+            value: !lambda 'return x;'
+
+  - platform: template
+    name: "CO2 Low Threshold"
+    id: co2_low_input
+    optimistic: true
+    min_value: 400
+    max_value: 1000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    update_interval: 15s
+    on_value:
+      then:
+        - globals.set:
+            id: co2_low_threshold
+            value: !lambda 'return x;'
+
+sensor:
+  - platform: scd4x
+    co2:
+      name: "CO2"
+      id: co2_sensor
+    temperature:
+      name: "Temperature"
+      id: temperature_sensor
+    humidity:
+      name: "Humidity"
+      id: humidity_sensor
+    update_interval: 5s
+
+  - platform: uptime
+    name: Uptime
+
+  - platform: template
+    name: "VPD"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: |-
+      float temp = id(temperature_sensor).state;
+      float humidity = id(humidity_sensor).state;
+      float svp = 0.61078 * exp((17.27 * temp) / (temp + 237.3));
+      float vpd = svp * (1 - (humidity / 100));
+      return vpd;
+
+  - platform: template
+    name: "Daily Max CO2"
+    update_interval: 60s
+    lambda: |-
+      static float daily_max = 0;
+      if (id(co2_sensor).state > daily_max) {
+        daily_max = id(co2_sensor).state;
+      }
+      if (id(homeassistant_time).now().hour == 0 && id(homeassistant_time).now().minute == 0) {
+        daily_max = 0;
+      }
+      return daily_max;
+
+  - platform: template
+    name: "Daily Min Temperature"
+    update_interval: 60s
+    lambda: |-
+      static float daily_min = 100;
+      if (id(temperature_sensor).state < daily_min) {
+        daily_min = id(temperature_sensor).state;
+      }
+      if (id(homeassistant_time).now().hour == 0 && id(homeassistant_time).now().minute == 0) {
+        daily_min = 100;
+      }
+      return daily_min;
+
+  - platform: template
+    name: "CO2 Moving Average"
+    unit_of_measurement: "ppm"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      static float values[5] = {0};
+      static int index = 0;
+      values[index] = id(co2_sensor).state;
+      index = (index + 1) % 5;
+      float sum = 0;
+      for (int i = 0; i < 5; i++) {
+        sum += values[i];
+      }
+      return sum / 5;
+
+binary_sensor:
+  - platform: template
+    name: "CO2 High Alert"
+    lambda: |-
+      return id(co2_sensor).state > id(co2_high_threshold);
+  - platform: template
+    name: "CO2 Low Alert"
+    lambda: |-
+      return id(co2_sensor).state < id(co2_low_threshold);
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP
+    mac_address:
+      name: MAC

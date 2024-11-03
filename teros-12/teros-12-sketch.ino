@@ -1,42 +1,36 @@
-#include <WiFi.h>
-#include <PubSubClient.h>
+#include <Arduino.h>
 #include <esp32-sdi12.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include "Unit_PoESP32.h"
 
 // Configuration Section
-const char* ssid = "Wifi AP";                      // WiFi SSID
-const char* password = "Wifi AP Password";                      // WiFi Password
-const char* mqtt_server = "192.168.50.196";             // MQTT Broker IP
-const int mqtt_port = 1883;                             // MQTT Broker Port
-const char* mqtt_user = "mqtt";                         // MQTT Username
-const char* mqtt_password = "ttqm";                     // MQTT Password
-const char* device_name = "teros-usa-1-5";              // Unique device name for MQTT client ID
-const char* mqtt_topic = "sdi12/teros-usa-1-5";         // Unique MQTT Topic for publishing data
-const uint8_t DEVICE_ADDRESS = 0;                       // SDI-12 Address of the device, ensure unique if multiple devices on same line
-#define SDI12_DATA_PIN 26                               // GPIO pin for SDI-12 data line
+const char* mqtt_server = "192.168.73.250";       
+const char* mqtt_port = "1883";                   
+const char* mqtt_user = "mqtt";                   
+const char* mqtt_password = "ttqm";               
+const char* device_name = "tc-veg-2";             
+const char* mqtt_topic = "sdi12/tc-veg-2";        
+const uint8_t DEVICE_ADDRESS = 0;                 
+#define SDI12_DATA_PIN 16                         
 
 // Rockwool specific constants
-const float ROCKWOOL_TOTAL_POROSITY = 0.95;             // Total porosity of the rockwool, adjust based on your specific type
-const float OFFSET_PERMITTIVITY = 4.1;                  // Offset permittivity for rockwool, might need adjustment for accuracy
+const float ROCKWOOL_TOTAL_POROSITY = 0.95;       
+const float OFFSET_PERMITTIVITY = 4.1;            
 
 // Buffer size for SDI-12 sensor measurements
-#define VALUES_BUFFER_SIZE 10                           // Size of the buffer to hold values from a measurement
+#define VALUES_BUFFER_SIZE 10                     
 
 // Maximum number of log entries to keep
 const int MAX_LOG_ENTRIES = 20;
 
 // MQTT reconnection interval (in milliseconds)
-const unsigned long mqttReconnectInterval = 5000;       // 5 seconds between connection attempts
+const unsigned long mqttReconnectInterval = 5000; 
 
-char mqtt_client_id[50];
-
+Unit_PoESP32 eth;
 ESP32_SDI12 sdi12(SDI12_DATA_PIN);
-float values[VALUES_BUFFER_SIZE]; // Buffer to hold values from a measurement
-
-WiFiClient espClient;
-PubSubClient client(espClient);
+float values[VALUES_BUFFER_SIZE];
 WebServer server(80);
 
 // Global variables to store sensor readings
@@ -47,56 +41,45 @@ String dataLog = "";
 
 unsigned long lastReconnectAttempt = 0;
 
-void setup_wifi() {
-    delay(10);
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-}
-
-void reconnect() {
-    if (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        snprintf(mqtt_client_id, sizeof(mqtt_client_id), "ESP32Client-%s", device_name);
-        if (client.connect(mqtt_client_id, mqtt_user, mqtt_password)) {
-            Serial.println("connected");
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-        }
-    }
-}
-
 void setup() {
     Serial.begin(115200);
     sdi12.begin();
-    setup_wifi();
-
-    // Set unique MQTT client ID
-    snprintf(mqtt_client_id, sizeof(mqtt_client_id), "ESP32Client-%s", device_name);
     
-    client.setServer(mqtt_server, mqtt_port);
+    // Initialize PoESP32
+    eth.Init(&Serial2, 9600, 16, 17);
+    delay(1000);
+    
+    Serial.println("Waiting for device connection...");
+    while (!eth.checkDeviceConnect()) {
+        delay(100);
+        Serial.print(".");
+    }
+    Serial.println("\nDevice connected");
+
+    Serial.println("Waiting for ethernet connection...");
+    while (!eth.checkETHConnect()) {
+        delay(100);
+        Serial.print(".");
+    }
+    Serial.println("\nEthernet connected");
+
+    // Create unique client ID
+    String clientId = String("ESP32Client-") + String(device_name);
+    
+    Serial.println("Connecting to MQTT...");
+    while (!eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
+                                mqtt_user, mqtt_password)) {
+        delay(1000);
+        Serial.print(".");
+    }
+    Serial.println("\nMQTT connected");
     
     server.on("/", HTTP_GET, handleRoot);
     server.on("/data", HTTP_GET, handleData);
     server.begin();
     Serial.println("HTTP server started");
     
-    // Initialize time
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-    
     delay(1000);
 }
 
@@ -123,9 +106,9 @@ float calculateSaturationExtractEC(float poreWaterEC, float vwc) {
 
 void handleRoot() {
     String html = "<html><head>";
-    html += "<meta http-equiv='refresh' content='5'/>";  // Refresh every 5 seconds
-    html += "<title>TEROS 12 Sensor Data Log</title></head>";
-    html += "<body><h1>TEROS 12 Sensor Readings Log</h1>";
+    html += "<meta http-equiv='refresh' content='5'/>";
+    html += "<title>TC-Veg-2 Sensor Data Log</title></head>";
+    html += "<body><h1>TC-Veg-2 Sensor Readings Log</h1>";
     html += "<pre id='log'>" + dataLog + "</pre>";
     html += "<script>";
     html += "setInterval(function() {";
@@ -134,7 +117,7 @@ void handleRoot() {
     html += "    .then(data => {";
     html += "      document.getElementById('log').innerHTML = data;";
     html += "    });";
-    html += "}, 5000);";  // Update every 5 seconds
+    html += "}, 5000);";
     html += "</script></body></html>";
     server.send(200, "text/html", html);
 }
@@ -170,17 +153,18 @@ void addToDataLog(String newEntry) {
 void loop() {
     server.handleClient();
     
-    if (!client.connected()) {
-        unsigned long now = millis();
-        if (now - lastReconnectAttempt > mqttReconnectInterval) {
-            lastReconnectAttempt = now;
-            reconnect();
+    // Check MQTT connection every 30 seconds
+    static unsigned long lastMQTTCheck = 0;
+    unsigned long currentMillis = millis();
+    
+    if (currentMillis - lastMQTTCheck >= 30000) {
+        lastMQTTCheck = currentMillis;
+        if (!eth.publicMQTTMsg(mqtt_topic + String("/heartbeat"), "alive", "0")) {
+            Serial.println("Lost MQTT connection, restarting...");
+            ESP.restart();
         }
-    } else {
-        client.loop();
     }
 
-    unsigned long currentMillis = millis();
     static unsigned long lastReadingTime = 0;
     if (currentMillis - lastReadingTime >= 15000) {
         lastReadingTime = currentMillis;
@@ -193,7 +177,7 @@ void loop() {
             raw_vwc = values[0];
             vwc = calculateVWC(raw_vwc);
             temperature = values[1];
-            bulk_ec = values[2] / 1000.0; // Convert µS/cm to dS/m
+            bulk_ec = values[2] / 1000.0;
 
             float bulk_permittivity = calculateBulkPermittivity(raw_vwc);
             temp_compensated_ec = compensateECForTemperature(bulk_ec, temperature);
@@ -207,7 +191,6 @@ void loop() {
                 saturation_extract_ec = 0;
             }
 
-            // Create log entry with timestamp
             String logEntry = getTimestamp() + ": " +
                               "Raw VWC: " + String(raw_vwc, 2) + ", " +
                               "VWC: " + String(vwc * 100, 2) + "%, " +
@@ -218,10 +201,8 @@ void loop() {
                               "Sat. Ext. EC: " + String(saturation_extract_ec, 3) + " dS/m";
             addToDataLog(logEntry);
 
-            // Print values for debugging
             Serial.println(logEntry);
 
-            // Create JSON payload for MQTT
             String payload = "{\"raw_vwc\": " + String(raw_vwc) + 
                              ", \"vwc\": " + String(vwc * 100) + 
                              ", \"temperature\": " + String(temperature) + 
@@ -229,9 +210,11 @@ void loop() {
                              ", \"temp_comp_ec\": " + String(temp_compensated_ec) + 
                              ", \"pore_water_ec\": " + String(pore_water_ec) + 
                              ", \"saturation_extract_ec\": " + String(saturation_extract_ec) + "}";
+            
             Serial.print("Publishing payload: ");
-            Serial.println(payload); // Debug MQTT payload
-            if (client.publish(mqtt_topic, payload.c_str())) {
+            Serial.println(payload);
+            
+            if (eth.publicMQTTMsg(mqtt_topic, payload.c_str(), "1")) {
                 Serial.println("Publish succeeded");
             } else {
                 Serial.println("Publish failed");

@@ -11,7 +11,7 @@ const char* mqtt_port = "1883";                   // MQTT Broker Port as string
 const char* mqtt_user = "mqtt";                   // MQTT Username
 const char* mqtt_password = "ttqm";               // MQTT Password
 const char* device_name = "tc-veg-2";             // Base device name for MQTT client ID
-const char* mqtt_topic = "homeassistant/sdi12/tc-veg-2"; // Unique MQTT Topic for publishing data
+const char* mqtt_topic = "tpac/tc-veg-2";         // Changed MQTT topic for better visibility
 const uint8_t DEVICE_ADDRESS = 0;                 // SDI-12 Address of the device
 #define SDI12_DATA_PIN 16                         // Changed to pin 16 for PoESP32
 
@@ -44,34 +44,92 @@ typedef enum { kConfig = 0, kStart, kConnecting, kConnected } DTUState_t;
 DTUState_t State = kStart;
 
 void setup() {
+    disableCore0WDT();
     Serial.begin(115200);
+    while(!Serial) {
+        delay(100);
+    }
+    Serial.println("Starting up...");
     sdi12.begin();
     
+    // Reset sequence
+    pinMode(5, OUTPUT);
+    digitalWrite(5, LOW);
+    delay(100);
+    digitalWrite(5, HIGH);
+    delay(500);
+    
     // Initialize PoESP32
-    eth.Init(&Serial2, 9600, 32, 26);
+    Serial.println("Initializing PoESP32...");
+    eth.Init(&Serial2, 9600, 16, 17);
+    delay(1000);
     
     Serial.println("Waiting for device connection...");
+    int retries = 0;
     while (!eth.checkDeviceConnect()) {
-        delay(100);
+        delay(1000);
+        Serial.print(".");
+        retries++;
+        if (retries > 10) {
+            Serial.println("\nRetrying device initialization...");
+            eth.Init(&Serial2, 9600, 16, 17);
+            retries = 0;
+        }
     }
-    Serial.println("Device connected");
+    Serial.println("\nDevice connected");
 
     Serial.println("Waiting for ethernet connection...");
+    retries = 0;
     while (!eth.checkETHConnect()) {
-        delay(100);
+        delay(1000);
+        Serial.print(".");
+        retries++;
+        if (retries > 10) {
+            Serial.println("\nRetrying ethernet connection...");
+            retries = 0;
+        }
     }
-    Serial.println("Ethernet connected");
+    Serial.println("\nEthernet connected");
 
     // Create unique client ID using device name
     String clientId = String("ESP32Client-") + String(device_name) + String("-") + 
                      String((uint32_t)ESP.getEfuseMac(), HEX);
-
+    Serial.print("MQTT Client ID: ");
+    Serial.println(clientId);
+    
     Serial.println("Connecting to MQTT...");
-    while (!eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
+    Serial.print("Server: ");
+    Serial.println(mqtt_server);
+    Serial.print("Port: ");
+    Serial.println(mqtt_port);
+    
+    retries = 0;
+    bool mqtt_connected = false;
+    while (!mqtt_connected && retries < 5) {
+        Serial.printf("MQTT connection attempt %d...\n", retries + 1);
+        if (eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
                                 mqtt_user, mqtt_password)) {
-        delay(100);
+            mqtt_connected = true;
+            Serial.println("MQTT connected successfully!");
+            
+            // Try to subscribe to a topic to verify connection
+            if (eth.subscribeMQTTMsg("tpac/tc-veg-2/command", "1")) {
+                Serial.println("Successfully subscribed to command topic");
+            } else {
+                Serial.println("Failed to subscribe to command topic");
+            }
+            
+        } else {
+            Serial.println("Failed to connect to MQTT");
+            delay(5000);
+            retries++;
+        }
     }
-    Serial.println("MQTT connected");
+
+    if (!mqtt_connected) {
+        Serial.println("Failed to connect to MQTT after multiple attempts");
+        ESP.restart();
+    }
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/data", HTTP_GET, handleData);
@@ -87,7 +145,6 @@ void setup() {
     State = kConnected;
 }
 
-// Keep your existing calculation functions unchanged
 float calculateVWC(float raw) {
     return (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
 }
@@ -109,12 +166,11 @@ float calculateSaturationExtractEC(float poreWaterEC, float vwc) {
     return (poreWaterEC * vwc) / ROCKWOOL_TOTAL_POROSITY;
 }
 
-// Keep your existing web handler functions unchanged
 void handleRoot() {
     String html = "<html><head>";
     html += "<meta http-equiv='refresh' content='5'/>";
-    html += "<title>TC-Veg-2 Sensor Data Log</title></head>";  // Changed to tc-veg-2
-    html += "<body><h1>TC-Veg-2 Sensor Readings Log</h1>";    // Changed to tc-veg-2
+    html += "<title>TC-Veg-2 Sensor Data Log</title></head>";
+    html += "<body><h1>TC-Veg-2 Sensor Readings Log</h1>";
     html += "<pre id='log'>" + String(dataLog) + "</pre>";
     html += "<script>";
     html += "setInterval(function() {";
@@ -162,8 +218,27 @@ void addToDataLog(const char* newEntry) {
 void loop() {
     server.handleClient();
 
+    static unsigned long lastMQTTCheck = 0;
     static unsigned long lastReadingTime = 0;
     unsigned long currentMillis = millis();
+    
+    // Check MQTT connection every 30 seconds
+    if (currentMillis - lastMQTTCheck >= 30000) {
+        lastMQTTCheck = currentMillis;
+        
+        // Send a simple heartbeat message to verify connection
+        if (!eth.publicMQTTMsg("tpac/tc-veg-2/heartbeat", "alive", "0")) {
+            Serial.println("Heartbeat failed, attempting to reconnect MQTT...");
+            String clientId = String("ESP32Client-") + String(device_name) + String("-") + 
+                            String((uint32_t)ESP.getEfuseMac(), HEX);
+            if (eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
+                                   mqtt_user, mqtt_password)) {
+                Serial.println("MQTT reconnected successfully");
+            } else {
+                Serial.println("MQTT reconnection failed");
+            }
+        }
+    }
     
     if (currentMillis - lastReadingTime >= 15000) { // 15 seconds
         lastReadingTime = currentMillis;
@@ -213,10 +288,35 @@ void loop() {
             serializeJson(doc, payload, sizeof(payload));
 
             // Publish to MQTT using PoESP32
-            if (!eth.publicMQTTMsg(mqtt_topic, payload, "1")) {
-                Serial.println("Failed to publish MQTT message");
-            } else {
-                Serial.println("MQTT message published successfully");
+            Serial.println("Attempting to publish MQTT message...");
+            Serial.print("Topic: ");
+            Serial.println(mqtt_topic);
+            Serial.print("Payload: ");
+            Serial.println(payload);
+            
+            // Try to publish multiple times if needed
+            bool published = false;
+            for(int i = 0; i < 3 && !published; i++) {
+                if (eth.publicMQTTMsg(mqtt_topic, payload, "1")) {
+                    Serial.println("MQTT message published successfully");
+                    published = true;
+                } else {
+                    Serial.printf("Failed to publish MQTT message, attempt %d\n", i + 1);
+                    delay(1000);
+                }
+            }
+            
+            if (!published) {
+                Serial.println("Failed to publish after all attempts, reconnecting MQTT...");
+                // Try to reconnect MQTT
+                String clientId = String("ESP32Client-") + String(device_name) + String("-") + 
+                                String((uint32_t)ESP.getEfuseMac(), HEX);
+                if (eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
+                                       mqtt_user, mqtt_password)) {
+                    Serial.println("MQTT reconnected successfully");
+                } else {
+                    Serial.println("MQTT reconnection failed");
+                }
             }
         }
     }

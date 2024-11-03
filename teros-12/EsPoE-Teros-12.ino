@@ -11,7 +11,7 @@ const char* mqtt_port = "1883";                   // MQTT Broker Port as string
 const char* mqtt_user = "mqtt";                   // MQTT Username
 const char* mqtt_password = "ttqm";               // MQTT Password
 const char* device_name = "tc-veg-2";             // Base device name for MQTT client ID
-const char* mqtt_topic = "tpac/tc-veg-2";         // Changed MQTT topic for better visibility
+const char* mqtt_topic = "homeassistant/sdi12/tc-veg-2";  // Change back to match existing structure         // Changed MQTT topic for better visibility
 const uint8_t DEVICE_ADDRESS = 0;                 // SDI-12 Address of the device
 #define SDI12_DATA_PIN 16                         // Changed to pin 16 for PoESP32
 
@@ -226,18 +226,16 @@ void loop() {
     if (currentMillis - lastMQTTCheck >= 30000) {
         lastMQTTCheck = currentMillis;
         
-        // Send a simple heartbeat message to verify connection
-        if (!eth.publicMQTTMsg("tpac/tc-veg-2/heartbeat", "alive", "0")) {
-            Serial.println("Heartbeat failed, attempting to reconnect MQTT...");
-            String clientId = String("ESP32Client-") + String(device_name) + String("-") + 
-                            String((uint32_t)ESP.getEfuseMac(), HEX);
-            if (eth.createMQTTClient(mqtt_server, mqtt_port, clientId.c_str(),
-                                   mqtt_user, mqtt_password)) {
-                Serial.println("MQTT reconnected successfully");
-            } else {
-                Serial.println("MQTT reconnection failed");
-            }
+        // Send a simple test message every 10 seconds
+    static unsigned long lastTestMessage = 0;
+    if (currentMillis - lastTestMessage >= 10000) {
+        lastTestMessage = currentMillis;
+        if (!eth.publicMQTTMsg("homeassistant/sdi12/tc-veg-2/test", "test_message", "1")) {
+            Serial.println("Test message failed to send");
+        } else {
+            Serial.println("Test message sent successfully");
         }
+    }
     }
     
     if (currentMillis - lastReadingTime >= 15000) { // 15 seconds

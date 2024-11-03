@@ -10,10 +10,10 @@ const char* mqtt_server = "192.168.73.250";       // MQTT Broker IP
 const char* mqtt_port = "1883";                   // MQTT Broker Port as string
 const char* mqtt_user = "mqtt";                   // MQTT Username
 const char* mqtt_password = "ttqm";               // MQTT Password
-const char* device_name = "tc-veg-1";             // Base device name for MQTT client ID
-const char* mqtt_topic = "homeassistant/sdi12/tc-veg-1"; // Unique MQTT Topic for publishing data
+const char* device_name = "tc-veg-2";             // Base device name for MQTT client ID
+const char* mqtt_topic = "homeassistant/sdi12/tc-veg-2"; // Unique MQTT Topic for publishing data
 const uint8_t DEVICE_ADDRESS = 0;                 // SDI-12 Address of the device
-#define SDI12_DATA_PIN 26                         // GPIO pin for SDI-12 data line
+#define SDI12_DATA_PIN 16                         // Changed to pin 16 for PoESP32
 
 // Rockwool specific constants
 const float ROCKWOOL_TOTAL_POROSITY = 0.95;       // Total porosity of the rockwool
@@ -113,8 +113,8 @@ float calculateSaturationExtractEC(float poreWaterEC, float vwc) {
 void handleRoot() {
     String html = "<html><head>";
     html += "<meta http-equiv='refresh' content='5'/>";
-    html += "<title>TC-Veg-1 Sensor Data Log</title></head>";
-    html += "<body><h1>TC-Veg-1 Sensor Readings Log</h1>";
+    html += "<title>TC-Veg-2 Sensor Data Log</title></head>";  // Changed to tc-veg-2
+    html += "<body><h1>TC-Veg-2 Sensor Readings Log</h1>";    // Changed to tc-veg-2
     html += "<pre id='log'>" + String(dataLog) + "</pre>";
     html += "<script>";
     html += "setInterval(function() {";

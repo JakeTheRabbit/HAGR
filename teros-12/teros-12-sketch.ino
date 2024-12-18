@@ -6,12 +6,12 @@
 #include <time.h>
 
 // Configuration
-const char* ssid = "";                      
-const char* password = "";                      
+const char* ssid = "Legacy";                      
+const char* password = "0211879062";                      
 const char* mqtt_server = "192.168.73.250";             
 const int mqtt_port = 1883;                             
-const char* mqtt_user = "";                         
-const char* mqtt_password = "";                     
+const char* mqtt_user = "mqtt";                         
+const char* mqtt_password = "ttqm";                     
 const char* device_name = "F1-Zone-1";              
 const char* MQTT_TOPIC_BASE = "homeassistant/sensor/sdi12";
 const uint8_t DEVICE_ADDRESS = 0;                       
@@ -54,32 +54,19 @@ struct SensorReadings {
 } readings;
 
 float calculateVWC(float raw) {
-    Serial.printf("Calculating VWC from raw value: %.2f\n", raw);
-    float vwc = (0.0003879 * raw - 0.6956);
-    vwc = vwc * vwc;
-    if (vwc < 0) vwc = 0;
-    if (vwc > 1) vwc = 1;
-    Serial.printf("Calculated VWC: %.2f%%\n", vwc * 100);
-    return vwc;
+    return (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
 }
 
 float calculateBulkPermittivity(float raw) {
-    Serial.printf("Calculating permittivity from raw: %.2f\n", raw);
-    float permittivity = pow(0.0003879 * raw + 0.6956, 2);
-    Serial.printf("Calculated permittivity: %.2f\n", permittivity);
-    return permittivity;
+    return pow(2.887e-9 * pow(raw, 3) - 2.080e-5 * pow(raw, 2) + 5.276e-2 * raw - 43.39, 2);
 }
 
 float calculatePoreWaterEC(float bulkEC, float soilTemp, float bulkPermittivity) {
-    Serial.printf("Calculating pore water EC (bulkEC: %.3f, temp: %.2f)\n", bulkEC, soilTemp);
     float waterPermittivity = 80.3 - 0.37 * (soilTemp - 20);
-    float poreWaterEC = (waterPermittivity * bulkEC) / (bulkPermittivity - OFFSET_PERMITTIVITY);
-    Serial.printf("Calculated pore water EC: %.3f\n", poreWaterEC);
-    return poreWaterEC;
+    return (waterPermittivity * bulkEC) / (bulkPermittivity - OFFSET_PERMITTIVITY);
 }
 
 float compensateECForTemperature(float ec, float temperature) {
-    Serial.printf("Temperature compensating EC: %.3f at %.2f°C\n", ec, temperature);
     return ec / (1 + 0.02 * (temperature - 25));
 }
 
@@ -109,7 +96,7 @@ String getTimestamp() {
 }
 
 void addToDataLog(String newEntry) {
-    Serial.println("Adding to log: " + newEntry);  // Debug print
+    Serial.println("Adding to log: " + newEntry);
     dataLog = newEntry + "\n" + dataLog;
     int newlineCount = 0;
     for (int i = 0; i < dataLog.length(); i++) {
@@ -148,20 +135,6 @@ void setup_wifi() {
         Serial.println(WiFi.RSSI());
     } else {
         Serial.println("\nWiFi connection failed! Will retry in loop...");
-    }
-}
-
-void reconnectMQTT() {
-    if (!client.connected()) {
-        Serial.print("Attempting MQTT connection... ");
-        if (client.connect(mqtt_client_id, mqtt_user, mqtt_password, availabilityTopic.c_str(), 1, true, "offline")) {
-            Serial.println("connected");
-            client.publish(availabilityTopic.c_str(), "online", true);
-            publishDiscoveryConfig();
-        } else {
-            Serial.print("failed, rc=");
-            Serial.println(client.state());
-        }
     }
 }
 
@@ -210,12 +183,29 @@ void publishDiscoveryConfig() {
         serializeJson(doc, buffer);
         Serial.println("Publishing config for " + String(sensor.type));
         client.publish(discoveryTopic.c_str(), buffer, true);
+        delay(100); // Small delay between discovery messages
+    }
+}
+
+void reconnectMQTT() {
+    if (!client.connected()) {
+        Serial.print("Attempting MQTT connection... ");
+        if (client.connect(mqtt_client_id, mqtt_user, mqtt_password, availabilityTopic.c_str(), 1, true, "offline")) {
+            Serial.println("connected");
+            delay(1000); // Add delay before publishing
+            client.publish(availabilityTopic.c_str(), "online", true);
+            Serial.println("Publishing discovery configs...");
+            publishDiscoveryConfig();
+        } else {
+            Serial.print("failed, rc=");
+            Serial.println(client.state());
+        }
     }
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(2000);  // Give serial time to start
+    delay(2000);
     
     Serial.println("\n\n=== TEROS-12 Sensor Starting ===");
     Serial.println("Initializing SDI-12...");
@@ -254,11 +244,10 @@ void setup() {
 void loop() {
     static unsigned long lastMsg = 0;
     
-    // Check WiFi connection
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("WiFi disconnected. Reconnecting...");
         setup_wifi();
-        return;  // Skip this loop iteration
+        return;
     }
     
     server.handleClient();

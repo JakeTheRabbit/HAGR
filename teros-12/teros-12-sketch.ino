@@ -6,12 +6,12 @@
 #include <time.h>
 
 // Configuration
-const char* ssid = "Legacy";                      
-const char* password = "0211879062";                      
-const char* mqtt_server = "192.168.73.250";             
+const char* ssid = "";                      
+const char* password = "";                      
+const char* mqtt_server = "";             
 const int mqtt_port = 1883;                             
-const char* mqtt_user = "mqtt";                         
-const char* mqtt_password = "ttqm";                     
+const char* mqtt_user = "";                         
+const char* mqtt_password = "";                     
 const char* device_name = "F1-Zone-1";              
 const char* MQTT_TOPIC_BASE = "homeassistant/sensor/sdi12";
 const uint8_t DEVICE_ADDRESS = 0;                       

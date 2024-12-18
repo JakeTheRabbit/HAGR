@@ -1,53 +1,48 @@
-/*
-  TEROS-12 Sensor Monitor with Home Assistant Integration
-  For ESP32 with SDI-12 sensor
-*/
-
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <esp32-sdi12.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
-#include <ArduinoOTA.h>
 #include <time.h>
 
-// WiFi and MQTT Settings
-const char* WIFI_SSID = "Wifi SSID";
-const char* WIFI_PASSWORD = "Wifi PW";
-const char* MQTT_SERVER = "192.168.1.XX;
-const int MQTT_PORT = 1883;
-const char* MQTT_USER = "mqtt";
-const char* MQTT_PASSWORD = "ttqm";
-const char* DEVICE_NAME = "Zone 1-1";
+// Configuration
+const char* ssid = "";                      
+const char* password = "";                      
+const char* mqtt_server = "192.168.73.250";             
+const int mqtt_port = 1883;                             
+const char* mqtt_user = "";                         
+const char* mqtt_password = "";                     
+const char* device_name = "F1-Zone-1";              
 const char* MQTT_TOPIC_BASE = "homeassistant/sensor/sdi12";
+const uint8_t DEVICE_ADDRESS = 0;                       
+#define SDI12_DATA_PIN 26
 
-// Device Information
-const char* MANUFACTURER = "China No.1";
-const char* MODEL = "Teros";
+const char* MANUFACTURER = "METER Group";
+const char* MODEL = "TEROS-12";
 const char* SW_VERSION = "1.0.0";
-const uint8_t SDI12_ADDRESS = 0;
-const int SDI12_DATA_PIN = 26;
-
-// Constants
-const float ROCKWOOL_TOTAL_POROSITY = 0.95;
-const float OFFSET_PERMITTIVITY = 4.1;
+const float ROCKWOOL_TOTAL_POROSITY = 0.95;             
+const float OFFSET_PERMITTIVITY = 4.1;                  
+#define VALUES_BUFFER_SIZE 10                           
 const int MAX_LOG_ENTRIES = 20;
-const unsigned long READING_INTERVAL = 15000;  // 15 seconds
-const unsigned long AVAILABILITY_INTERVAL = 60000;  // 1 minute
+const unsigned long mqttReconnectInterval = 5000;       
+const unsigned long READING_INTERVAL = 15000;           
+const unsigned long AVAILABILITY_INTERVAL = 60000;      
 
-// MQTT Topics
 String stateTopic;
 String availabilityTopic;
 String commandTopic;
 String errorTopic;
 
-// Global objects
+char mqtt_client_id[50];
+float values[VALUES_BUFFER_SIZE];
+String dataLog = "";
+unsigned long lastReconnectAttempt = 0;
+
 ESP32_SDI12 sdi12(SDI12_DATA_PIN);
 WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+PubSubClient client(espClient);
 WebServer server(80);
 
-// Sensor readings structure
 struct SensorReadings {
     float raw_vwc;
     float vwc;
@@ -58,28 +53,33 @@ struct SensorReadings {
     float saturation_extract_ec;
 } readings;
 
-// Global variables
-float values[10];  // Buffer for SDI-12 readings
-unsigned long lastReconnectAttempt = 0;
-unsigned long mqttReconnectInterval = 5000;
-String dataLog;
-char mqtt_client_id[50];
-
-// Calculation functions
 float calculateVWC(float raw) {
-    return (6.771e-10 * pow(raw, 3) - 5.105e-6 * pow(raw, 2) + 1.302e-2 * raw - 10.848);
+    Serial.printf("Calculating VWC from raw value: %.2f\n", raw);
+    float vwc = (0.0003879 * raw - 0.6956);
+    vwc = vwc * vwc;
+    if (vwc < 0) vwc = 0;
+    if (vwc > 1) vwc = 1;
+    Serial.printf("Calculated VWC: %.2f%%\n", vwc * 100);
+    return vwc;
 }
 
 float calculateBulkPermittivity(float raw) {
-    return pow(2.887e-9 * pow(raw, 3) - 2.080e-5 * pow(raw, 2) + 5.276e-2 * raw - 43.39, 2);
+    Serial.printf("Calculating permittivity from raw: %.2f\n", raw);
+    float permittivity = pow(0.0003879 * raw + 0.6956, 2);
+    Serial.printf("Calculated permittivity: %.2f\n", permittivity);
+    return permittivity;
 }
 
 float calculatePoreWaterEC(float bulkEC, float soilTemp, float bulkPermittivity) {
+    Serial.printf("Calculating pore water EC (bulkEC: %.3f, temp: %.2f)\n", bulkEC, soilTemp);
     float waterPermittivity = 80.3 - 0.37 * (soilTemp - 20);
-    return (waterPermittivity * bulkEC) / (bulkPermittivity - OFFSET_PERMITTIVITY);
+    float poreWaterEC = (waterPermittivity * bulkEC) / (bulkPermittivity - OFFSET_PERMITTIVITY);
+    Serial.printf("Calculated pore water EC: %.3f\n", poreWaterEC);
+    return poreWaterEC;
 }
 
 float compensateECForTemperature(float ec, float temperature) {
+    Serial.printf("Temperature compensating EC: %.3f at %.2f°C\n", ec, temperature);
     return ec / (1 + 0.02 * (temperature - 25));
 }
 
@@ -87,9 +87,20 @@ float calculateSaturationExtractEC(float poreWaterEC, float vwc) {
     return (poreWaterEC * vwc) / ROCKWOOL_TOTAL_POROSITY;
 }
 
+void handleRoot() {
+    String html = "<html><head><meta http-equiv='refresh' content='5'/><title>TEROS 12 Sensor Data Log</title></head>";
+    html += "<body><h1>TEROS 12 Sensor Readings Log</h1><pre id='log'>" + dataLog + "</pre>";
+    html += "<script>setInterval(function(){fetch('/data').then(response => response.text()).then(data => {document.getElementById('log').innerHTML = data;});}, 5000);</script></body></html>";
+    server.send(200, "text/html", html);
+}
+
+void handleData() {
+    server.send(200, "text/plain", dataLog);
+}
+
 String getTimestamp() {
     struct tm timeinfo;
-    if(!getLocalTime(&timeinfo)) {
+    if(!getLocalTime(&timeinfo)){
         return "Time not set";
     }
     char timeStringBuff[50];
@@ -97,8 +108,9 @@ String getTimestamp() {
     return String(timeStringBuff);
 }
 
-void addToDataLog(const String& entry) {
-    dataLog = entry + "\n" + dataLog;
+void addToDataLog(String newEntry) {
+    Serial.println("Adding to log: " + newEntry);  // Debug print
+    dataLog = newEntry + "\n" + dataLog;
     int newlineCount = 0;
     for (int i = 0; i < dataLog.length(); i++) {
         if (dataLog[i] == '\n') {
@@ -111,85 +123,50 @@ void addToDataLog(const String& entry) {
     }
 }
 
-void handleSensorReadings() {
-    Serial.println("\nTaking sensor readings...");
+void setup_wifi() {
+    Serial.println("\nStarting WiFi connection...");
+    Serial.print("Connecting to: ");
+    Serial.println(ssid);
     
-    // First check if sensor is responding
-    if (sdi12.ackActive(SDI12_ADDRESS) != ESP32_SDI12::SDI12_OK) {
-        Serial.println("Error: Sensor not responding");
-        mqttClient.publish(errorTopic.c_str(), "Sensor not responding", true);
-        return;
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect();
+    delay(100);
+    WiFi.begin(ssid, password);
+    
+    int attempt = 0;
+    while (WiFi.status() != WL_CONNECTED && attempt < 30) {
+        delay(1000);
+        Serial.print(".");
+        attempt++;
     }
-
-    // Take measurement using the library's measure function
-    ESP32_SDI12::Status res = sdi12.measure(SDI12_ADDRESS, values, 10);
     
-    if (res != ESP32_SDI12::SDI12_OK) {
-        Serial.printf("Error taking measurement: %d\n", res);
-        mqttClient.publish(errorTopic.c_str(), "Measurement failed", true);
-        return;
-    }
-
-    // Process readings (TEROS-12 returns VWC, temp, and EC in that order)
-    readings.raw_vwc = values[0];
-    readings.temperature = values[1];
-    readings.bulk_ec = values[2] / 1000.0;  // Convert µS/cm to dS/m
-    
-    Serial.println("Raw readings:");
-    Serial.printf("Raw VWC: %.2f\n", readings.raw_vwc);
-    Serial.printf("Temperature: %.2f°C\n", readings.temperature);
-    Serial.printf("Bulk EC: %.3f dS/m\n", readings.bulk_ec);
-    
-    if (!isnan(readings.raw_vwc) && !isnan(readings.temperature) && !isnan(readings.bulk_ec)) {
-        // Calculate derived values
-        readings.vwc = calculateVWC(readings.raw_vwc);
-        float bulk_permittivity = calculateBulkPermittivity(readings.raw_vwc);
-        readings.temp_compensated_ec = compensateECForTemperature(readings.bulk_ec, readings.temperature);
-        
-        if (readings.vwc >= 0.10) {
-            readings.pore_water_ec = calculatePoreWaterEC(readings.temp_compensated_ec, 
-                                                        readings.temperature, 
-                                                        bulk_permittivity);
-            readings.saturation_extract_ec = calculateSaturationExtractEC(readings.pore_water_ec, 
-                                                                        readings.vwc);
-        } else {
-            readings.pore_water_ec = 0;
-            readings.saturation_extract_ec = 0;
-            Serial.println("VWC too low for accurate EC calculations");
-        }
-        
-        // Publish to MQTT
-        DynamicJsonDocument doc(512);
-        char buffer[512];
-        
-        doc["raw_vwc"] = readings.raw_vwc;
-        doc["vwc"] = readings.vwc * 100;  // Convert to percentage
-        doc["temperature"] = readings.temperature;
-        doc["bulk_ec"] = readings.bulk_ec;
-        doc["temp_comp_ec"] = readings.temp_compensated_ec;
-        doc["pore_water_ec"] = readings.pore_water_ec;
-        doc["saturation_extract_ec"] = readings.saturation_extract_ec;
-        
-        size_t n = serializeJson(doc, buffer);
-        
-        Serial.println("Publishing to MQTT:");
-        Serial.println("Topic: " + stateTopic);
-        Serial.println("Payload: " + String(buffer));
-        
-        if(mqttClient.publish(stateTopic.c_str(), buffer, true)) {
-            Serial.println("MQTT publish successful");
-        } else {
-            Serial.println("MQTT publish failed");
-        }
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\nWiFi connected successfully");
+        Serial.print("IP address: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("Signal Strength (RSSI): ");
+        Serial.println(WiFi.RSSI());
     } else {
-        Serial.println("Invalid readings detected");
-        mqttClient.publish(errorTopic.c_str(), "Invalid sensor readings", true);
+        Serial.println("\nWiFi connection failed! Will retry in loop...");
     }
 }
 
-void publishHomeAssistantConfig() {
-    Serial.println("\nPublishing Home Assistant MQTT Discovery config...");
-    
+void reconnectMQTT() {
+    if (!client.connected()) {
+        Serial.print("Attempting MQTT connection... ");
+        if (client.connect(mqtt_client_id, mqtt_user, mqtt_password, availabilityTopic.c_str(), 1, true, "offline")) {
+            Serial.println("connected");
+            client.publish(availabilityTopic.c_str(), "online", true);
+            publishDiscoveryConfig();
+        } else {
+            Serial.print("failed, rc=");
+            Serial.println(client.state());
+        }
+    }
+}
+
+void publishDiscoveryConfig() {
+    Serial.println("Publishing discovery config...");
     struct SensorConfig {
         const char* type;
         const char* name;
@@ -204,138 +181,151 @@ void publishHomeAssistantConfig() {
         {"bulk_ec", "Bulk EC", "dS/m", "electrical_conductivity", "{{ value_json.bulk_ec|round(3) }}"},
         {"temp_comp_ec", "Temp Comp EC", "dS/m", "electrical_conductivity", "{{ value_json.temp_comp_ec|round(3) }}"},
         {"pore_water_ec", "Pore Water EC", "dS/m", "electrical_conductivity", "{{ value_json.pore_water_ec|round(3) }}"},
-        {"sat_extract_ec", "Saturation Extract EC", "dS/m", "electrical_conductivity", "{{ value_json.saturation_extract_ec|round(3) }}"},
         {"raw_vwc", "Raw VWC", "", nullptr, "{{ value_json.raw_vwc|round(2) }}"}
     };
     
     for (const auto& sensor : sensors) {
-        String discoveryTopic = String(MQTT_TOPIC_BASE) + "/" + DEVICE_NAME + "/" + sensor.type + "/config";
-        
-        DynamicJsonDocument doc(1024);
+        String discoveryTopic = String(MQTT_TOPIC_BASE) + "/" + device_name + "/" + sensor.type + "/config";
+        DynamicJsonDocument doc(512);
         char buffer[512];
         
-        doc["name"] = String(DEVICE_NAME) + " " + sensor.name;
-        doc["unique_id"] = String(DEVICE_NAME) + "_" + sensor.type;
+        doc["name"] = String(device_name) + " " + sensor.name;
+        doc["unique_id"] = String(device_name) + "_" + sensor.type;
         doc["state_topic"] = stateTopic;
         doc["availability_topic"] = availabilityTopic;
         doc["value_template"] = sensor.value_template;
         
-        if (sensor.unit) {
-            doc["unit_of_measurement"] = sensor.unit;
-        }
-        if (sensor.device_class) {
-            doc["device_class"] = sensor.device_class;
-        }
+        if (sensor.unit) doc["unit_of_measurement"] = sensor.unit;
+        if (sensor.device_class) doc["device_class"] = sensor.device_class;
         
         doc["state_class"] = "measurement";
         
         JsonObject device = doc.createNestedObject("device");
-        device["identifiers"][0] = DEVICE_NAME;
+        device["identifiers"][0] = device_name;
         device["manufacturer"] = MANUFACTURER;
         device["model"] = MODEL;
-        device["name"] = DEVICE_NAME;
+        device["name"] = device_name;
         device["sw_version"] = SW_VERSION;
         
-        size_t n = serializeJson(doc, buffer);
-        
-        Serial.println("Publishing config for: " + String(sensor.type));
-        Serial.println("Topic: " + discoveryTopic);
-        
-        if(mqttClient.publish(discoveryTopic.c_str(), buffer, true)) {
-            Serial.println("Success");
-        } else {
-            Serial.println("Failed");
-        }
-        
-        delay(100);
+        serializeJson(doc, buffer);
+        Serial.println("Publishing config for " + String(sensor.type));
+        client.publish(discoveryTopic.c_str(), buffer, true);
     }
-}
-
-void reconnectMQTT() {
-    if (!mqttClient.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        if (mqttClient.connect(mqtt_client_id, MQTT_USER, MQTT_PASSWORD, 
-                             availabilityTopic.c_str(), 1, true, "offline")) {
-            Serial.println("connected");
-            mqttClient.publish(availabilityTopic.c_str(), "online", true);
-            publishHomeAssistantConfig();
-            mqttReconnectInterval = 5000;
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(mqttClient.state());
-            Serial.println(" retry later");
-            mqttReconnectInterval = min(mqttReconnectInterval * 2, 300000UL);
-        }
-    }
-}
-
-void setupWiFi() {
-    Serial.print("Connecting to WiFi");
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    
-    Serial.println("\nWiFi connected");
-    Serial.println("IP address: " + WiFi.localIP().toString());
-}
-
-void setupMQTT() {
-    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-    snprintf(mqtt_client_id, sizeof(mqtt_client_id), "ESP32-%s", DEVICE_NAME);
-    
-    stateTopic = String(MQTT_TOPIC_BASE) + "/" + DEVICE_NAME + "/state";
-    availabilityTopic = String(MQTT_TOPIC_BASE) + "/" + DEVICE_NAME + "/availability";
-    commandTopic = String(MQTT_TOPIC_BASE) + "/" + DEVICE_NAME + "/command";
-    errorTopic = String(MQTT_TOPIC_BASE) + "/" + DEVICE_NAME + "/error";
-    
-    Serial.println("MQTT Topics:");
-    Serial.println("State: " + stateTopic);
-    Serial.println("Availability: " + availabilityTopic);
-    Serial.println("Command: " + commandTopic);
-    Serial.println("Error: " + errorTopic);
 }
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\nTEROS-12 Sensor Monitor Starting...");
-
+    delay(2000);  // Give serial time to start
+    
+    Serial.println("\n\n=== TEROS-12 Sensor Starting ===");
+    Serial.println("Initializing SDI-12...");
     sdi12.begin();
-    setupWiFi();
-    setupMQTT();
     
-    // Initialize time
+    if (sdi12.ackActive(DEVICE_ADDRESS) == ESP32_SDI12::SDI12_OK) {
+        Serial.println("SDI-12 sensor responding");
+    } else {
+        Serial.println("WARNING: SDI-12 sensor not responding!");
+    }
+    
+    setup_wifi();
+    
+    Serial.println("Setting up MQTT...");
+    snprintf(mqtt_client_id, sizeof(mqtt_client_id), "ESP32Client-%s", device_name);
+    stateTopic = String(MQTT_TOPIC_BASE) + "/" + device_name + "/state";
+    availabilityTopic = String(MQTT_TOPIC_BASE) + "/" + device_name + "/availability";
+    errorTopic = String(MQTT_TOPIC_BASE) + "/" + device_name + "/error";
+    
+    Serial.println("MQTT Topics:");
+    Serial.println("State: " + stateTopic);
+    Serial.println("Availability: " + availabilityTopic);
+    Serial.println("Error: " + errorTopic);
+    
+    client.setServer(mqtt_server, mqtt_port);
+    
+    Serial.println("Starting web server...");
+    server.on("/", HTTP_GET, handleRoot);
+    server.on("/data", HTTP_GET, handleData);
+    server.begin();
+    
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-    
-    Serial.println("Setup completed");
+    Serial.println("Setup complete\n");
 }
 
 void loop() {
-    static unsigned long lastReadingTime = 0;
-    static unsigned long lastAvailabilityUpdate = 0;
-    unsigned long currentMillis = millis();
+    static unsigned long lastMsg = 0;
     
-    if (!mqttClient.connected()) {
-        if (currentMillis - lastReconnectAttempt >= mqttReconnectInterval) {
-            lastReconnectAttempt = currentMillis;
+    // Check WiFi connection
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi disconnected. Reconnecting...");
+        setup_wifi();
+        return;  // Skip this loop iteration
+    }
+    
+    server.handleClient();
+    
+    if (!client.connected()) {
+        unsigned long now = millis();
+        if (now - lastReconnectAttempt > mqttReconnectInterval) {
+            lastReconnectAttempt = now;
             reconnectMQTT();
         }
     } else {
-        mqttClient.loop();
+        client.loop();
+    }
+
+    unsigned long now = millis();
+    if (now - lastMsg > READING_INTERVAL) {
+        lastMsg = now;
         
-        // Update availability
-        if (currentMillis - lastAvailabilityUpdate >= AVAILABILITY_INTERVAL) {
-            lastAvailabilityUpdate = currentMillis;
-            mqttClient.publish(availabilityTopic.c_str(), "online", true);
-        }
+        Serial.println("\n=== Taking Sensor Reading ===");
+        ESP32_SDI12::Status res = sdi12.measure(DEVICE_ADDRESS, values, VALUES_BUFFER_SIZE);
         
-        // Take readings
-        if (currentMillis - lastReadingTime >= READING_INTERVAL) {
-            lastReadingTime = currentMillis;
-            handleSensorReadings();
+        if (res == ESP32_SDI12::SDI12_OK) {
+            Serial.println("Raw sensor values:");
+            readings.raw_vwc = values[0];
+            readings.temperature = values[1];
+            readings.bulk_ec = values[2] / 1000.0;
+
+            Serial.printf("Raw VWC: %.2f\n", readings.raw_vwc);
+            Serial.printf("Temperature: %.2f°C\n", readings.temperature);
+            Serial.printf("Bulk EC: %.3f dS/m\n", readings.bulk_ec);
+
+            readings.vwc = calculateVWC(readings.raw_vwc);
+            float bulk_permittivity = calculateBulkPermittivity(readings.raw_vwc);
+            readings.temp_compensated_ec = compensateECForTemperature(readings.bulk_ec, readings.temperature);
+            
+            if (readings.vwc >= 0.10) {
+                readings.pore_water_ec = calculatePoreWaterEC(readings.temp_compensated_ec, readings.temperature, bulk_permittivity);
+                readings.saturation_extract_ec = calculateSaturationExtractEC(readings.pore_water_ec, readings.vwc);
+            } else {
+                readings.pore_water_ec = 0;
+                readings.saturation_extract_ec = 0;
+                Serial.println("VWC too low for EC calculations");
+            }
+
+            String logEntry = getTimestamp() + ": Raw VWC: " + String(readings.raw_vwc, 2) + 
+                            ", VWC: " + String(readings.vwc * 100, 2) + "%, Temp: " + 
+                            String(readings.temperature, 2) + " C, Bulk EC: " + 
+                            String(readings.bulk_ec, 3) + " dS/m";
+            addToDataLog(logEntry);
+
+            DynamicJsonDocument doc(256);
+            char buffer[256];
+            
+            doc["raw_vwc"] = readings.raw_vwc;
+            doc["vwc"] = readings.vwc * 100;
+            doc["temperature"] = readings.temperature;
+            doc["bulk_ec"] = readings.bulk_ec;
+            doc["temp_comp_ec"] = readings.temp_compensated_ec;
+            doc["pore_water_ec"] = readings.pore_water_ec;
+            doc["saturation_extract_ec"] = readings.saturation_extract_ec;
+            
+            serializeJson(doc, buffer);
+            Serial.println("Publishing to MQTT: " + String(buffer));
+            client.publish(stateTopic.c_str(), buffer, true);
+        } else {
+            Serial.printf("Sensor read failed with error: %d\n", res);
+            client.publish(errorTopic.c_str(), "Sensor read failed", true);
         }
     }
 }

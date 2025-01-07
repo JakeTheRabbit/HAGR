@@ -2,6 +2,11 @@
 
 Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended.
 
+Here is an exmaple of my fertigation control dashboard. 
+
+<img width="825" alt="Irrigation Control v2" src="https://github.com/user-attachments/assets/773845f0-8afe-4255-b620-9c46b1f75d23" />
+
+
 For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP32, visit: Teros-12 / Teros-12 Compatible SDI-12 to ESP32.
 
 My Grow SOPs: 

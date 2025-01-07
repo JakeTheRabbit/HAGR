@@ -29,6 +29,8 @@ My Grow SOPs:
 - If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
 - Teros-12 / Teros-12 Compatable SDI-12 to ESP32 (not working out of the box) https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
 - Another (USE THIS ONE) (working SDI-12 substrate sensor) with automatic MQTT discovery and calibrated https://github.com/Chill-Division/sdi12-substrate-sensor
+- Hydrobuddy [Mix your own nutes](https://scienceinhydroponics.com/2016/03/the-first-free-hydroponic-nutrient-calculator-program-o.html)
+- Open Salts [Ingredients of common nutes](http://opensalts.wikidot.com/)
 
 Resources for automations:
 - Grodan Grow guide: https://www.grodan101.com/siteassets/downloads/downloads-na-101/grow-guide-2023/grow-guide---cannabis-edition-2024.pdf

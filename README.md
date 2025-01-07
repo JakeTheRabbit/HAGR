@@ -86,6 +86,13 @@ The integrated features include but are not limited to:
     <img src="https://github.com/JakeTheRabbit/HAGR/assets/123831499/f788d65a-31c6-459c-a08a-5912b7a1fba6" alt="crop steering config" width="200">
 </a>
 
+Peri-pump automatic batch tank filling: 
+
+<img width="1205" alt="image" src="https://github.com/user-attachments/assets/344c5632-e1da-451d-a06a-b8f062dcf741" />
+
+Coming soon...
+
+
 ## Home Assistant Addons
 
 I use these Home Assistant Addons:

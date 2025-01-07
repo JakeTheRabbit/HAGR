@@ -14,7 +14,7 @@ My Grow SOPs:
 - Cloning/Propagation: [Cloning Guide](growingSOPs/cloning.md)
 - Environment cheat sheet: [Environmental Parameters](growingSOPs/Environment%20reference%20guide.md)
 - Air flow for indoor grow environments: [Air flow requirements](growingSOPs/Indoor%20air%20flow.md)
-- [Athena batch tank calculator (metric):](https://github.com/JakeTheRabbit/HAGR/blob/main/athena.html)
+- [Athena batch tank calculator (metric) hosted on github:]([https://github.com/JakeTheRabbit/HAGR/blob/main/athena.html](https://jaketherabbit.github.io/batch_tank_calculator/))
 - <div></div>
   <img width="100" alt="image" src="https://github.com/user-attachments/assets/7394f98f-7d81-4b6b-bec8-78a4e703786f" />
 

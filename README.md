@@ -27,13 +27,15 @@ My Grow SOPs:
 - Killerherts HA growing functions: [Killerherts/nodeRed-HA-GrowingFunctions](https://github.com/Killerherts/nodeRed-HA-GrowingFunctions)
 - Awesome Crop Steering: https://github.com/Intergalactic-XYZ/awesome-cropsteering
 - If you like raw SDI-12 sensors and mqtt, none of this Home Assistant fluff: https://github.com/cropsteering/OS-SDI12
-- Teros-12 / Teros-12 Compatable SDI-12 to ESP32 https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
-- Another (working SDI-12 substrate sensor) https://github.com/Chill-Division/sdi12-substrate-sensor
+- Teros-12 / Teros-12 Compatable SDI-12 to ESP32 (not working out of the box) https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md
+- Another (USE THIS ONE) (working SDI-12 substrate sensor) with automatic MQTT discovery and calibrated https://github.com/Chill-Division/sdi12-substrate-sensor
 
 Resources for automations:
 - Grodan Grow guide: https://www.grodan101.com/siteassets/downloads/downloads-na-101/grow-guide-2023/grow-guide---cannabis-edition-2024.pdf
 - Athena Grow Guide: https://issuu.com/athenaag/docs/athena_hb_me
 - Growlink Crop Steering: https://www.growlink.ag/crop-steering
+
+[Legacy Grow App](https://github.com/stewnight/legacy-grow-app) - a work in progress open source seed to harvest, grow manager, because all the other ones are shit. 
 
 Tutorials:
 - How to splice wires for sensors the right way: https://www.youtube.com/watch?v=aTpYi5nYjO0
@@ -47,6 +49,7 @@ Links:
 - Open THC https://github.com/openthc
 - Farm OS: https://github.com/farmOS/farmOS
 - Open Foam: https://www.openfoam.com/
+- [M5Stack.com](https://shop.m5stack.com/collections/m5-sensor) where I buy most of my sensors.
 
 
 ## Features

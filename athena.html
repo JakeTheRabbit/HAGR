@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Batch Tank Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- CSS Styles -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+    :root {
+      --color-dark-blue: #052a4f;
+      --color-blue: #2b407a;
+      --color-light-blue: #c6d2df;
+      --color-dark-gray: #333333;
+      --color-medium-gray: #6c6c6c;
+      --color-light-gray: #f1f1f1;
+      --color-white: #ffffff;
+      --color-vibrant: #00ff00; /* Vibrant color for numbers */
+    }
+
+    body {
+      background-color: #000000; /* Black background for OLED screens */
+      color: var(--color-light-gray);
+      margin: 0;
+      padding: 20px;
+      font-family: 'Roboto', sans-serif; /* Modern font */
+    }
+    .calculator {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 8px;
+      background: #000000;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      color: var(--color-light-blue);
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--color-light-blue);
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      margin-bottom: 16px;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 4px;
+      background-color: #1a1a1a;
+      color: var(--color-light-gray);
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--color-blue);
+      color: var(--color-white);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #333333;
+      color: var(--color-white);
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      background: #1a1a1a;
+      border-left: 6px solid var(--color-blue);
+    }
+    .logs {
+      margin-top: 20px;
+      padding: 10px;
+      background: #000000;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 4px;
+    }
+    .log-entry {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #1a1a1a;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 4px;
+      position: relative;
+    }
+    .log-entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .delete-log {
+      background-color: #444;
+      border: none;
+      color: var(--color-white);
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .delete-log:hover {
+      background-color: #666;
+    }
+    /* Fullscreen Result Styles */
+    .fullscreen-result {
+      display: none;
+      flex-direction: column;
+      background-color: #000000;
+      color: var(--color-light-gray);
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .fullscreen-result.active {
+      display: flex;
+    }
+    .fullscreen-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .dosage-item {
+      margin-bottom: 20px;
+    }
+    .dosage-name {
+      font-weight: bold;
+      text-align: center;
+      color: var(--color-light-gray);
+    }
+    .dosage-value {
+      text-align: center;
+      font-size: 1.8em;
+      color: var(--color-vibrant);
+    }
+    /* Button Group */
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .button-group button {
+      width: 48%;
+    }
+    /* Fullscreen Buttons */
+    .fullscreen-buttons {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background-color: #000000;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+    .fullscreen-buttons button {
+      width: 48%;
+    }
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .calculator {
+        padding: 15px;
+      }
+      button {
+        font-size: 14px;
+      }
+    }
+    /* Note Style */
+    .note {
+      font-size: 0.9em;
+      color: var(--color-medium-gray);
+      margin-top: -10px;
+      margin-bottom: 20px;
+    }
+    /* Compact Details in Fullscreen */
+    .fullscreen-content .details p {
+      font-size: 0.8em;
+      margin: 5px 0;
+    }
+    /* Prevent Text Wrapping */
+    .details p, .dosage-item {
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <h1>Batch Tank Calculator</h1>
+    <form id="dosageForm">
+      <div class="section">
+        <label for="growthStage">Select Growth Stage:</label>
+        <select id="growthStage">
+          <option value="">-- Select Growth Stage --</option>
+          <option value="pre-soak">Clone Pre-soak</option>
+          <option value="clone">Clone</option>
+          <option value="veg">Veg</option>
+          <option value="flower">Flower</option>
+          <option value="finishing">Finishing</option>
+        </select>
+      </div>
+      <div class="section">
+        <label for="desiredPH">Desired pH:</label>
+        <select id="desiredPH">
+          <!-- Options from 5.4 to 6.5 -->
+        </select>
+      </div>
+      <div class="section">
+        <label for="ec">Select Target EC:</label>
+        <select id="ec">
+          <option value="">-- Select EC --</option>
+          <option value="1.0">1.0</option>
+          <option value="1.5">1.5</option>
+          <option value="2.0">2.0</option>
+          <option value="2.5">2.5</option>
+          <option value="3.0">3.0</option>
+          <option value="3.5">3.5</option>
+          <option value="4.0">4.0</option>
+        </select>
+      </div>
+      <div class="section">
+        <label for="size">Batch Tank Size (Liters):</label>
+        <input type="number" id="size" placeholder="Enter batch tank size in liters">
+      </div>
+      <div class="section">
+        <label for="balance">Select Balance Dosage (ml/10L):</label>
+        <select id="balance">
+          <option value="">-- Select Balance Dosage --</option>
+          <option value="1">1 ml</option>
+          <option value="2">2 ml</option>
+          <option value="3">3 ml</option>
+          <option value="4">4 ml</option>
+          <option value="5">5 ml</option>
+          <option value="6">6 ml</option>
+          <option value="7">7 ml</option>
+          <option value="8">8 ml</option>
+          <option value="9">9 ml</option>
+          <option value="10">10 ml</option>
+        </select>
+        <p class="note">Note: Balance dosage is for user to interpret based on their balance mix ratio.</p>
+      </div>
+      <div class="section">
+        <label for="cleanse">Select Cleanse Dosage (ml/10L):</label>
+        <select id="cleanse">
+          <option value="">-- Select Cleanse Dosage --</option>
+          <option value="1">1 ml</option>
+          <option value="2">2 ml</option>
+          <option value="3">3 ml</option>
+          <option value="4">4 ml</option>
+          <option value="5">5 ml</option>
+          <option value="6">6 ml</option>
+          <option value="7">7 ml</option>
+          <option value="8">8 ml</option>
+          <option value="9">9 ml</option>
+          <option value="10">10 ml</option>
+        </select>
+      </div>
+      <div class="section">
+        <label for="coreFade">Select Mix Ratio for Core/Fade:</label>
+        <select id="coreFade">
+          <option value="">-- Select Core/Fade Ratio --</option>
+          <option value="113">113 grams/L</option>
+          <option value="226">226 grams/L</option>
+          <option value="240">240 grams/L</option>
+          <option value="282">282 grams/L</option>
+        </select>
+      </div>
+      <div class="section">
+        <label for="growBloom">Select Mix Ratio for Grow/Bloom:</label>
+        <select id="growBloom">
+          <option value="">-- Select Grow/Bloom Ratio --</option>
+          <option value="113">113 grams/L</option>
+          <option value="226">226 grams/L</option>
+          <option value="240">240 grams/L</option>
+          <option value="282">282 grams/L</option>
+        </select>
+      </div>
+      <!-- Added IDs to buttons -->
+      <button type="button" id="calculateButton">Calculate Dosage</button>
+      <button type="button" id="saveConfigButton">Save as Default Configuration</button>
+      <button type="button" id="resetButton">Reset</button>
+      <button type="button" id="clearLogsButton">Clear Logs</button>
+      <button type="button" id="exportLogsButton">Export All Logs to CSV</button>
+    </form>
+    <div class="result" id="result"></div>
+    <!-- Added Fullscreen Result Section -->
+    <div class="fullscreen-result" id="fullscreenResult">
+      <div class="fullscreen-content" id="fullscreenContent"></div>
+      <div class="fullscreen-buttons">
+        <button type="button" id="backButton">Back to Calculator</button>
+        <button type="button" id="shareButton">Share Result</button>
+      </div>
+    </div>
+    <div class="logs" id="logs">
+      <h2>Calculation Logs</h2>
+      <div id="logEntries"></div>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script>
+    (function() {
+      const mixRatios = {
+        "113": {
+          grow: [null, 5.4, 8.3, 11.4, 14.6, 17.9, 21.4, 24.9],
+          core: [null, 3.2, 5.0, 6.9, 8.8, 10.8, 12.8, 14.9]
+        },
+        "226": {
+          grow: [null, 2.7, 4.2, 5.7, 7.3, 9.0, 10.7, 12.4],
+          core: [null, 1.6, 2.5, 3.4, 4.4, 5.4, 6.4, 7.5]
+        },
+        "240": {
+          grow: [null, 2.5, 3.8, 5.5, 7.1, 8.5, 10.2, 11.9],
+          core: [null, 1.5, 2.3, 3.3, 4.3, 5.1, 6.1, 7.2]
+        },
+        "282": {
+          grow: [null, 1.8, 2.7, 3.8, 4.9, 6.1, 7.3, 8.6],
+          core: [null, 1.1, 1.7, 2.4, 3.1, 3.9, 4.6, 5.5]
+        },
+      };
+
+      let wakeLock = null; // For Screen Wake Lock
+      let isFullscreen = false; // To track fullscreen state
+
+      // Generate pH options
+      function generatePHOptions() {
+        const desiredPH = document.getElementById('desiredPH');
+        for (let i = 5.4; i <= 6.5; i += 0.1) {
+          const option = document.createElement('option');
+          option.value = i.toFixed(1);
+          option.textContent = i.toFixed(1);
+          desiredPH.appendChild(option);
+        }
+      }
+
+      async function requestWakeLock() {
+        try {
+          if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock is active');
+          }
+        } catch (err) {
+          console.error(`${err.name}, ${err.message}`);
+        }
+      }
+
+      function releaseWakeLock() {
+        if (wakeLock !== null) {
+          wakeLock.release().then(() => {
+            wakeLock = null;
+            console.log('Wake Lock is released');
+          });
+        }
+      }
+
+      async function enterFullscreen() {
+        const fsResult = document.getElementById('fullscreenResult');
+        if (fsResult.requestFullscreen) {
+          await fsResult.requestFullscreen();
+          isFullscreen = true;
+        }
+      }
+
+      async function exitFullscreen() {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+          isFullscreen = false;
+        }
+      }
+
+      function showFullscreenResult(resultContentHtml) {
+        const fullscreenContentHtml = `
+          <div id="fullscreenResultContent">
+            ${resultContentHtml}
+          </div>
+        `;
+
+        document.getElementById('fullscreenContent').innerHTML = fullscreenContentHtml;
+        document.getElementById('fullscreenResult').classList.add('active');
+
+        // Attach event listener to share button
+        document.getElementById('shareButton').onclick = () => shareResult(resultContentHtml);
+        document.getElementById('backButton').onclick = hideFullscreenResult;
+
+        // Enter fullscreen and keep screen awake
+        enterFullscreen();
+        requestWakeLock();
+      }
+
+      function hideFullscreenResult() {
+        document.getElementById('fullscreenResult').classList.remove('active');
+        document.getElementById('fullscreenContent').innerHTML = '';
+
+        // Exit fullscreen and release wake lock
+        exitFullscreen();
+        releaseWakeLock();
+      }
+
+      function calculateDosage() {
+        const growthStage = document.getElementById('growthStage').value;
+        const desiredPH = parseFloat(document.getElementById('desiredPH').value);
+        const ec = parseFloat(document.getElementById('ec').value);
+        const size = parseFloat(document.getElementById('size').value);
+        const balance = parseInt(document.getElementById('balance').value);
+        const cleanse = parseInt(document.getElementById('cleanse').value);
+        const coreFade = document.getElementById('coreFade').value;
+        const growBloom = document.getElementById('growBloom').value;
+
+        // Input Validation
+        if (!growthStage) {
+          document.getElementById('result').innerHTML = '<p>Please select a growth stage.</p>';
+          return;
+        }
+        if (!desiredPH || desiredPH <= 0) {
+          document.getElementById('result').innerHTML = '<p>Please select a valid desired pH.</p>';
+          return;
+        }
+        if (!ec || ec <= 0) {
+          document.getElementById('result').innerHTML = '<p>Please select a valid EC value.</p>';
+          return;
+        }
+        if (!size || size <= 0) {
+          document.getElementById('result').innerHTML = '<p>Please enter a valid batch tank size.</p>';
+          return;
+        }
+        if (!balance || balance < 0) {
+          document.getElementById('result').innerHTML = '<p>Please select a valid balance dosage.</p>';
+          return;
+        }
+        if (!cleanse || cleanse < 0) {
+          document.getElementById('result').innerHTML = '<p>Please select a valid cleanse dosage.</p>';
+          return;
+        }
+        if (!coreFade) {
+          document.getElementById('result').innerHTML = '<p>Please select a core/fade ratio.</p>';
+          return;
+        }
+        if (!growBloom) {
+          document.getElementById('result').innerHTML = '<p>Please select a grow/bloom ratio.</p>';
+          return;
+        }
+
+        const ratio = mixRatios[growBloom];
+        const growIndex = Math.round(ec * 2) - 1;
+
+        const grow = ratio.grow[growIndex];
+        const core = ratio.core[growIndex];
+
+        if (!core || !grow) {
+          document.getElementById('result').innerHTML = '<p>Error: Invalid EC value or mix ratio not available for this EC level.</p>';
+          return;
+        }
+
+        // Calculate total dosages
+        const totalGrowDosage = grow * size;
+        const totalCoreDosage = core * size;
+        const totalBalanceDosage = (balance / 10) * size;
+        const totalCleanseDosage = (cleanse / 10) * size;
+
+        // Prepare the result items in the desired order
+        const resultContentHtml = `
+          <div class="details">
+            <p><strong>Growth Stage:</strong> ${growthStage}</p>
+            <p><strong>Desired pH:</strong> ${desiredPH}</p>
+            <p><strong>Target EC:</strong> ${ec}</p>
+            <p><strong>Batch Tank Size:</strong> ${size} liters</p>
+          </div>
+          <div class="dosage-item">
+            <div class="dosage-name">Balance Dosage</div>
+            <div class="dosage-value">${totalBalanceDosage.toFixed(2)} ml</div>
+          </div>
+          <div class="dosage-item">
+            <div class="dosage-name">Grow/Bloom Dosage</div>
+            <div class="dosage-value">${totalGrowDosage.toFixed(2)} ml</div>
+          </div>
+          <div class="dosage-item">
+            <div class="dosage-name">Core/Fade Dosage</div>
+            <div class="dosage-value">${totalCoreDosage.toFixed(2)} ml</div>
+          </div>
+          <div class="dosage-item">
+            <div class="dosage-name">Cleanse Dosage</div>
+            <div class="dosage-value">${totalCleanseDosage.toFixed(2)} ml</div>
+          </div>
+        `;
+
+        // For display, include the buttons
+        const displayResultHtml = `
+          <div id="resultContent">
+            ${resultContentHtml}
+          </div>
+          <div class="button-group">
+            <button type="button" class="fullscreenButton">View Full Screen</button>
+            <button type="button" class="shareResultButton">Share Result</button>
+          </div>
+        `;
+
+        document.getElementById('result').innerHTML = displayResultHtml;
+
+        // Attach event listeners to the buttons
+        const fullscreenButtons = document.querySelectorAll('.fullscreenButton');
+        const shareResultButtons = document.querySelectorAll('.shareResultButton');
+
+        fullscreenButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const resultContent = this.parentElement.previousElementSibling.innerHTML;
+            showFullscreenResult(resultContent);
+          });
+        });
+
+        shareResultButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const resultContent = this.parentElement.previousElementSibling.innerHTML;
+            shareResult(resultContent);
+          });
+        });
+
+        const timestamp = new Date().toLocaleString();
+        const logEntry = {
+          id: Date.now(),
+          timestamp,
+          inputs: {
+            growthStage,
+            desiredPH,
+            ec,
+            size,
+            balance,
+            cleanse,
+            coreFade,
+            growBloom
+          },
+          resultContentHtml
+        };
+
+        addLogEntry(logEntry);
+        saveLogEntry(logEntry);
+
+        // Scroll to the result
+        document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+      }
+
+      function addLogEntry(logEntry) {
+        const logsContainer = document.getElementById('logEntries');
+        const logElement = document.createElement('div');
+        logElement.className = 'log-entry';
+        logElement.setAttribute('data-id', logEntry.id);
+        logElement.innerHTML = `
+          <div class="log-entry-header">
+            <p><strong>${logEntry.timestamp}</strong></p>
+            <button class="delete-log" data-id="${logEntry.id}">Delete</button>
+          </div>
+          <div id="logResultContent${logEntry.id}">
+            ${logEntry.resultContentHtml}
+          </div>
+          <div class="button-group">
+            <button type="button" class="fullscreenButton">View Full Screen</button>
+            <button type="button" class="shareResultButton">Share Result</button>
+          </div>
+        `;
+        logsContainer.insertBefore(logElement, logsContainer.firstChild);
+
+        // Add event listener to delete button
+        logElement.querySelector('.delete-log').addEventListener('click', deleteLogEntry);
+
+        // Attach event listeners to the buttons
+        const fullscreenButton = logElement.querySelector('.fullscreenButton');
+        const shareResultButton = logElement.querySelector('.shareResultButton');
+
+        fullscreenButton.addEventListener('click', function() {
+          const resultContent = logElement.querySelector(`#logResultContent${logEntry.id}`).innerHTML;
+          showFullscreenResult(resultContent);
+        });
+
+        shareResultButton.addEventListener('click', function() {
+          const resultContent = logElement.querySelector(`#logResultContent${logEntry.id}`).innerHTML;
+          shareResult(resultContent);
+        });
+      }
+
+      function saveLogEntry(logEntry) {
+        const logEntries = JSON.parse(localStorage.getItem('logEntries')) || [];
+        logEntries.unshift(logEntry);
+        localStorage.setItem('logEntries', JSON.stringify(logEntries));
+      }
+
+      function deleteLogEntry(event) {
+        const id = event.target.getAttribute('data-id');
+        let logEntries = JSON.parse(localStorage.getItem('logEntries')) || [];
+        logEntries = logEntries.filter(entry => entry.id !== parseInt(id));
+        localStorage.setItem('logEntries', JSON.stringify(logEntries));
+        event.target.parentElement.parentElement.remove();
+      }
+
+      function saveDefaultConfig() {
+        const growthStage = document.getElementById('growthStage').value;
+        const desiredPH = document.getElementById('desiredPH').value;
+        const ec = document.getElementById('ec').value;
+        const size = document.getElementById('size').value;
+        const balance = document.getElementById('balance').value;
+        const cleanse = document.getElementById('cleanse').value;
+        const coreFade = document.getElementById('coreFade').value;
+        const growBloom = document.getElementById('growBloom').value;
+
+        const defaultConfig = { growthStage, desiredPH, ec, size, balance, cleanse, coreFade, growBloom };
+        localStorage.setItem('defaultConfig', JSON.stringify(defaultConfig));
+        alert('Default configuration saved!');
+      }
+
+      function loadDefaultConfig() {
+        const defaultConfig = JSON.parse(localStorage.getItem('defaultConfig'));
+        if (defaultConfig) {
+          document.getElementById('growthStage').value = defaultConfig.growthStage;
+          document.getElementById('desiredPH').value = defaultConfig.desiredPH;
+          document.getElementById('ec').value = defaultConfig.ec;
+          document.getElementById('size').value = defaultConfig.size;
+          document.getElementById('balance').value = defaultConfig.balance;
+          document.getElementById('cleanse').value = defaultConfig.cleanse;
+          document.getElementById('coreFade').value = defaultConfig.coreFade;
+          document.getElementById('growBloom').value = defaultConfig.growBloom;
+        } else {
+          // Set default values
+          document.getElementById('desiredPH').value = '6.0';
+          document.getElementById('ec').value = '3.0';
+          document.getElementById('coreFade').value = '226';
+          document.getElementById('growBloom').value = '226';
+          document.getElementById('cleanse').value = '5';
+        }
+      }
+
+      function loadLogEntries() {
+        const logEntries = JSON.parse(localStorage.getItem('logEntries')) || [];
+        logEntries.forEach(addLogEntry);
+      }
+
+      function resetForm() {
+        document.getElementById('dosageForm').reset();
+        document.getElementById('result').innerHTML = '';
+        // Reset defaults
+        document.getElementById('desiredPH').value = '6.0';
+        document.getElementById('ec').value = '3.0';
+        document.getElementById('coreFade').value = '226';
+        document.getElementById('growBloom').value = '226';
+        document.getElementById('cleanse').value = '5';
+      }
+
+      function clearLogs() {
+        localStorage.removeItem('logEntries');
+        document.getElementById('logEntries').innerHTML = '';
+        alert('Calculation logs cleared.');
+      }
+
+      // Set defaults based on growth stage
+      function setDefaultsByGrowthStage() {
+        const growthStage = document.getElementById('growthStage').value;
+        const desiredPH = document.getElementById('desiredPH');
+        const ec = document.getElementById('ec');
+
+        if (growthStage === 'pre-soak') {
+          desiredPH.value = '5.4';
+          ec.value = '2.5';
+        } else if (growthStage === 'clone') {
+          desiredPH.value = '5.6';
+          ec.value = '2.0';
+        } else if (growthStage === 'veg') {
+          desiredPH.value = '5.8';
+          ec.value = '3.0';
+        } else if (growthStage === 'flower') {
+          desiredPH.value = '6.1';
+          ec.value = '3.0';
+        } else if (growthStage === 'finishing') {
+          desiredPH.value = '6.2';
+          ec.value = '3.0';
+        }
+      }
+
+      // Share the result
+      function shareResult(resultContentHtml) {
+        const timestamp = new Date().toLocaleString();
+        const resultText = `Dosage Calculation (${timestamp}):\n` +
+          resultContentHtml.replace(/<[^>]*>?/gm, '').trim();
+
+        if (navigator.share) {
+          navigator.share({
+            title: 'Dosage Calculation',
+            text: resultText
+          }).then(() => {
+            console.log('Result shared successfully');
+          }).catch((error) => {
+            console.error('Error sharing:', error);
+            // Fallback to clipboard
+            navigator.clipboard.writeText(resultText).then(() => {
+              alert('Result copied to clipboard');
+            });
+          });
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(resultText).then(() => {
+            alert('Result copied to clipboard');
+          });
+        } else {
+          alert('Sharing not supported on this device');
+        }
+      }
+
+      // Export logs to CSV
+      function exportLogsToCSV() {
+        const logEntries = JSON.parse(localStorage.getItem('logEntries')) || [];
+        if (logEntries.length === 0) {
+          alert('No logs to export.');
+          return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Timestamp,Growth Stage,Desired pH,Target EC,Batch Tank Size (L),Balance Dosage (ml/10L),Cleanse Dosage (ml/10L),Core/Fade Ratio (g/L),Grow/Bloom Ratio (g/L),Results\n";
+
+        logEntries.forEach(entry => {
+          const dataString = `${entry.timestamp},${entry.inputs.growthStage},${entry.inputs.desiredPH},${entry.inputs.ec},${entry.inputs.size},${entry.inputs.balance},${entry.inputs.cleanse},${entry.inputs.coreFade},${entry.inputs.growBloom},${entry.resultContentHtml.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ')}`;
+          csvContent += dataString + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'dosage_calculation_logs.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Added event listeners for buttons
+      document.addEventListener('DOMContentLoaded', () => {
+        generatePHOptions();
+        loadDefaultConfig();
+        loadLogEntries();
+
+        document.getElementById('calculateButton').addEventListener('click', calculateDosage);
+        document.getElementById('saveConfigButton').addEventListener('click', saveDefaultConfig);
+        document.getElementById('resetButton').addEventListener('click', resetForm);
+        document.getElementById('clearLogsButton').addEventListener('click', clearLogs);
+        document.getElementById('exportLogsButton').addEventListener('click', exportLogsToCSV);
+        document.getElementById('growthStage').addEventListener('change', setDefaultsByGrowthStage);
+
+        // Listen for fullscreen change to handle wake lock
+        document.addEventListener('fullscreenchange', () => {
+          if (!document.fullscreenElement) {
+            isFullscreen = false;
+            releaseWakeLock();
+            document.getElementById('fullscreenResult').classList.remove('active');
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

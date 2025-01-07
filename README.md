@@ -1,6 +1,6 @@
 # HAGR: Home Assistant Grow Room
 
-Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended.
+Welcome to the Home Assistant Grow Room (HAGR) repository. This project focuses on automating grow rooms using Home Assistant. Note that some features may not work as expected and instructions are minimal. Familiarity with Home Assistant is recommended. This is a slow burner work in progress, lots of stuff hasn't been published yet purely due to lack of time. I'm currently setting up a licensed medical facility which which is taking 120% of my time. 
 
 Here is an exmaple of my fertigation control dashboard. 
 

@@ -78,7 +78,139 @@ Our Chinese friends have produced a formidable alternative called the BGT-SEC(Z2
 
 Where to buy: [Alibaba Link](https://www.alibaba.com/product-detail/China-low-price-CE-IP68-SID12_1600643601689.html) (choose the SDI-12 version, 5m cable recommended)
 
-## Home Assistant Configuration
+
+# New config 2025 for ESPHOME. This is all you need to connect to Home Assistant through ESP Home. This version also works with M5 Stack ESPOE Devices. 
+Credits [Chill Division](https://github.com/Chill-Division/M5Stack-ESPHome/blob/main/VH3.96%20-%204Pin%20Transfer%20Module%20Unit.md)
+
+Yaml for M5Stack Atom Lite: 
+
+```
+esphome:
+  name: f1-row1-front-sdi12
+
+esp32:
+  board: m5stack-atom
+#  board: m5stack-core-esp32 # (EsPoE Version)
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+#ethernet:
+#  type: IP101
+#  mdc_pin: GPIO23
+#  mdio_pin: GPIO18
+#  clk_mode: GPIO0_IN
+#  phy_addr: 1
+#  power_pin: GPIO5
+#  #use_address: 192.168.122.82
+
+wifi:
+  ssid: "Your_WiFi_SSID"  # Replace with your WiFi SSID
+  password: "Your_WiFi_Password"  # Replace with your WiFi password
+  
+  # Enable fallback hotspot in case of connection failure
+  ap:
+    ssid: "F1-Row1-Front-Sdi12"
+    password: "12345678"
+
+web_server:
+  port: 80
+  local: true
+  version: 2
+  include_internal: true
+
+external_components:
+  - source: github://ssieb/esphome@uarthalf
+    components: [ uart ]
+    refresh: 1min
+  - source: github://ssieb/esphome_components@sdi12
+    components: [ sdi12 ]
+    refresh: 1min
+
+uart:
+  - id: sdi12uart
+    tx_pin:
+      number: GPIO26
+      inverted: true
+    rx_pin: GPIO32
+    baud_rate: 1200
+    data_bits: 7
+    parity: even
+    half_duplex: true
+    debug:
+      direction: BOTH
+      after:
+        timeout: 20ms
+      sequence:
+        - lambda: UARTDebug::log_string(direction, bytes);
+
+sdi12:
+  - uart_id: sdi12uart
+    id: sdibus
+
+# Button configuration
+binary_sensor:
+  - platform: gpio
+    pin: GPIO39
+    name: "Physical Button"
+    id: physical_button
+    on_click:
+      min_length: 3s
+      max_length: 10s
+      then:
+        - switch.toggle: restart_switch
+
+# Restart switch
+switch:
+  - platform: restart
+    name: "Restart Device"
+    id: restart_switch
+
+sensor:
+  - platform: uptime
+    name: Uptime
+    
+  - platform: sdi12
+    address: 0
+    update_interval: 10s
+    sensors:
+      - index: 3
+        name: pwEC
+        id: pwec
+        accuracy_decimals: 2
+        unit_of_measurement: 'EC (ppm500)'
+        filters:
+          -  lambda: return x / 1000;
+      - index: 2
+        name: Temperature
+        id: temperature
+        accuracy_decimals: 1
+        unit_of_measurement: '°C'
+      - index: 1
+        name: vWC
+        id: vwc
+        accuracy_decimals: 2
+        unit_of_measurement: '%'
+        filters:
+          - lambda: |-
+              float RAW = x;
+              float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
+              vwc = vwc * 0.8;  // Scale from 0-100 to 0-80
+              return vwc * 100;  // Convert to percentage
+```
+
+## Home Assistant Configuration for Arduino (Old version doesn't work with ESPoE)
 
 Add the following to your `configuration.yaml`:
 

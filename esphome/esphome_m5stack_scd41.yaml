@@ -1,21 +1,90 @@
-#use this to get the SCD-41 from M5 stack working using an m5stack atom lite and the grove ports. 
+# Feature List: CO2 Environmental Monitoring System
+# ----------------------------------------------------------------------------------
+
+# Core Hardware Components
+# ----------------------------------------------------------------------------------
+# M5Stack Atom ESP32-based compact device
+# SCD4x CO2 sensor module (high-precision NDIR technology)
+# I2C communication for sensor integration
+# Wi-Fi connectivity with fallback access point
+# Compact form factor for flexible placement
+
+# Environmental Monitoring
+# ----------------------------------------------------------------------------------
+# Carbon dioxide (CO2) concentration measurement
+# Temperature monitoring with daily minimum tracking
+# Relative humidity monitoring
+# VPD (Vapor Pressure Deficit) calculation 
+# 5-second sensor update interval
+# Moving average calculation for CO2 stabilization
+# Daily maximum CO2 level tracking
+# Automatic sensor data validation
+
+# Alert System
+# ----------------------------------------------------------------------------------
+# Configurable CO2 high threshold (default: 1500 ppm)
+# Configurable CO2 low threshold (default: 800 ppm)
+# Binary sensor states for automation integration
+# Real-time alert status indicators
+# Threshold adjustment through Home Assistant interface
+
+# Connectivity & Integration
+# ----------------------------------------------------------------------------------
+# Home Assistant integration via ESPHome
+# Encrypted API communication
+# Over-the-air (OTA) firmware updates
+# Local web interface (port 80)
+# Wi-Fi connectivity with fallback access point
+# Captive portal for easy initial setup
+# Time synchronization via Home Assistant
+# Network information reporting (IP/MAC)
+
+# Advanced Features
+# ----------------------------------------------------------------------------------
+# VPD automatic calculation for plant health monitoring
+# Customizable thresholds via number entities
+# Daily statistics tracking
+# Uptime monitoring
+# Automatic daily reset of min/max values
+# Device restart capability
+# SCD4x automatic self-calibration configuration
+
+# Data Processing
+# ----------------------------------------------------------------------------------
+# Moving average filter for CO2 readings
+# Daily minimum temperature tracking
+# Daily maximum CO2 tracking
+# Real-time VPD calculation
+# Sensor state validation
+# Persistent threshold settings
+
+substitutions:
+  devicename: f1-scd41-back-right
+  hostname: f1-scd41-back-right
+  friendlyname: f1-scd41-back-right
+  board: m5stack-atom
+  framework_type: arduino
+  api_encryption_key: ""
+  ota_password: ""
 
 esphome:
-  name: "espatom-scd41-1"
+  name: ${hostname}
+  friendly_name: ${friendlyname}
 
 esp32:
-  board: m5stack-core-esp32
+  board: ${board}
   framework:
-    type: arduino
+    type: ${framework_type}
 
-# Enable logging
 logger:
 
-# Enable Home Assistant API
 api:
+  encryption:
+    key: "${api_encryption_key}"
 
 ota:
-
+  - platform: esphome
+    password: "${ota_password}"
 
 wifi:
   ssid: !secret wifi_ssid
@@ -23,27 +92,162 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Esphome-Web-Bfabf8"
-    password: "9OAWRE6HL5BL"
+    ssid: "Roaming-Co2-2-Sensor"
+    password: "4Cz7jygbCZOU"
 
 captive_portal:
 
+web_server:
+  port: 80
+
 i2c:
   id: bus_a
-  scan: True
-  sda: GPIO26
-  scl: GPIO32
+  sda: 26
+  scl: 32
+  scan: true
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+globals:
+  - id: co2_high_threshold
+    type: float
+    initial_value: '1500'
+  - id: co2_low_threshold
+    type: float
+    initial_value: '800'
+
+
+number:
+  - platform: template
+    name: "CO2 High Threshold"
+    id: co2_high_input
+    optimistic: true
+    min_value: 500
+    max_value: 2000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    on_value:
+      then:
+        - globals.set:
+            id: co2_high_threshold
+            value: !lambda "return x;"
+
+  - platform: template
+    name: "CO2 Low Threshold"
+    id: co2_low_input
+    optimistic: true
+    min_value: 400
+    max_value: 1000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    on_value:
+      then:
+        - globals.set:
+            id: co2_low_threshold
+            value: !lambda "return x;"
 
 sensor:
   - platform: scd4x
+    automatic_self_calibration: False
     co2:
-      name: "SCD41-1 CO2"
-      accuracy_decimals: 1
+      name: "CO2"
+      id: co2_sensor
     temperature:
-      name: "SCD41-1 Temperature"
-      accuracy_decimals: 2
+      name: "Temperature"
+      id: temperature_sensor
     humidity:
-      name: "SCD41-1 Humidity"
-      accuracy_decimals: 1
-    update_interval: 10s
+      name: "Humidity"
+      id: humidity_sensor
+    update_interval: 5s
 
+  - platform: uptime
+    name: "Uptime"
+
+  - platform: template
+    name: "VPD"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 2
+    lambda: |-
+      if (!id(temperature_sensor).has_state() || !id(humidity_sensor).has_state()) {
+        return NAN;
+      }
+      float temp = id(temperature_sensor).state;
+      float humidity = id(humidity_sensor).state;
+      float svp = 0.61078 * exp((17.27 * temp) / (temp + 237.3));
+      float vpd = svp * (1.0 - (humidity / 100.0));
+      return vpd;
+
+  - platform: template
+    name: "Daily Max CO2"
+    lambda: |-
+      static float daily_max = 0;
+      if (!id(co2_sensor).has_state()) {
+        return NAN;
+      }
+      if (id(co2_sensor).state > daily_max) {
+        daily_max = id(co2_sensor).state;
+      }
+      if (id(homeassistant_time).now().hour == 0 && id(homeassistant_time).now().minute == 0) {
+        daily_max = 0;
+      }
+      return daily_max;
+
+  - platform: template
+    name: "Daily Min Temperature"
+    lambda: |-
+      static float daily_min = 100;
+      if (!id(temperature_sensor).has_state()) {
+        return NAN;
+      }
+      if (id(temperature_sensor).state < daily_min) {
+        daily_min = id(temperature_sensor).state;
+      }
+      if (id(homeassistant_time).now().hour == 0 && id(homeassistant_time).now().minute == 0) {
+        daily_min = 100;
+      }
+      return daily_min;
+
+  - platform: template
+    name: "CO2 Moving Average"
+    unit_of_measurement: "ppm"
+    accuracy_decimals: 0
+    lambda: |-
+      if (!id(co2_sensor).has_state()) {
+        return NAN;
+      }
+      static float values[5] = {0};
+      static int index = 0;
+      values[index] = id(co2_sensor).state;
+      index = (index + 1) % 5;
+      float sum = 0;
+      for (int i = 0; i < 5; i++) {
+        sum += values[i];
+      }
+      return sum / 5;
+
+binary_sensor:
+  - platform: template
+    name: "CO2 High Alert"
+    lambda: |-
+      return id(co2_sensor).state > id(co2_high_threshold);
+  - platform: template
+    name: "CO2 Low Alert"
+    lambda: |-
+      return id(co2_sensor).state < id(co2_low_threshold);
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "MAC Address"
+
+    

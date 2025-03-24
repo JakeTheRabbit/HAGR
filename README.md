@@ -95,8 +95,7 @@ Peri-pump automatic batch tank filling:
 
 <img width="1205" alt="image" src="https://github.com/user-attachments/assets/344c5632-e1da-451d-a06a-b8f062dcf741" />
 
-Coming soon...
-
+[Automated batch tank](https://github.com/JakeTheRabbit/HAGR/blob/main/automated_batch_tank.md)
 
 ## Home Assistant Addons
 

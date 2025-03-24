@@ -1,0 +1,722 @@
+# Feature List: M5Stack Dial Digital Scale System
+# ----------------------------------------------------------------------------------
+
+# Core Hardware Components
+# ----------------------------------------------------------------------------------
+# ESP32-S3 microcontroller for advanced processing capabilities
+# Round TFT display (GC9A01A) for user interface
+# HX711 load cell amplifier for precise weight measurements
+# PCF8563 real-time clock for timekeeping during power-off periods
+# Rotary encoder for navigation and selection
+# Dual tactile buttons for tare and save functions
+# Buzzer for audio feedback and alerts
+# NFC/RFID reader (RC522) for tag identification
+# RGB status LED for visual indications
+
+# Weight Measurement System
+# ----------------------------------------------------------------------------------
+# Precision scale with calibrated measurement (0-40kg range)
+# Linear calibration with two-point reference system
+# Tare functionality with persistent memory
+# Weight filtering with sliding window averaging
+# CO2 cylinder content percentage calculation
+# Empty/full bottle weight reference system
+# Automatic reading display with 0.5s update interval
+# 10g resolution with precision rounding
+
+# User Interface
+# ----------------------------------------------------------------------------------
+# Circular display with intuitive layout
+# Weight display with large, readable font
+# CO2 percentage calculation for gas cylinders
+# Memory system with 10 saved weight records
+# Timestamp recording for saved measurements
+# Rotary control for cycling through saved weights
+# Display timeout with countdown timer
+# Active backlight control for power efficiency
+# Calibration mode with guided instructions
+
+# Power Management
+# ----------------------------------------------------------------------------------
+# Automatic display timeout (30s default)
+# Deep sleep support for extended battery life
+# Display forced-off mode for light-sensitive environments
+# Backlight power management with zero-power off state
+# Smart wake-up system (only physical buttons can wake display)
+# Activity tracking for intelligent power management
+# 24-hour runtime before deep sleep cycle
+
+# Connectivity & Integration
+# ----------------------------------------------------------------------------------
+# Wi-Fi connectivity with fallback access point
+# Static IP configuration for network reliability
+# Home Assistant integration via ESPHome
+# Local web server for direct control (password protected)
+# OTA (Over-the-Air) firmware updates
+# Time synchronization with Home Assistant
+# API access with encryption for secure remote control
+# Comprehensive logging system
+
+# Special Features
+# ----------------------------------------------------------------------------------
+# Sound feedback using RTTTL tones for user actions
+# Memory system for tracking multiple measurements
+# CO2 bottle level monitoring with percentage display
+# NFC/RFID tag detection capabilities
+# Time-stamped weight records
+# Forced display-off mode for grow room compatibility
+# Diagnostic sensors for system monitoring
+# Calibration mode for precision adjustment
+
+
+esphome:
+  name: m5-dial-co2-tank-level
+  friendly_name: M5Stack Dial with Scales
+  on_boot:
+    priority: 100
+    then:
+      - pcf8563.read_time:
+      - logger.log: "M5Stack Dial booting up"
+      # Turn off display immediately on boot after 5 seconds
+      - delay: 5s
+      - lambda: 'id(display_on) = false; id(force_display_off) = true;'
+      - output.set_level:
+          id: backlight_output
+          level: 0%
+      - lambda: 'id(round_display).set_update_interval(0);'
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+# Deep sleep component
+deep_sleep:
+  id: deep_sleep_control
+  run_duration: 24h
+
+# WiFi settings
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  # Manual IP
+  # manual_ip:
+  #   static_ip: 192.168.73.158
+  #   gateway: 192.168.73.1
+  #   subnet: 255.255.255.0
+  #   dns1: 8.8.8.8
+  #   dns2: 1.1.1.1
+  
+  # Fallback hotspot
+  ap:
+    ssid: "m5 scales Fallback Hotspot"
+    password: "FTi0dalz2qff"
+
+# API settings
+api:
+  encryption:
+    key: ""
+  reboot_timeout: 0s
+  port: 6053
+
+status_led:
+  pin: GPIO13
+  
+captive_portal:
+
+ota:
+  - platform: esphome
+    password: ""
+
+logger:
+  level: DEBUG
+  logs:
+    wifi: DEBUG
+    api: DEBUG
+    api.connection: DEBUG
+    hx711: INFO
+    i2c: INFO
+
+# I2C bus
+i2c:
+  - id: internal_i2c
+    sda: GPIO11
+    scl: GPIO12
+    scan: true
+    frequency: 100kHz
+
+# NFC reader
+rc522_i2c:
+  - id: nfc_reader
+    i2c_id: internal_i2c
+    address: 0x28
+
+# Outputs
+output:
+  - platform: ledc
+    pin: GPIO3
+    id: buzzer
+  - platform: ledc
+    pin: GPIO9
+    id: backlight_output
+    # Special settings to ensure it can be fully off
+    frequency: 1000 Hz
+    min_power: 0.0
+    max_power: 1.0
+    zero_means_zero: true  # Important - force zero to be truly zero
+
+# RTTTL tones
+rtttl:
+  output: buzzer
+
+# Data storage globals
+globals:
+  - id: saved_weights
+    type: float[10]
+    initial_value: '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}'
+  - id: saved_timestamps
+    type: uint32_t[10]
+    initial_value: '{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}'
+  - id: current_weight_index
+    type: int
+    initial_value: '0'
+  - id: display_hold
+    type: bool
+    initial_value: 'false'
+  - id: tare_value
+    type: float
+    initial_value: '0.0'
+  - id: scale_initialized
+    type: bool
+    initial_value: 'false'
+  - id: empty_bottle_weight
+    type: float
+    initial_value: '21950.0'
+  - id: full_bottle_weight
+    type: float
+    initial_value: '39150.0'
+  - id: full_co2_weight
+    type: float
+    initial_value: '17200.0'
+  # Display control globals
+  - id: last_activity_time
+    type: uint32_t
+    initial_value: '0'
+  - id: display_on
+    type: bool
+    initial_value: 'false'  # Start with display OFF
+  - id: display_timeout_seconds
+    type: uint32_t
+    initial_value: '30'
+  # New global to prioritize display off state
+  - id: force_display_off
+    type: bool
+    initial_value: 'true'  # Start with forced OFF
+
+# Sensors
+sensor:
+  - platform: rotary_encoder
+    id: encoder
+    pin_a: GPIO40
+    pin_b: GPIO41
+    resolution: 1
+    min_value: 0
+    max_value: 9
+    on_clockwise:
+      then:
+        # Only update the UI if display is already on
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: |-
+                  id(last_activity_time) = millis() / 1000;
+                  if (id(current_weight_index) < 9) {
+                    id(current_weight_index)++;
+                  }
+              - script.execute: update_display
+    on_anticlockwise:
+      then:
+        # Only update the UI if display is already on
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: |-
+                  id(last_activity_time) = millis() / 1000;
+                  if (id(current_weight_index) > 0) {
+                    id(current_weight_index)--;
+                  }
+              - script.execute: update_display
+
+  # HX711 scale sensor
+  - platform: hx711
+    name: "Scale Weight"
+    id: scale_weight
+    dout_pin: GPIO1
+    clk_pin: GPIO2
+    gain: 128
+    update_interval: 0.5s
+    filters:
+      - calibrate_linear:
+          - -624700 -> 0
+          - -599800 -> 1000
+      - sliding_window_moving_average:
+          window_size: 3
+          send_every: 1
+      - throttle: 10s
+      - lambda: |-
+          float value = x - id(tare_value);
+          if (value < 0) value = 0;
+          return round(value / 10.0) * 10.0;
+    unit_of_measurement: "g"
+    accuracy_decimals: 0
+    device_class: "weight"
+    state_class: "measurement"
+    on_value:
+      then:
+        - lambda: |-
+            id(scale_initialized) = true;
+            
+            // Calculate CO2 percentage without affecting display
+            float current_weight = id(scale_weight).state;
+            float co2_weight = current_weight - id(empty_bottle_weight);
+            float percentage = 0.0;
+            
+            if (current_weight > 15000) {
+              if (co2_weight <= 0) {
+                percentage = 0.0;
+              } else if (co2_weight >= id(full_co2_weight)) {
+                percentage = 100.0;
+              } else {
+                percentage = (co2_weight / id(full_co2_weight)) * 100.0;
+                percentage = round(percentage);
+              }
+            }
+            
+            // Publish to the template sensor
+            id(co2_percentage).publish_state(percentage);
+            
+            // Update display ONLY if it's already on - never turn it on automatically
+            if (id(display_on) && !id(display_hold)) {
+              id(update_display).execute();
+            }
+
+  # CO2 percentage sensor
+  - platform: template
+    name: "CO2 Bottle Percentage"
+    id: co2_percentage
+    unit_of_measurement: "%"
+    icon: "mdi:gas-cylinder"
+    accuracy_decimals: 0
+    update_interval: 10s
+    filters:
+      - throttle: 10s
+  
+  # System sensors
+  - platform: uptime
+    name: Uptime
+    id: system_uptime
+    update_interval: 60s
+    
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# Time
+time:
+  - platform: pcf8563
+    id: rtctime
+    address: 0x51
+    update_interval: never
+  - platform: homeassistant
+    id: esptime
+    on_time_sync:
+      then:
+        - pcf8563.write_time:
+
+# Buttons - ONLY these can wake the display
+binary_sensor:
+  - platform: gpio
+    name: Hold/Save Button
+    id: hold_save_button
+    pin: GPIO46
+    internal: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms 
+    on_press:
+      then:
+        # First, handle display wake if needed
+        - lambda: 'id(last_activity_time) = millis() / 1000;'
+        - if:
+            condition:
+              lambda: 'return !id(display_on);'
+            then:
+              # Wake up display only on physical button press
+              - script.execute: manual_wake_display
+              - delay: 100ms  # Brief delay to let display initialize
+            else:
+              # If display is already on, handle normal button functions
+              - if:
+                  condition:
+                    lambda: 'return !id(display_hold);'
+                  then:
+                    - lambda: |-
+                        id(display_hold) = true;
+                        if (id(scale_weight).has_state()) {
+                          id(saved_weights)[id(current_weight_index)] = id(scale_weight).state;
+                          id(saved_timestamps)[id(current_weight_index)] = id(esptime).now().timestamp;
+                          id(current_weight_index)++;
+                          if (id(current_weight_index) >= 10) {
+                            id(current_weight_index) = 0;
+                          }
+                        }
+                    - rtttl.play: "save:d=4,o=5,b=100:16e6,16g6"
+                    - script.execute: update_display
+                  else:
+                    - lambda: 'id(display_hold) = false;'
+                    - rtttl.play: "unsave:d=4,o=5,b=100:16g6,16e6"
+                    - script.execute: update_display
+
+  - platform: gpio
+    name: Tare Button
+    id: tare_button
+    pin: GPIO42
+    internal: true
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_press:
+      then:
+        # First, handle display wake if needed
+        - lambda: 'id(last_activity_time) = millis() / 1000;'
+        - if:
+            condition:
+              lambda: 'return !id(display_on);'
+            then:
+              # Wake up display only on physical button press
+              - script.execute: manual_wake_display
+              - delay: 100ms  # Brief delay to let display initialize
+            else:
+              # If display is already on, handle normal Tare function
+              - lambda: |-
+                  if (id(scale_weight).has_state()) {
+                    id(tare_value) = id(scale_weight).state;
+                    ESP_LOGI("scale", "Tare set to %.1f g", id(tare_value));
+                  }
+              - rtttl.play: "tare:d=4,o=5,b=100:16e6"
+              - script.execute: update_display
+  
+  # Status sensor
+  - platform: status
+    name: "Device Status"
+    id: device_status
+
+# SPI bus
+spi:
+  id: spi_bus
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+# Fonts
+font:
+  - file: "arial.ttf"
+    id: display_font
+    size: 20
+
+  - file: "arial.ttf"
+    id: large_font
+    size: 28
+
+# Display
+display:
+  - platform: ili9xxx
+    id: round_display
+    model: GC9A01A
+    cs_pin: GPIO7
+    reset_pin: GPIO8
+    dc_pin: GPIO4
+    invert_colors: false
+    rotation: 0
+    update_interval: 0s  # Start with no updates
+    lambda: |-
+      // If display is off, don't render anything
+      if (!id(display_on)) {
+        it.fill(Color::BLACK);
+        return;
+      }
+      
+      // Clear the display
+      it.fill(Color::BLACK);
+      
+      // Center coordinates
+      int center_x = it.get_width() / 2;
+      int center_y = it.get_height() / 2;
+      
+      // Display title
+      it.printf(center_x, 20, id(display_font), TextAlign::CENTER, "M5 Scale");
+      
+      // Check if we're in calibration mode
+      if (id(scale_calibration_mode).state) {
+        it.printf(center_x, center_y - 40, id(display_font), TextAlign::CENTER, "CALIBRATION MODE");
+        if (id(scale_weight).has_state()) {
+          it.printf(center_x, center_y, id(large_font), TextAlign::CENTER, "%.0f", id(scale_weight).state);
+        } else {
+          it.printf(center_x, center_y, id(large_font), TextAlign::CENTER, "No Reading");
+        }
+        it.printf(center_x, center_y + 40, id(display_font), TextAlign::CENTER, "Empty→Place 1kg→Note values");
+        it.printf(center_x, center_y + 70, id(display_font), TextAlign::CENTER, "Record both values");
+        return;
+      }
+      
+      // Controls info
+      it.printf(center_x, 45, id(display_font), TextAlign::CENTER, "Tare | Hold: Save");
+      
+      // Display the weight value
+      if (id(scale_weight).has_state()) {
+        if (id(display_hold)) {
+          it.printf(center_x, center_y - 30, id(large_font), TextAlign::CENTER, "Saved: %.0f g", id(saved_weights)[id(current_weight_index)]);
+          
+          // Show timestamp if available
+          if (id(saved_timestamps)[id(current_weight_index)] > 0) {
+            time_t timestamp = id(saved_timestamps)[id(current_weight_index)];
+            struct tm timeinfo;
+            localtime_r(&timestamp, &timeinfo);
+            char time_str[20];
+            strftime(time_str, sizeof(time_str), "%H:%M %d/%m", &timeinfo);
+            it.printf(center_x, center_y + 10, id(display_font), TextAlign::CENTER, "%s", time_str);
+          }
+          
+          it.printf(center_x, center_y + 50, id(display_font), TextAlign::CENTER, "Memory %d/10", id(current_weight_index) + 1);
+        } else {
+          it.printf(center_x, center_y - 20, id(large_font), TextAlign::CENTER, "%.0f g", id(scale_weight).state);
+          
+          // Show CO2 percentage for heavy items
+          if (id(scale_weight).state > 15000) {
+            if (id(co2_percentage).has_state()) {
+              it.printf(center_x, center_y + 20, id(large_font), TextAlign::CENTER, "CO2: %.0f%%", id(co2_percentage).state);
+            }
+          }
+          
+          // Show tare info
+          if (id(tare_value) != 0.0) {
+            it.printf(center_x, center_y + 60, id(display_font), TextAlign::CENTER, "Tare: %.0f g", id(tare_value));
+          }
+        }
+      } else {
+        it.printf(center_x, center_y, id(display_font), TextAlign::CENTER, "Scale initializing...");
+      }
+      
+      // Show timeout countdown in bottom corner
+      uint32_t time_left = id(display_timeout_seconds) - (millis() / 1000 - id(last_activity_time));
+      if (time_left <= id(display_timeout_seconds)) {
+        it.printf(210, 210, id(display_font), TextAlign::RIGHT, "%ds", time_left);
+      }
+
+# Backlight
+light:
+  - platform: monochromatic
+    name: "Backlight"
+    output: backlight_output
+    id: display_backlight
+    default_transition_length: 0s
+    restore_mode: ALWAYS_OFF  # Always start off
+
+# Strict timeout check - 1 second interval for countdown accuracy
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          // If forced off, ensure display remains off regardless of other conditions
+          if (id(force_display_off)) {
+            if (id(display_on)) {
+              // Force display off
+              id(display_on) = false;
+              id(backlight_output).set_level(0.0);
+              id(round_display).set_update_interval(0);
+              ESP_LOGI("display", "Display forced off by priority override");
+            }
+            return;  // Skip timeout check when forced off
+          }
+          
+          // Check for timeout
+          uint32_t current_time = millis() / 1000;
+          uint32_t elapsed_time = current_time - id(last_activity_time);
+          
+          // If timeout reached and display is on
+          if (elapsed_time > id(display_timeout_seconds) && id(display_on)) {
+            // Turn off display and backlight
+            id(display_on) = false;
+            
+            // Ensure backlight is truly off with multiple methods
+            id(display_backlight).turn_off();
+            id(backlight_output).set_level(0.0);
+            
+            // Stop display updates to save power
+            id(round_display).set_update_interval(0);
+            
+            ESP_LOGI("display", "Display turned off due to inactivity after %u seconds", elapsed_time);
+          }
+          
+          // If display is on, update display to show countdown
+          if (id(display_on)) {
+            id(round_display).update();
+          }
+
+# Scripts
+script:
+  - id: update_display
+    then:
+      - lambda: 'if (id(display_on)) id(round_display).update();'
+
+  - id: reset_tare
+    then:
+      - lambda: 'id(tare_value) = 0.0;'
+      - rtttl.play: "reset:d=4,o=5,b=100:16c6,16g5"
+      - script.execute: update_display
+
+  - id: clear_saved_weights
+    then:
+      - lambda: |-
+          for (int i = 0; i < 10; i++) {
+            id(saved_weights)[i] = 0.0;
+            id(saved_timestamps)[i] = 0;
+          }
+          id(current_weight_index) = 0;
+      - rtttl.play: "clear:d=4,o=5,b=100:16c6,16g5,16c6"
+      - script.execute: update_display
+
+  # Special manual wake script - ONLY called by physical buttons
+  - id: manual_wake_display
+    then:
+      - lambda: |-
+          // Only wake if not force-disabled
+          if (!id(force_display_off)) {
+            id(display_on) = true;
+            id(last_activity_time) = millis() / 1000;
+            ESP_LOGI("display", "Display manually woken by physical button");
+          }
+      - output.set_level:
+          id: backlight_output
+          level: 100%
+      - lambda: 'id(round_display).set_update_interval(500);'
+      - script.execute: update_display
+
+# Switches
+switch:
+  - platform: restart
+    name: "Restart Device"
+    id: restart_switch
+
+  - platform: template
+    name: "Scale Calibration Mode"
+    id: scale_calibration_mode
+    icon: "mdi:scale"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: 'id(last_activity_time) = millis() / 1000;'
+              - logger.log: "CALIBRATION MODE ON - Record empty and 1kg values"
+              - rtttl.play: "calibrate:d=4,o=5,b=100:16c6,16e6,16g6"
+              - script.execute: update_display
+    on_turn_off:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: 'id(last_activity_time) = millis() / 1000;'
+              - logger.log: "CALIBRATION MODE OFF - Regular scale operation"
+              - rtttl.play: "done:d=4,o=5,b=100:16g6,16e6,16c6"
+              - script.execute: update_display
+
+  # Reset tare switch
+  - platform: template
+    name: "Reset Tare"
+    id: reset_tare_switch
+    icon: "mdi:scale-balance"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: 'id(last_activity_time) = millis() / 1000;'
+              - script.execute: reset_tare
+        - switch.turn_off: reset_tare_switch
+
+  # Clear saved weights switch
+  - platform: template
+    name: "Clear Saved Weights" 
+    id: clear_weights_switch
+    icon: "mdi:delete"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(display_on);'
+            then:
+              - lambda: 'id(last_activity_time) = millis() / 1000;'
+              - script.execute: clear_saved_weights
+        - switch.turn_off: clear_weights_switch
+        
+  # Display force off switch - overrides everything
+  - platform: template
+    name: "Force Display Off"
+    id: force_display_off_switch
+    icon: "mdi:lightbulb-off"
+    optimistic: true
+    restore_mode: ALWAYS_ON  # Default to ON (display forced off)
+    on_turn_on:
+      then:
+        - lambda: |-
+            id(force_display_off) = true;
+            id(display_on) = false;
+        - output.set_level:
+            id: backlight_output
+            level: 0%
+        - lambda: 'id(round_display).set_update_interval(0);'
+        - logger.log: "Display FORCED OFF (grow room mode)"
+    on_turn_off:
+      then:
+        - lambda: 'id(force_display_off) = false;'
+        - logger.log: "Display force-off disabled (buttons can wake display)"
+
+  # Manual display enable (for testing/maintenance only)
+  - platform: template
+    name: "Manual Display On"
+    id: manual_display_on_switch
+    icon: "mdi:lightbulb"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      then:
+        - lambda: 'id(force_display_off) = false;'
+        - script.execute: manual_wake_display
+    on_turn_off:
+      then:
+        - lambda: 'id(display_on) = false;'
+        - output.set_level:
+            id: backlight_output
+            level: 0%
+        - lambda: 'id(round_display).set_update_interval(0);'
+
+# Web server
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: admin

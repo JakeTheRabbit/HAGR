@@ -64,7 +64,7 @@ The integrated features include but are not limited to:
 - **VPD Calculations**: Live leaf and environment calculations to maintain optimal humidity and temperature.
 - **Automatic VPD Control**: Adjusts leaf VPD to maintain steady conditions despite temperature and humidity fluctuations.
 - **Sensor Integrations**: Includes THC-S, Teros 12, and Alibaba Teros 12 compatible VWC/EC sensors.
-- **Nutrient Dosing**: Automated dosing with peristaltic pumps using Athena Pro line nutrients.
+- [**Nutrient Dosing**](https://github.com/JakeTheRabbit/HAGR/blob/main/automated_batch_tank.md): Automated dosing with peristaltic pumps using Athena Pro line nutrients.
 - **Lighting Control**: LED lights and drivers controlled via PWM as dimmable entities in Home Assistant.
 - **Tank Level Monitoring**: Ultrasonic distance sensor for tank levels.
 - **Notifications**: Hourly sensor updates and alerts for high/low setpoints (e.g., Temperature, VWC, CO2).

@@ -58,26 +58,24 @@ Links:
 
 The integrated features include but are not limited to:
 
-- **[CO2 Control](blueprints/co2_control_and_alerts.yaml):** Setpoints for day/night, high / low alerting, safety off, hysteresis, auto-dim lights on low CO2
-- [Teros-12 SDI-12 to ESP32](https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md): Connect your Teros 12 or make a cheap chinese version and connect to Home Assistant with an ESP32
-- **Thermal Camera**: Live leaf temperature readings using ESP32 and MLX90641 in Home Assistant.
+- **[CO2 Control](blueprints/co2_control_and_alerts.yaml):** Setpoints for day/night, high / low alerting, safety off (turns off the relay if left on for more than x minutes), hysteresis, auto-dim lights on low CO2 (if your CO2 levels drop below your set point for too long the lights dim to prevent damage).
+- [Teros-12 SDI-12 to ESP32](https://github.com/JakeTheRabbit/HAGR/blob/main/teros-12/Readme.md): Integrate VWC (moisture) and substrate EC readings into Home Assistant. Connect your Teros 12 or make a cheap chinese version and connect to Home Assistant with an ESP32
+- **Thermal Camera**: Live leaf temperature readings using ESP32 and MLX90641.
 - **VPD Calculations**: Live leaf and environment calculations to maintain optimal humidity and temperature.
-- **Automatic VPD Control**: Adjusts leaf VPD to maintain steady conditions despite temperature and humidity fluctuations.
-- **Sensor Integrations**: Includes THC-S, Teros 12, and Alibaba Teros 12 compatible VWC/EC sensors.
+- **Automatic VPD Control**: Adjusts the relative humidity to maintain a static leaf VPD despite temperature and humidity fluctuations. Can control the dehumidifier/humidifier to achieve this. 
 - [**Nutrient Dosing**](https://github.com/JakeTheRabbit/HAGR/blob/main/automated_batch_tank.md): Automated dosing with peristaltic pumps using Athena Pro line nutrients.
-- **Lighting Control**: LED lights and drivers controlled via PWM as dimmable entities in Home Assistant.
-- **Tank Level Monitoring**: Ultrasonic distance sensor for tank levels.
-- **Notifications**: Hourly sensor updates and alerts for high/low setpoints (e.g., Temperature, VWC, CO2).
-- **Fan Speed Control**: Automatically adjusts fan speed.
-- **AC Control**: ESP32-controlled AC wall unit.
-- **Irrigation Strategy & Crop Steering**: (still in progress)
+- **Lighting Control**: LED lights and drivers controlled via PWM as dimmable entities in Home Assistant. Automatic light acclimation (i.e. increase ppfd by 5% every day until 1200umol).
+- **Tank Level Monitoring**: Ultrasonic distance sensor for tank levels, alters for empty batch tank, status monitor % full.
+- **Notifications**: Hourly sensor updates and alerts for high/low setpoints (e.g., Temperature, VWC, CO2). Urgent/Alarm alerts for critical stuff like low CO2, high temperature (breaks through DND).
+- **Fan Speed Control**: Automatically adjusts fan speed to maintain a temperature.
+- **AC Control**: Control your wall mounted AC unit with an IR blaster. PID control a room to +/- 0.2 celcius with a regular AC. 
+- **Irrigation Strategy & Crop Steering**:
   - Multiple sensor triggers for redundancy
   - Dosing calculations and adjustments
   - Emergency shots and dryback percentage calculations
   - Various transitions and fail-safes
 - **Lighting Automation**: Automatic lights on/off.
 - **Temperature Control**: Day/night setpoints.
-- **CO2-Triggered Light Dimming**: Low CO2 auto light dimming.
 
 ## Screenshots
 

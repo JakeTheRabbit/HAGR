@@ -1,0 +1,719 @@
+# # Crop Steering Package for Irrigation
+# # Extracted from automations.yaml
+#
+# # Combined Crop Steering and Backup Pump Activation
+# - id: '1707102576341'
+#   alias: Combined Crop Steering and Backup Pump Activation
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_8_rockwool_wvc
+#     - sensor.lites3_2_rockwool_vwc
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#   condition:
+#   - condition: or
+#     conditions:
+#     - condition: and
+#       conditions:
+#       - condition: numeric_state
+#         entity_id: sensor.esppoe_8_rockwool_wvc
+#         below: input_number.2_7_p3_min_vwc
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P3
+#     - condition: and
+#       conditions:
+#       - condition: numeric_state
+#         entity_id: sensor.lites3_2_rockwool_vwc
+#         below: input_number.2_7_p3_min_vwc
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P3
+#     - condition: and
+#       conditions:
+#       - condition: numeric_state
+#         entity_id: sensor.esppoe_2_rockwool_calibrated_humidity_4
+#         below: input_number.2_7_p3_min_vwc
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P3
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P3
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ trigger.to_state.state | float < states(''input_number.2_7_p3_min_vwc'')
+#           | float }}'
+#       sequence:
+#       - service: notify.mobile_app_s23ultra
+#         data:
+#           message: 'P3 Shot Number: {{ states(''input_number.p3_shot_count'') }} -
+#             VWC is {{ trigger.to_state.state }} in {{ state_attr(trigger.entity_id,
+#             ''friendly_name'') }}, turning the pump on for {{ states(''input_number.2_7_p1_shot_size'')
+#             | float * 35 }} seconds. Threshold is {{ states(''input_number.2_7_p3_min_vwc'')
+#             }}.
+#
+#             '
+#           title: Pump Activation Notice
+#           data:
+#             tag: pump_activation_notice
+#       - service: switch.turn_on
+#         target:
+#           entity_id: switch.switch_4
+#         data: {}
+#       - delay:
+#           seconds: '{{ states(''input_number.2_7_p1_shot_size'') | float * 35 }}'
+#       - service: switch.turn_off
+#         target:
+#           entity_id: switch.switch_4
+#         data: {}
+#   mode: single
+#
+# # 2.7 Crop Steering - P1 Pump Activation Every 20 Minutes
+# - id: '1707898475026'
+#   alias: 2.7 Crop Steering -  P1 Pump Activation Every 20 Minutes
+#   description: "This automation turns on the pump every 20 minutes during the P1 irrigation
+#     phase. It then turns off the pump after waiting X seconds defined by how big the
+#     shot is set to. 20 minutes is hard coded. \n"
+#   trigger:
+#   - platform: time_pattern
+#     minutes: /15
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P1
+#   action:
+#   - service: switch.turn_on
+#     data: {}
+#     target:
+#       entity_id: switch.switch_4
+#   - delay:
+#       seconds: '{{ states(''input_number.2_7_p1_shot_size'') | float * 35 }}'
+#     enabled: false
+#   - delay:
+#       hours: 0
+#       minutes: 2
+#       seconds: 0
+#       milliseconds: 0
+#   - service: switch.turn_off
+#     data: {}
+#     target:
+#       entity_id: switch.switch_4
+#   - service: input_datetime.set_datetime
+#     entity_id: input_datetime.2_7_last_pump_off_time
+#     data:
+#       timestamp: '{{ as_timestamp(now()) }}'
+#     enabled: false
+#   mode: single
+#
+# # 2.7 Crop Steering - At the time of the input_time helper change to P3
+# - id: '1707898580060'
+#   alias: 2.7 Crop Steering - At the time of the input_time helper change to P3
+#   description: ''
+#   trigger:
+#   - platform: time
+#     at: input_datetime.2_7_p3_start_time
+#   condition: []
+#   action:
+#   - service: input_select.select_option
+#     data:
+#       option: P3
+#     target:
+#       entity_id: input_select.2_7_crop_steering_phase
+#   mode: single
+#
+# # 2.7 Crop Steering - Change phase to P0 when lights turn on
+# - id: '1707898716334'
+#   alias: 2.7 Crop Steering - Change phase to P0 when lights turn on
+#   description: ''
+#   trigger:
+#   - platform: time
+#     at: input_datetime.2_7_sunrise
+#   condition: []
+#   action:
+#   - service: input_select.select_option
+#     data:
+#       option: P0
+#     target:
+#       entity_id: input_select.2_7_crop_steering_phase
+#   mode: single
+#
+# # 2.7 Crop Steering - Changes from P0 to P1 when the VWC reaches the P3 dryback target
+# - id: '1707899604354'
+#   alias: 2.7 Crop Steering - Changes from P0 to P1 when the VWC reaches the P3 dryback target
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     - sensor.esppoe_8_rockwool_wvc
+#     - sensor.lites3_2_rockwool_vwc
+#   condition: []
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ trigger.to_state.state | float < states(''input_number.2_7_p3_min_vwc'')
+#           | float }}'
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P0
+#       sequence:
+#       - service: input_select.select_option
+#         data:
+#           option: P1
+#         target:
+#           entity_id: input_select.2_7_crop_steering_phase
+#   mode: single
+#
+# # 2.7 Crop Steering - When the VWC is more than the p2 VWC max turn off the pump
+# - id: '1707900610310'
+#   alias: 2.7 Crop Steering - When the VWC is more than the p2 VWC max turn off the pump
+#   description: ''
+#   trigger:
+#   - platform: numeric_state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     above: input_number.2_7_p2_field_capacity
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P2
+#   action:
+#   - service: switch.turn_off
+#     data: {}
+#     target:
+#       entity_id: switch.switch_4
+#   mode: single
+#
+# # 2.7 Crop Steering - When VWC is below P2 Dryback VWC turn the pump on
+# - id: '1707900780310'
+#   alias: 2.7 Crop Steering - When VWC is below P2 Dryback VWC turn the pump on
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#   - platform: state
+#     entity_id:
+#     - input_number.2_7_p2_dryback_vwc
+#   condition:
+#   - condition: numeric_state
+#     entity_id: sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     below: input_number.2_7_p2_dryback_vwc
+#     enabled: false
+#   - condition: and
+#     conditions:
+#     - condition: state
+#       entity_id: input_select.2_7_crop_steering_phase
+#       state: P2
+#     - condition: or
+#       conditions:
+#       - condition: numeric_state
+#         entity_id: sensor.esppoe_8_rockwool_wvc
+#         below: input_number.2_7_p2_dryback_vwc
+#       - condition: numeric_state
+#         entity_id: sensor.esppoe_2_rockwool_calibrated_humidity_4
+#         below: input_number.2_7_p2_dryback_vwc
+#   - condition: state
+#     entity_id: switch.switch_4
+#     state: 'off'
+#   action:
+#   - service: switch.turn_on
+#     data: {}
+#     target:
+#       entity_id: switch.switch_4
+#   mode: single
+#
+# # Deprecated - 2.7 Crop Steering - When VWC is above field capacity shot count is at least 10, and both PWEC sensors are below reset value during p1, change to p2
+# - id: '1707900936889'
+#   alias: Deprecated - 2.7 Crop Steering - When VWC is above field capacity, shot count is at least 10, and both PWEC sensors are below reset value during p1, change to p2
+#   description: ''
+#   trigger:
+#   - platform: numeric_state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     above: input_number.2_7_p1_field_capacity
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P1
+#   - condition: numeric_state
+#     entity_id: input_number.p1_shot_count
+#     above: input_number.p1_max_shot_count
+#   - condition: numeric_state
+#     entity_id: sensor.esppoe_2_rockwool_pwec
+#     below: input_number.pwec_p1_reset_value
+#   - condition: numeric_state
+#     entity_id: sensor.esppoe_8_rockwool_pwec
+#     below: input_number.pwec_p1_reset_value
+#   action:
+#   - service: input_select.select_option
+#     data:
+#       option: P2
+#     target:
+#       entity_id: input_select.2_7_crop_steering_phase
+#   mode: single
+#
+# # 2.7 Crop Steering Count pump on occurrences per phase
+# - id: '1707901253502'
+#   alias: 2.7 Crop Steering Count pump on occurrences per phase
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id: switch.switch_4
+#     from: 'on'
+#     to: 'off'
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P1
+#       sequence:
+#       - service: input_number.increment
+#         target:
+#           entity_id: input_number.p1_shot_count
+#     - conditions:
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P2
+#       sequence:
+#       - service: input_number.increment
+#         target:
+#           entity_id: input_number.p2_shot_count
+#     - conditions:
+#       - condition: state
+#         entity_id: input_select.2_7_crop_steering_phase
+#         state: P3
+#       sequence:
+#       - service: input_number.increment
+#         target:
+#           entity_id: input_number.p3_shot_count
+#     default: []
+#
+# # 2.7 Crop Steering Phase Updates Notification
+# - id: '1707901385565'
+#   alias: 2.7 Crop Steering Phase Updates Notification
+#   description: 'Notifies when input_select.crop_steering_phase_updates_automatically
+#     changes state
+#
+#     '
+#   trigger:
+#   - platform: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#   action:
+#   - service: notify.mobile_app_s23ultra
+#     data:
+#       title: 2.7 Phase Update
+#       message: 'Crop Steering Phase has changed to: {{ states(''input_select.2_7_crop_steering_phase'')
+#         }}\n Time: {{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}\n VWC: R: {{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#         }}%, M: {{ states(''sensor.lites3_2_rockwool_vwc'') }}%, L: {{ states(''sensor.esppoe_8_rockwool_wvc'')
+#         }}%\n PWEC: R: {{ states(''sensor.esppoe_2_rockwool_pwec'') }}, M: {{ states(''sensor.lites3_2_rockwool_pwec'')
+#         }}, L: {{ states(''sensor.esppoe_8_rockwool_pwec'') }}\n Shot Counts: P1:
+#         {{ states(''input_number.p1_shot_count'') }}, P2: {{ states(''input_number.p2_shot_count'')
+#         }}, P3: {{ states(''input_number.p3_shot_count'') }}
+#
+#         '
+#       data:
+#         tag: crop_steering_phase_update
+#   - service: notify.mobile_app_s23ultra
+#     data:
+#       command: clear_notification
+#       data:
+#         tag: crop_steering_phase_update
+#   - condition: template
+#     value_template: '{{ states(''input_number.p1_shot_count'') | int == states(''input_number.p1_max_shot_count'')
+#       | int }}'
+#   - service: notify.mobile_app_s23ultra
+#     data:
+#       title: P1 Max Shot Count Reached
+#       message: 'The P1 shot count has reached its maximum limit.\n Time: {{ now().strftime(''%Y-%m-%d
+#         %H:%M:%S'') }}\n P1 Shot Count: {{ states(''input_number.p1_shot_count'')
+#         }}\n P1 Max Shot Count: {{ states(''input_number.p1_max_shot_count'') }}
+#
+#         '
+#       data:
+#         tag: p1_max_shot_count_reached
+#   mode: single
+#
+# # 2.7 Crop Steering Transition to P2 Phase and Update Field Capacity
+# - id: '1707902285287'
+#   alias: 2.7 Crop Steering Transition to P2 Phase and Update Field Capacity
+#   description: Change crop steering phase to P2 and update field capacity based on
+#     shot count, specific sensor conditions, and ensure we are in P1.
+#   trigger:
+#   - platform: state
+#     entity_id: input_number.p1_shot_count
+#   - platform: numeric_state
+#     entity_id:
+#     - sensor.lites3_2_rockwool_vwc
+#     above: input_number.2_7_p1_field_capacity
+#   - platform: numeric_state
+#     entity_id:
+#     - sensor.lites3_2_rockwool_pwec
+#     below: input_number.pwec_p1_reset_value
+#   - platform: numeric_state
+#     entity_id: sensor.esppoe_8_rockwool_pwec
+#     below: input_number.pwec_p1_reset_value
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ is_state(''input_select.2_7_crop_steering_phase'', ''P1'')
+#           }}'
+#       - condition: or
+#         conditions:
+#         - condition: template
+#           value_template: '{{ states(''input_number.p1_shot_count'') | float > states(''input_number.p1_max_shot_count'')
+#             | float }}'
+#         - condition: and
+#           conditions:
+#           - condition: numeric_state
+#             entity_id: sensor.esppoe_2_rockwool_pwec_4
+#             below: input_number.pwec_p1_reset_value
+#           - condition: numeric_state
+#             entity_id: sensor.esppoe_8_rockwool_pwec
+#             below: input_number.pwec_p1_reset_value
+#           - condition: numeric_state
+#             entity_id: sensor.lites3_2_rockwool_vwc
+#             above: input_number.2_7_p1_field_capacity
+#       sequence:
+#       - service: input_select.select_option
+#         target:
+#           entity_id: input_select.2_7_crop_steering_phase
+#         data:
+#           option: P2
+#       - service: input_number.set_value
+#         target:
+#           entity_id: input_number.2_7_p2_field_capacity
+#         data:
+#           value: '{{ (states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') |
+#             float) - 1 }}'
+#       - service: input_number.set_value
+#         target:
+#           entity_id: input_number.2_7_p2_dryback_vwc
+#         data:
+#           value: '{{ ((states(''input_number.2_7_p2_field_capacity'') | float) -  (states(''input_number.2_7_p2_field_capacity'')
+#             | float) *  (states(''input_number.2_7_p2_dryback_vwc_dryback_percent'')
+#             | float) / 100) | round(2) }}
+#
+#             '
+#     default: []
+#   mode: single
+#
+# # 2.7 Crop Steering Reset counts on phase change
+# - id: '1707902582609'
+#   alias: 2.7 Crop Steering Reset counts on phase change
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ trigger.to_state.state == ''P1'' }}'
+#       sequence:
+#       - service: input_number.set_value
+#         target:
+#           entity_id: input_number.p1_shot_count
+#         data:
+#           value: 0
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ trigger.to_state.state == ''P2'' }}'
+#       sequence:
+#       - service: input_number.set_value
+#         target:
+#           entity_id: input_number.p2_shot_count
+#         data:
+#           value: 0
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ trigger.to_state.state == ''P3'' }}'
+#       sequence:
+#       - service: input_number.set_value
+#         target:
+#           entity_id: input_number.p3_shot_count
+#         data:
+#           value: 0
+#     default: []
+#
+# # Update VWC and pwEC min-max for P1
+# - id: '1707990309750'
+#   alias: Update VWC and pwEC min-max for P1
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_8_rockwool_pwec
+#     - sensor.esppoe_2_rockwool_pwec_4
+#     - sensor.esppoe_8_rockwool_wvc
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P1
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float < states(''input_number.right_vwc_min_p1'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_min_p1
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float > states(''input_number.right_vwc_max_p1'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_max_p1
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float < states(''input_number.left_vwc_min_p1'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_min_p1
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float > states(''input_number.left_vwc_max_p1'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_max_p1
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float < states(''input_number.right_pwec_min_p1'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_min_p1
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float > states(''input_number.right_pwec_max_p1'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_max_p1
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float <
+#           states(''input_number.left_pwec_min_p1'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_min_p1
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float >
+#           states(''input_number.left_pwec_max_p1'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_max_p1
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     default: []
+#
+# # Update VWC and pwEC min-max for P2
+# - id: '1707990443613'
+#   alias: Update VWC and pwEC min-max for P2
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     - sensor.esppoe_8_rockwool_wvc
+#     - sensor.esppoe_8_rockwool_pwec
+#     - sensor.esppoe_2_rockwool_pwec_4
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P2
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float < states(''input_number.right_vwc_min_p2'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_min_p2
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float > states(''input_number.right_vwc_max_p2'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_max_p2
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float < states(''input_number.left_vwc_min_p2'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_min_p2
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float > states(''input_number.left_vwc_max_p2'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_max_p2
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float < states(''input_number.right_pwec_min_p2'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_min_p2
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float > states(''input_number.right_pwec_max_p2'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_max_p2
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float <
+#           states(''input_number.left_pwec_min_p2'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_min_p2
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float >
+#           states(''input_number.left_pwec_max_p2'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_max_p2
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     default: []
+#
+# # Update VWC and pwEC min-max for P3
+# - id: '1707990884680'
+#   alias: Update VWC and pwEC min-max for P3
+#   description: ''
+#   trigger:
+#   - platform: state
+#     entity_id:
+#     - sensor.esppoe_2_rockwool_calibrated_humidity_4
+#     - sensor.esppoe_2_rockwool_pwec_4
+#     - sensor.esppoe_8_rockwool_wvc
+#     - sensor.esppoe_8_rockwool_pwec
+#     - sensor.lites3_2_rockwool_pwec
+#     - sensor.lites3_2_rockwool_vwc
+#   condition:
+#   - condition: state
+#     entity_id: input_select.2_7_crop_steering_phase
+#     state: P3
+#   action:
+#   - choose:
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float < states(''input_number.left_vwc_min_p3'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_min_p3
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'')
+#           | float > states(''input_number.left_vwc_max_p3'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_vwc_max_p3
+#           value: '{{ states(''sensor.esppoe_2_rockwool_calibrated_humidity_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float < states(''input_number.right_vwc_min_p3'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_min_p3
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_wvc'') | float > states(''input_number.right_vwc_max_p3'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_vwc_max_p3
+#           value: '{{ states(''sensor.esppoe_8_rockwool_wvc'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float <
+#           states(''input_number.left_pwec_min_p3'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_min_p3
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') | float >
+#           states(''input_number.left_pwec_max_p3'') | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.left_pwec_max_p3
+#           value: '{{ states(''sensor.esppoe_2_rockwool_pwec_4'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float < states(''input_number.right_pwec_min_p3'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_min_p3
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     - conditions:
+#       - condition: template
+#         value_template: '{{ states(''sensor.esppoe_8_rockwool_pwec'') | float > states(''input_number.right_pwec_max_p3'')
+#           | float }}'
+#       sequence:
+#       - service: input_number.set_value
+#         data:
+#           entity_id: input_number.right_pwec_max_p3
+#           value: '{{ states(''sensor.esppoe_8_rockwool_pwec'') }}'
+#     default: []

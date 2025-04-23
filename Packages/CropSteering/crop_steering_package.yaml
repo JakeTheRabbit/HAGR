@@ -1,0 +1,31 @@
+# Home Assistant Crop Steering Package
+# Loads all necessary configurations for the improved crop steering system.
+
+# Include all input helpers (selects, numbers, datetimes)
+input_select: !include crop_steering_variables.yaml
+input_number: !include crop_steering_variables.yaml
+input_datetime: !include crop_steering_variables.yaml
+
+# Include template sensors (calculations, status, etc.)
+# Includes sensors defined using the modern 'template:' structure
+template:
+  - !include crop_steering_improved_sensors.yaml
+  - !include crop_steering_aggregation_sensors.yaml
+
+# Include automations
+automation: !include crop_steering_improved_automations.yaml
+
+# Note: This package assumes the following files exist in the same directory:
+# - crop_steering_variables.yaml (containing input_select, input_number, input_datetime)
+# - crop_steering_improved_sensors.yaml (containing template sensors under the 'sensor:' key)
+# - crop_steering_aggregation_sensors.yaml (containing template sensors under the 'sensor:' key)
+# - crop_steering_improved_automations.yaml (containing automations under the 'automation:' key)
+
+# You might need to adjust sensor includes if they are not directly under the 'sensor:' key
+# For example, if aggregation sensors were under their own key, you'd need:
+# sensor: !include crop_steering_improved_sensors.yaml
+# sensor_aggregation: !include crop_steering_aggregation_sensors.yaml # Fictional key
+# Or merge them into one file under the 'template:' key list structure.
+
+# Using individual includes for template sensors. Ensure each included file
+# starts with the 'template:' key followed by a list structure (e.g., '- sensor: ...').

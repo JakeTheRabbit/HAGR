@@ -1,0 +1,456 @@
+# Automatic Dryback Calculation and Tracking
+# Inspired by AROYA's automatic dryback calculations feature
+
+# This component automatically identifies the exact peak and valley of each dryback cycle,
+# then logs the percentage and duration for you. No more squinting at graphs or making
+# approximate eyeball estimates.
+
+# History Storage
+recorder:
+  purge_keep_days: 30  # Keep at least 30 days of history for dryback analysis
+  include:
+    entities:
+      - sensor.dryback_current_percentage
+      - sensor.dryback_current_duration
+      - sensor.dryback_last_peak_time
+      - sensor.dryback_last_valley_time
+      - sensor.dryback_last_percentage
+      - sensor.dryback_last_duration
+      - sensor.dryback_history
+      - sensor.cs_configured_avg_vwc # Use configured entity
+      - sensor.cs_configured_min_vwc # Use configured entity
+      - sensor.cs_configured_max_vwc # Use configured entity
+
+# Input helpers for dryback detection settings
+# Input helpers for dryback detection settings are defined in crop_steering_variables.yaml
+
+# Input text for storing dryback history
+input_text:
+  dryback_history_json:
+    name: Dryback History JSON
+    initial: "[]"
+
+# Sensor templates for dryback detection and calculation
+sensor:
+  - platform: template
+    sensors:
+      # Current dryback tracking
+      dryback_in_progress:
+        friendly_name: "Dryback In Progress"
+        value_template: >
+          {% set last_peak = states('sensor.dryback_last_peak_time') %}
+          {% set last_valley = states('sensor.dryback_last_valley_time') %}
+          {% if last_peak != 'unknown' and last_peak != '' %}
+            {% if last_valley == 'unknown' or last_valley == '' %}
+              true
+            {% else %}
+              {% if last_peak is string and last_valley is string and last_peak|length > 0 and last_valley|length > 0 %}
+                {% if as_timestamp(last_peak) > as_timestamp(last_valley) %}
+                  true
+                {% else %}
+                  false
+                {% endif %}
+              {% else %}
+                false
+              {% endif %}
+            {% endif %}
+          {% else %}
+            false
+          {% endif %}
+        icon_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            mdi:trending-down
+          {% else %}
+            mdi:trending-neutral
+          {% endif %}
+          
+      dryback_current_percentage:
+        friendly_name: "Current Dryback Percentage"
+        value_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            {% set peak_vwc = states('sensor.dryback_last_peak_vwc') | float(0) %}
+            {% set current_vwc = states('sensor.cs_configured_avg_vwc') | float(0) %} {# Use configured entity #}
+            {% if peak_vwc > 0 %}
+              {% set percentage = ((peak_vwc - current_vwc) / peak_vwc * 100) | round(1) %}
+              {% if percentage > 0 %}{{ percentage }}{% else %}0{% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        
+      dryback_current_duration:
+        friendly_name: "Current Dryback Duration"
+        value_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            {% set peak_time = states('sensor.dryback_last_peak_time') %}
+            {% if peak_time != 'unknown' and peak_time != '' and peak_time is string and peak_time|length > 0 %}
+              {% set duration_seconds = now().timestamp() - as_timestamp(peak_time)|default(0) %}
+              {% if duration_seconds > 0 %}
+                {{ (duration_seconds / 60) | round(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "min"
+        icon_template: "mdi:timer"
+        
+      # Peak detection
+# Statistics sensor for VWC
+  - platform: statistics
+    name: "VWC Statistics"
+    entity_id: sensor.cs_configured_avg_vwc # Use configured entity
+    state_characteristic: mean
+    sampling_size: 10
+    max_age:
+      minutes: 10
+
+  - platform: template
+    sensors:
+      dryback_potential_peak:
+        friendly_name: "Potential VWC Peak"
+        value_template: >
+          {% set current = states('sensor.cs_configured_avg_vwc') | float(0) %} {# Use configured entity #}
+          {% set previous = states('sensor.vwc_statistics_mean') | float(0) %}
+          {% set threshold = states('input_number.cs_dryback_peak_detection_threshold') | float(0.5) %}
+          {% if previous > current and (previous - current) > threshold and not is_state('sensor.dryback_in_progress', 'true') %}
+            {{ previous }}
+          {% else %}
+            {{ states('sensor.dryback_potential_peak') | default(0) }}
+          {% endif %}
+        unit_of_measurement: "%"
+        
+      dryback_last_peak_time:
+        friendly_name: "Last Dryback Peak Time"
+        value_template: >
+          {% set potential_peak = states('sensor.dryback_potential_peak') %}
+          {% if potential_peak != 'unknown' and potential_peak != states('sensor.dryback_last_peak_vwc') %}
+            {{ now().isoformat() }}
+          {% else %}
+            {{ states('sensor.dryback_last_peak_time') }}
+          {% endif %}
+          
+      dryback_last_peak_vwc:
+        friendly_name: "Last Dryback Peak VWC"
+        value_template: >
+          {% set potential_peak = states('sensor.dryback_potential_peak') %}
+          {% if potential_peak != 'unknown' and potential_peak != states('sensor.dryback_last_peak_vwc') %}
+            {{ potential_peak }}
+          {% else %}
+            {{ states('sensor.dryback_last_peak_vwc') }}
+          {% endif %}
+        unit_of_measurement: "%"
+        
+      # Valley detection
+      dryback_potential_valley:
+        friendly_name: "Potential VWC Valley"
+        value_template: >
+          {% set current = states('sensor.cs_configured_avg_vwc') | float(0) %} {# Use configured entity #}
+          {% set previous = states('sensor.vwc_statistics_mean') | float(0) %}
+          {% set threshold = states('input_number.cs_dryback_valley_detection_threshold') | float(0.5) %}
+          {% if previous < current and (current - previous) > threshold and is_state('sensor.dryback_in_progress', 'true') %}
+            {{ previous }}
+          {% else %}
+            {{ states('sensor.dryback_potential_valley') | default(0) }}
+          {% endif %}
+        unit_of_measurement: "%"
+        
+      dryback_last_valley_time:
+        friendly_name: "Last Dryback Valley Time"
+        value_template: >
+          {% set potential_valley = states('sensor.dryback_potential_valley') %}
+          {% if potential_valley != 'unknown' and potential_valley != states('sensor.dryback_last_valley_vwc') %}
+            {{ now().isoformat() }}
+          {% else %}
+            {{ states('sensor.dryback_last_valley_time') }}
+          {% endif %}
+          
+      dryback_last_valley_vwc:
+        friendly_name: "Last Dryback Valley VWC"
+        value_template: >
+          {% set potential_valley = states('sensor.dryback_potential_valley') %}
+          {% if potential_valley != 'unknown' and potential_valley != states('sensor.dryback_last_valley_vwc') %}
+            {{ potential_valley }}
+          {% else %}
+            {{ states('sensor.dryback_last_valley_vwc') }}
+          {% endif %}
+        unit_of_measurement: "%"
+        
+      # Completed dryback calculations
+      dryback_last_percentage:
+        friendly_name: "Last Dryback Percentage"
+        value_template: >
+          {% set peak = states('sensor.dryback_last_peak_vwc') | float(0) %}
+          {% set valley = states('sensor.dryback_last_valley_vwc') | float(0) %}
+          {% if peak > 0 and valley > 0 and valley < peak %}
+            {{ ((peak - valley) / peak * 100) | round(1) }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        
+      dryback_last_duration:
+        friendly_name: "Last Dryback Duration"
+        value_template: >
+          {% set peak_time = states('sensor.dryback_last_peak_time') %}
+          {% set valley_time = states('sensor.dryback_last_valley_time') %}
+          {% if peak_time != 'unknown' and valley_time != 'unknown' and peak_time != '' and valley_time != '' and peak_time is string and valley_time is string %}
+            {% if peak_time|length > 0 and valley_time|length > 0 %}
+              {% set duration_seconds = as_timestamp(valley_time)|default(0) - as_timestamp(peak_time)|default(0) %}
+              {% if duration_seconds > 0 %}
+                {{ (duration_seconds / 60) | round(0) }}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "min"
+        icon_template: "mdi:timer"
+        
+      # Dryback statistics
+      dryback_avg_percentage_24h:
+        friendly_name: "Average Dryback Percentage (24h)"
+        value_template: >
+          {% set history = states('sensor.dryback_history') %}
+          {% if history != 'unknown' and history != '' and history is string and history|length > 0 %}
+            {% if history|first == '[' %}
+              {% set data = history | from_json(default=[]) %}
+              {% set recent = data | selectattr('timestamp', 'gt', (now().timestamp() - 86400)) | list %}
+              {% if recent | length > 0 %}
+                {% set percentages = recent | map(attribute='percentage') | map('float', 0) | list %}
+                {% if percentages | length > 0 %}
+                  {{ (percentages | sum / percentages | length) | round(1) }}
+                {% else %}
+                  0
+                {% endif %}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        
+      dryback_avg_duration_24h:
+        friendly_name: "Average Dryback Duration (24h)"
+        value_template: >
+          {% set history = states('sensor.dryback_history') %}
+          {% if history != 'unknown' and history != '' and history is string and history|length > 0 %}
+            {% if history|first == '[' %}
+              {% set data = history | from_json(default=[]) %}
+              {% set recent = data | selectattr('timestamp', 'gt', (now().timestamp() - 86400)) | list %}
+              {% if recent | length > 0 %}
+                {% set durations = recent | map(attribute='duration') | map('float', 0) | list %}
+                {% if durations | length > 0 %}
+                  {{ (durations | sum / durations | length) | round(0) }}
+                {% else %}
+                  0
+                {% endif %}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "min"
+        icon_template: "mdi:timer"
+        
+      dryback_count_24h:
+        friendly_name: "Dryback Count (24h)"
+        value_template: >
+          {% set history = states('sensor.dryback_history') %}
+          {% if history != 'unknown' and history != '' and history is string and history|length > 0 %}
+            {% if history|first == '[' %}
+              {% set data = history | from_json(default=[]) %}
+              {% set recent = data | selectattr('timestamp', 'gt', (now().timestamp() - 86400)) | list %}
+              {{ recent | length }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        icon_template: "mdi:counter"
+        
+      # History management
+      dryback_history:
+        friendly_name: "Dryback History"
+        value_template: "{{ states('input_text.dryback_history_json') }}"
+
+# Automations for dryback tracking
+automation:
+  - id: dryback_completed
+    alias: Dryback Completed
+    description: "Records a completed dryback cycle in the history"
+    trigger:
+      - platform: state
+        entity_id: sensor.dryback_last_valley_time
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != trigger.from_state.state }}"
+      - condition: template
+        value_template: "{{ states('sensor.dryback_last_percentage') | float >= states('input_number.cs_dryback_min_percentage') | float }}"
+      - condition: template
+        value_template: "{{ states('sensor.dryback_last_duration') | float >= states('input_number.cs_dryback_min_duration') | float }}"
+    action:
+      - variables:
+          timestamp: "{{ as_timestamp(now()) }}"
+          peak_time: "{{ states('sensor.dryback_last_peak_time') }}"
+          valley_time: "{{ states('sensor.dryback_last_valley_time') }}"
+          peak_vwc: "{{ states('sensor.dryback_last_peak_vwc') }}"
+          valley_vwc: "{{ states('sensor.dryback_last_valley_vwc') }}"
+          percentage: "{{ states('sensor.dryback_last_percentage') }}"
+          duration: "{{ states('sensor.dryback_last_duration') }}"
+          phase: "{{ states('input_select.crop_steering_phase') }}"
+          current_history: "{{ states('input_text.dryback_history_json') }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.dryback_history_json
+        data:
+          value: >
+            {% if current_history is string and current_history|first == '[' %}
+              {% set history = current_history | from_json(default=[]) %}
+              {% set new_entry = {
+                'timestamp': timestamp | float(0),
+                'peak_time': peak_time,
+                'valley_time': valley_time,
+                'peak_vwc': peak_vwc | float(0),
+                'valley_vwc': valley_vwc | float(0),
+                'percentage': percentage | float(0),
+                'duration': duration | float(0),
+                'phase': phase
+              } %}
+              {% set updated = [new_entry] + history %}
+              {% if updated | length > 100 %}
+                {% set updated = updated[:100] %}
+              {% endif %}
+              {{ updated | to_json }}
+            {% else %}
+              {% set new_entry = {
+                'timestamp': as_timestamp(now()),
+                'peak_time': peak_time,
+                'valley_time': valley_time,
+                'peak_vwc': peak_vwc | float(0),
+                'valley_vwc': valley_vwc | float(0),
+                'percentage': percentage | float(0),
+                'duration': duration | float(0),
+                'phase': phase
+              } %}
+              {{ [new_entry] | to_json }}
+            {% endif %}
+      - service: persistent_notification.create
+        data:
+          title: "Dryback Cycle Completed"
+          message: >
+            A dryback cycle has been completed:
+            
+            Start: {{ peak_time }}
+            End: {{ valley_time }}
+            Duration: {{ duration }} minutes
+            Dryback: {{ percentage }}%
+            Phase: {{ phase }}
+            
+            Peak VWC: {{ peak_vwc }}%
+            Valley VWC: {{ valley_vwc }}%
+          notification_id: dryback_completed
+
+  - id: dryback_reset_potential_peak
+    alias: Reset Potential Peak
+    description: "Resets the potential peak detection after irrigation"
+    trigger:
+      - platform: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        from: 'on'
+        to: 'off'
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.dryback_potential_peak
+      - delay:
+          seconds: 300  # Wait 5 minutes after irrigation before detecting new peaks
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.dryback_potential_peak
+
+# Dashboard cards for dryback tracking
+# These are examples of Lovelace UI cards that can be used to display dryback information
+
+# Card 1: Current Dryback Status
+# type: entities
+# title: Current Dryback Status
+# entities:
+#   - entity: sensor.dryback_in_progress
+#   - entity: sensor.dryback_current_percentage
+#   - entity: sensor.dryback_current_duration
+#   - entity: sensor.dryback_last_peak_vwc
+#   - entity: sensor.cs_configured_avg_vwc # Use configured entity
+
+# Card 2: Dryback History
+# type: entities
+# title: Dryback History
+# entities:
+#   - entity: sensor.dryback_last_percentage
+#   - entity: sensor.dryback_last_duration
+#   - entity: sensor.dryback_avg_percentage_24h
+#   - entity: sensor.dryback_avg_duration_24h
+#   - entity: sensor.dryback_count_24h
+
+# Card 3: Dryback Progress Gauge
+# type: gauge
+# title: Current Dryback Progress
+# entity: sensor.dryback_current_percentage
+# min: 0
+# max: 30
+# severity:
+#   green: 0
+#   yellow: 15
+#   red: 25
+
+# Card 4: Dryback History Graph
+# type: custom:apexcharts-card
+# header:
+#   title: Dryback History
+#   show: true
+# graph_span: 24h
+# series:
+#   - entity: sensor.cs_configured_avg_vwc # Use configured entity
+#     name: VWC
+#     stroke_width: 2
+#     show:
+#       in_header: true
+#   - entity: sensor.dryback_last_peak_vwc
+#     name: Peaks
+#     stroke_width: 0
+#     show:
+#       in_header: true
+#     color: red
+#     show_points: true
+#     point_size: 5
+#   - entity: sensor.dryback_last_valley_vwc
+#     name: Valleys
+#     stroke_width: 0
+#     show:
+#       in_header: true
+#     color: blue
+#     show_points: true
+#     point_size: 5

@@ -1,0 +1,714 @@
+# Crop Steering Variables
+# This file contains all configurable variables for the crop steering system
+# Edit this file to match your sensor entities and preferences
+
+#==============================================================================
+# ALL INPUT HELPERS COMBINED
+#==============================================================================
+
+input_select:
+  cs_crop_steering_phase: # Renamed from crop_steering_phase for consistency
+    name: Crop Steering Phase
+    options:
+      - P0
+      - P1
+      - P2
+      - P3
+    initial: P0
+    icon: mdi:sprout
+
+  cs_steering_mode:
+    name: Growth Steering Mode
+    options:
+      - Vegetative
+      - Generative
+    initial: Vegetative
+    icon: mdi:leaf-maple
+
+  cs_aggregation_method:
+    name: Sensor Aggregation Method
+    options:
+      - average
+      - min
+      - max
+    initial: average
+    icon: mdi:calculator
+
+input_number:
+  # SHOT COUNTERS (Moved from config_entities and renamed)
+  cs_p1_shot_count:
+    name: P1 Shot Count
+    min: 0
+    max: 20 # Consider increasing if cs_p1_max_shots can be higher
+    step: 1
+    icon: mdi:counter
+    initial: 0
+  cs_p2_shot_count:
+    name: P2 Shot Count
+    min: 0
+    max: 100 # Arbitrary high max, adjust if needed
+    step: 1
+    icon: mdi:counter
+    initial: 0
+  cs_p3_shot_count:
+    name: P3 Shot Count
+    min: 0
+    max: 100 # Arbitrary high max, adjust if needed
+    step: 1
+    icon: mdi:counter
+    initial: 0
+
+  # DRYBACK DETECTION SETTINGS
+  cs_dryback_peak_detection_threshold:
+    name: Dryback Peak Detection Threshold
+    min: 0.1
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "%"
+    icon: mdi:chart-bell-curve
+    initial: 0.5
+
+  cs_dryback_valley_detection_threshold:
+    name: Dryback Valley Detection Threshold
+    min: 0.1
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "%"
+    icon: mdi:chart-bell-curve
+    initial: 0.5
+
+  cs_dryback_min_duration:
+    name: Minimum Dryback Duration
+    min: 10
+    max: 1440
+    step: 10
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 60
+
+  cs_dryback_min_percentage:
+    name: Minimum Dryback Percentage
+    min: 1
+    max: 50
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:percent
+    initial: 5
+
+  # IRRIGATION SETTINGS - General irrigation settings
+  cs_dripper_flow_rate:
+    name: Dripper Flow Rate
+    min: 0.1
+    max: 10.0
+    step: 0.1
+    unit_of_measurement: "L/hr"
+    icon: mdi:water
+    initial: 1.2
+
+  # P0 Phase settings
+  cs_p0_veg_dryback_target:
+    name: P0 Veg Dryback Target
+    min: 0
+    max: 20
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 2
+
+  cs_p0_gen_dryback_target:
+    name: P0 Gen Dryback Target
+    min: 0
+    max: 20
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 5
+
+  cs_p0_max_wait_time:
+    name: P0 Max Wait Time
+    min: 0
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 120
+
+  cs_p0_min_wait_time:
+    name: P0 Min Wait Time
+    min: 0
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 30
+
+  # P1 Phase settings
+  cs_p1_initial_shot_size_percent:
+    name: P1 Initial Shot Size
+    min: 0
+    max: 20
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 2
+
+  cs_p1_shot_size_increment_percent:
+    name: P1 Shot Size Increment
+    min: 0
+    max: 10
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 1
+
+  cs_p1_time_between_shots:
+    name: P1 Time Between Shots
+    min: 1
+    max: 60
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 15
+
+  cs_p1_target_vwc:
+    name: P1 Target VWC
+    min: 10
+    max: 50
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 30
+
+  cs_p1_max_shots:
+    name: P1 Max Shots
+    min: 1
+    max: 20 # Ensure cs_p1_shot_count max is >= this
+    step: 1
+    icon: mdi:counter
+    initial: 6
+
+  cs_p1_min_shots: # Added based on feedback
+    name: P1 Min Shots for P2 Transition
+    min: 0
+    max: 20 # Should be <= cs_p1_max_shots
+    step: 1
+    icon: mdi:counter
+    initial: 3 # Default to 3, adjust as needed
+
+  cs_p1_max_shot_size_percent:
+    name: P1 Max Shot Size
+    min: 1
+    max: 30
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 10
+
+  # P2 Phase settings
+  cs_p2_shot_size_percent:
+    name: P2 Shot Size
+    min: 1
+    max: 30
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 5
+
+  cs_p2_veg_frequency:
+    name: P2 Veg Frequency
+    min: 10
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 60
+
+  cs_p2_gen_frequency:
+    name: P2 Gen Frequency
+    min: 10
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 120
+
+  cs_p2_vwc_threshold:
+    name: P2 VWC Threshold
+    min: 10
+    max: 50
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 25
+
+  cs_p2_ec_high_threshold:
+    name: P2 EC High Threshold
+    min: 1.0
+    max: 2.0
+    step: 0.05
+    icon: mdi:flash
+    initial: 1.2
+
+  cs_p2_ec_low_threshold:
+    name: P2 EC Low Threshold
+    min: 0.5
+    max: 1.0
+    step: 0.05
+    icon: mdi:flash
+    initial: 0.8
+
+  cs_p2_vwc_adjustment_high_ec:
+    name: P2 VWC Adjustment High EC
+    min: -5
+    max: 5
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 2
+
+  cs_p2_vwc_adjustment_low_ec:
+    name: P2 VWC Adjustment Low EC
+    min: -5
+    max: 5
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: -2
+
+  # P3 Phase settings
+  cs_p3_veg_last_irrigation:
+    name: P3 Veg Last Irrigation
+    min: 0
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 60
+
+  cs_p3_gen_last_irrigation:
+    name: P3 Gen Last Irrigation
+    min: 0
+    max: 300
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer
+    initial: 180
+
+  cs_p3_emergency_vwc_threshold:
+    name: P3 Emergency VWC Threshold
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 15
+
+  cs_p3_emergency_shot_size_percent:
+    name: P3 Emergency Shot Size
+    min: 1
+    max: 20
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 3
+
+  # EC TARGET SETTINGS - EC targets for vegetative mode
+  cs_ec_target_veg_p0:
+    name: EC Target Veg P0
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 1.6
+
+  cs_ec_target_veg_p1:
+    name: EC Target Veg P1
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 1.8
+
+  cs_ec_target_veg_p2:
+    name: EC Target Veg P2
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 2.0
+
+  cs_ec_target_veg_p3:
+    name: EC Target Veg P3
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 1.8
+
+  # EC targets for generative mode
+  cs_ec_target_gen_p0:
+    name: EC Target Gen P0
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 1.8
+
+  cs_ec_target_gen_p1:
+    name: EC Target Gen P1
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 2.2
+
+  cs_ec_target_gen_p2:
+    name: EC Target Gen P2
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 2.5
+
+  cs_ec_target_gen_p3:
+    name: EC Target Gen P3
+    min: 0.5
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 2.8
+
+  cs_ec_target_flush:
+    name: EC Target Flush
+    min: 0.1
+    max: 2.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 0.8
+
+  # LIGHT SCHEDULE SETTINGS
+  cs_lights_fade_in_minutes:
+    name: Lights Fade In Duration
+    min: 0
+    max: 120
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:weather-sunset-up
+    initial: 30
+
+  cs_lights_fade_out_minutes:
+    name: Lights Fade Out Duration
+    min: 0
+    max: 120
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:weather-sunset-down
+    initial: 30
+
+  # SUBSTRATE SETTINGS
+  cs_substrate_size:
+    name: Substrate Size
+    min: 1
+    max: 24
+    step: 1
+    unit_of_measurement: "in"
+    icon: mdi:ruler
+    initial: 6
+
+  cs_substrate_volume:
+    name: Substrate Volume
+    min: 0.1
+    max: 20
+    step: 0.1
+    unit_of_measurement: "L"
+    icon: mdi:cube-outline
+    initial: 3.5
+
+  cs_substrate_field_capacity:
+    name: Substrate Field Capacity
+    min: 10
+    max: 100
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 35
+
+  cs_substrate_saturation_point:
+    name: Substrate Saturation Point
+    min: 10
+    max: 100
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 45
+
+  cs_substrate_critical_vwc:
+    name: Substrate Critical VWC
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 10
+
+  cs_substrate_max_ec:
+    name: Substrate Max EC
+    min: 1.0
+    max: 10.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 3.5
+
+  cs_substrate_water_retention_factor:
+    name: Substrate Water Retention Factor
+    min: 0.1
+    max: 1.0
+    step: 0.05
+    icon: mdi:water
+    initial: 0.85
+
+  # SENSOR AGGREGATION SETTINGS
+  cs_min_valid_vwc:
+    name: Minimum Valid VWC
+    min: 0
+    max: 50
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 1.0
+
+  cs_max_valid_vwc:
+    name: Maximum Valid VWC
+    min: 10
+    max: 100
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+    initial: 80.0
+
+  cs_min_valid_ec:
+    name: Minimum Valid EC
+    min: 0
+    max: 2.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 0.1
+
+  cs_max_valid_ec:
+    name: Maximum Valid EC
+    min: 1.0
+    max: 10.0
+    step: 0.1
+    unit_of_measurement: "mS/cm"
+    icon: mdi:flash
+    initial: 5.0
+
+#==============================================================================
+# ENTITY CONFIGURATION HELPERS (Blueprint Target)
+#==============================================================================
+input_text:
+  cs_config_vwc_sensor_entities:
+    name: CS Config - VWC Sensor Entities
+    # Example: sensor.zone1_vwc, sensor.zone2_vwc
+    initial: ""
+    icon: mdi:water-percent
+  cs_config_ec_sensor_entities:
+    name: CS Config - EC Sensor Entities
+    # Example: sensor.zone1_ec, sensor.zone2_ec
+    initial: ""
+    icon: mdi:flash
+  # Optional: Add temp sensors if needed later
+  # cs_config_temp_sensor_entities:
+  #   name: CS Config - Temperature Sensor Entities
+  #   initial: ""
+  #   icon: mdi:thermometer
+  cs_config_pump_switch_entity:
+    name: CS Config - Irrigation Pump Switch Entity
+    initial: ""
+    icon: mdi:water-pump
+  cs_config_zone_switch_entities:
+    name: CS Config - Zone Switch Entities (comma-separated, order matters)
+    # Example: switch.zone1_valve, switch.zone2_valve
+    initial: ""
+    icon: mdi:valve
+  cs_config_waste_switch_entity:
+    name: CS Config - Waste/Flush Switch Entity (Optional)
+    initial: ""
+    icon: mdi:pipe-valve
+  # Zone 1 Sensors
+  cs_config_z1_vwc_front:
+    name: CS Config - Zone 1 VWC Front Sensor
+    initial: ""
+  cs_config_z1_vwc_back:
+    name: CS Config - Zone 1 VWC Back Sensor
+    initial: ""
+  cs_config_z1_ec_front:
+    name: CS Config - Zone 1 EC Front Sensor
+    initial: ""
+  cs_config_z1_ec_back:
+    name: CS Config - Zone 1 EC Back Sensor
+    initial: ""
+  # Zone 2 Sensors
+  cs_config_z2_vwc_front:
+    name: CS Config - Zone 2 VWC Front Sensor
+    initial: ""
+  cs_config_z2_vwc_back:
+    name: CS Config - Zone 2 VWC Back Sensor
+    initial: ""
+  cs_config_z2_ec_front:
+    name: CS Config - Zone 2 EC Front Sensor
+    initial: ""
+  cs_config_z2_ec_back:
+    name: CS Config - Zone 2 EC Back Sensor
+    initial: ""
+  # Zone 3 Sensors
+  cs_config_z3_vwc_front:
+    name: CS Config - Zone 3 VWC Front Sensor
+    initial: ""
+  cs_config_z3_vwc_back:
+    name: CS Config - Zone 3 VWC Back Sensor
+    initial: ""
+  cs_config_z3_ec_front:
+    name: CS Config - Zone 3 EC Front Sensor
+    initial: ""
+  cs_config_z3_ec_back:
+    name: CS Config - Zone 3 EC Back Sensor
+    initial: ""
+  # Optional: Add light entity if needed later
+  # cs_config_light_entity:
+  #   name: CS Config - Light Entity
+  #   initial: ""
+  #   icon: mdi:lightbulb
+
+#==============================================================================
+# INTERMEDIATE TEMPLATE ENTITIES (Used by other package files)
+#==============================================================================
+template:
+  # Sensor Aggregation
+  - sensor:
+      - name: "CS Configured Avg VWC"
+        unique_id: cs_configured_avg_vwc
+        unit_of_measurement: "%"
+        icon: mdi:chart-line-variant
+        state: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {% set values = expand(entity_ids) | map(attribute='state') | map('float', none) | reject('none') | list %}
+          {% if values | length > 0 %}
+            {{ (values | sum / values | length) | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        availability: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {{ entity_ids | length > 0 and expand(entity_ids) | selectattr('state', '!=', 'unavailable') | selectattr('state', '!=', 'unknown') | list | length > 0 }}
+
+      - name: "CS Configured Avg EC"
+        unique_id: cs_configured_avg_ec
+        unit_of_measurement: "mS/cm" # Or your preferred unit
+        icon: mdi:flash
+        state: >
+          {% set entity_ids = states('input_text.cs_config_ec_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {% set values = expand(entity_ids) | map(attribute='state') | map('float', none) | reject('none') | list %}
+          {% if values | length > 0 %}
+            {{ (values | sum / values | length) | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        availability: >
+          {% set entity_ids = states('input_text.cs_config_ec_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {{ entity_ids | length > 0 and expand(entity_ids) | selectattr('state', '!=', 'unavailable') | selectattr('state', '!=', 'unknown') | list | length > 0 }}
+
+      - name: "CS Configured Min VWC"
+        unique_id: cs_configured_min_vwc
+        unit_of_measurement: "%"
+        icon: mdi:arrow-down-bold
+        state: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {% set values = expand(entity_ids) | map(attribute='state') | map('float', none) | reject('none') | list %}
+          {% if values | length > 0 %}
+            {{ values | min | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        availability: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {{ entity_ids | length > 0 and expand(entity_ids) | selectattr('state', '!=', 'unavailable') | selectattr('state', '!=', 'unknown') | list | length > 0 }}
+
+      - name: "CS Configured Max VWC"
+        unique_id: cs_configured_max_vwc
+        unit_of_measurement: "%"
+        icon: mdi:arrow-up-bold
+        state: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {% set values = expand(entity_ids) | map(attribute='state') | map('float', none) | reject('none') | list %}
+          {% if values | length > 0 %}
+            {{ values | max | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        availability: >
+          {% set entity_ids = states('input_text.cs_config_vwc_sensor_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {{ entity_ids | length > 0 and expand(entity_ids) | selectattr('state', '!=', 'unavailable') | selectattr('state', '!=', 'unknown') | list | length > 0 }}
+
+  # Control Switches
+  - switch:
+      - name: "CS Configured Pump Switch"
+        unique_id: cs_configured_pump_switch
+        value_template: "{{ is_state(states('input_text.cs_config_pump_switch_entity'), 'on') }}"
+        turn_on:
+          service: switch.turn_on
+          target:
+            entity_id: "{{ states('input_text.cs_config_pump_switch_entity') }}"
+        turn_off:
+          service: switch.turn_off
+          target:
+            entity_id: "{{ states('input_text.cs_config_pump_switch_entity') }}"
+        availability: >
+          {{ states('input_text.cs_config_pump_switch_entity') | length > 0 and states(states('input_text.cs_config_pump_switch_entity')) != 'unavailable' }}
+        icon_template: >
+          {% if is_state(states('input_text.cs_config_pump_switch_entity'), 'on') %}
+            mdi:water-pump
+          {% else %}
+            mdi:water-pump-off
+          {% endif %}
+
+      # Add template switches for zones if direct control is needed by other parts of the package
+      # This example assumes zones are controlled directly via automations using the list from input_text
+      # If you need individual switch entities like `switch.cs_configured_zone_1`, add them similarly to the pump switch.
+
+input_datetime:
+  # LIGHT SCHEDULE SETTINGS
+  cs_lights_on_time:
+    name: Lights On Time
+    has_date: false
+    has_time: true
+    initial: "06:00:00"
+    icon: mdi:weather-sunset-up
+
+  cs_lights_off_time:
+    name: Lights Off Time
+    has_date: false
+    has_time: true
+    initial: "00:00:00" # Assuming midnight, adjust if needed
+    icon: mdi:weather-sunset-down
+
+  # P3 Start Time (Moved from config_entities)
+  cs_p3_start_time: # Note: This might be redundant if p3_start_time_calculated sensor is used for triggers
+    name: P3 Start Time (Manual Override)
+    has_date: false
+    has_time: true
+    initial: "22:00:00"
+    icon: mdi:clock-time-ten
+
+# Removed input_text section for entity mapping - hardcode entities where needed

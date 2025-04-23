@@ -1,0 +1,506 @@
+# Improved Crop Steering Automations
+# This file contains automations for the four-phase crop steering approach:
+# P0: Pre-Irrigation Dry Back
+# P1: Ramp-Up Phase
+# P2: Maintenance Phase
+# P3: Overnight Dry Back
+
+#==============================================================================
+# PHASE TRANSITION AUTOMATIONS
+#==============================================================================
+
+automation:
+  # P0 Phase - Starts at lights-on
+  - id: improved_crop_steering_change_to_p0
+    alias: Crop Steering - Change to P0 at lights-on
+    description: "Changes the crop steering phase to P0 when lights turn on"
+    trigger:
+      - platform: time
+        at: input_datetime.cs_lights_on_time # Renamed
+    action:
+      - service: input_select.select_option
+        data:
+          option: P0
+        target:
+          entity_id: input_select.cs_crop_steering_phase # Renamed
+      # Reset shot counters
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p1_shot_count # Renamed
+        data:
+          value: 0
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p2_shot_count # Renamed
+        data:
+          value: 0
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p3_shot_count # Renamed
+        data:
+          value: 0
+    mode: single
+
+  # P0 to P1 Transition - Based on dryback target or maximum wait time
+  - id: improved_crop_steering_p0_to_p1
+    alias: Crop Steering - P0 to P1 Transition
+    description: "Transitions from P0 to P1 based on dryback target or maximum wait time"
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.cs_configured_avg_vwc # Use configured entity
+      - platform: template
+        value_template: "{{ states('sensor.cs_minutes_since_lights_on') | int % 5 == 0 }}" # Renamed sensor dependency
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P0
+      - condition: template
+        value_template: "{{ states('sensor.cs_minutes_since_lights_on') | int >= states('input_number.cs_p0_min_wait_time') | int }}" # Renamed sensor and input_number
+    action:
+      - choose:
+          # VWC has reached target dryback
+          - conditions:
+              - condition: template
+                value_template: "{{ states('sensor.cs_configured_avg_vwc') | float <= states('sensor.cs_dynamic_p0_dryback') | float }}" # Use configured entity
+            sequence:
+              - service: input_select.select_option
+                data:
+                  option: P1
+                target:
+                  entity_id: input_select.cs_crop_steering_phase # Renamed
+              - service: notify.mobile_app_notify # Assuming this service name is correct
+                data:
+                  title: "Crop Steering Phase Change"
+                  message: >
+                    Transitioned to P1 (Ramp-Up Phase) after reaching dryback target of {{ states('sensor.cs_dynamic_p0_dryback') }}%.
+                    Current VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+                  data:
+                    tag: crop_steering_phase_change
+          
+          # Maximum wait time has been reached
+          - conditions:
+              - condition: template
+                value_template: "{{ states('sensor.cs_minutes_since_lights_on') | int >= states('input_number.cs_p0_max_wait_time') | int }}" # Renamed sensor and input_number
+            sequence:
+              - service: input_select.select_option
+                data:
+                  option: P1
+                target:
+                  entity_id: input_select.cs_crop_steering_phase # Renamed
+              - service: notify.mobile_app_notify # Assuming this service name is correct
+                data:
+                  title: "Crop Steering Phase Change"
+                  message: >
+                    Transitioned to P1 (Ramp-Up Phase) after reaching maximum wait time of {{ states('input_number.cs_p0_max_wait_time') }} minutes.
+                    Current VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+                  data:
+                    tag: crop_steering_phase_change
+    mode: single
+
+  # P1 to P2 Transition - Based on shot count, VWC, or EC
+  - id: improved_crop_steering_p1_to_p2
+    alias: Crop Steering - P1 to P2 Transition
+    description: "Transitions from P1 to P2 based on shot count, VWC, or EC"
+    trigger:
+      - platform: state
+        entity_id: input_number.cs_p1_shot_count # Renamed
+      - platform: numeric_state
+        entity_id:
+          - sensor.cs_configured_avg_vwc # Use configured entity
+        above: input_number.cs_substrate_field_capacity # Renamed (using substrate setting)
+      - platform: numeric_state
+        entity_id:
+          - sensor.cs_configured_avg_ec # Use configured entity
+        below: input_number.cs_ec_target_flush # Renamed (using flush target as reset value?) - CHECK THIS LOGIC
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P1
+    action:
+      - choose:
+          # Maximum shot count reached
+          - conditions:
+              - condition: template
+                value_template: "{{ states('input_number.cs_p1_shot_count') | float >= states('input_number.cs_p1_max_shots') | float }}" # Renamed
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.cs_crop_steering_phase # Renamed
+                data:
+                  option: P2
+              - service: notify.mobile_app_notify # Assuming this service name is correct
+                data:
+                  title: "Crop Steering Phase Change"
+                  message: >
+                    Transitioned to P2 (Maintenance Phase) after reaching maximum shot count of {{ states('input_number.cs_p1_max_shots') }}.
+                    Current VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+                  data:
+                    tag: crop_steering_phase_change
+          
+          # Target VWC reached
+          - conditions:
+              - condition: numeric_state
+                entity_id: sensor.cs_configured_avg_vwc # Use configured entity
+                above: "{{ states('input_number.cs_p1_target_vwc') }}" # Renamed
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.cs_crop_steering_phase # Renamed
+                data:
+                  option: P2
+              - service: notify.mobile_app_notify # Assuming this service name is correct
+                data:
+                  title: "Crop Steering Phase Change"
+                  message: >
+                    Transitioned to P2 (Maintenance Phase) after reaching target VWC of {{ states('input_number.cs_p1_target_vwc') }}%.
+                    Current VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+                  data:
+                    tag: crop_steering_phase_change
+          
+          # EC target reached (with VWC target and Min Shots)
+          - conditions:
+              # EC below flush target
+              - condition: numeric_state
+                entity_id: sensor.cs_configured_avg_ec # Use configured entity
+                below: input_number.cs_ec_target_flush # Renamed (using flush target as reset value)
+              # VWC above P1 target VWC
+              - condition: numeric_state
+                entity_id: sensor.cs_configured_avg_vwc # Use configured entity
+                above: input_number.cs_p1_target_vwc # Added check for P1 VWC target
+              # Minimum shots reached
+              - condition: numeric_state
+                entity_id: input_number.cs_p1_shot_count
+                above: "{{ states('input_number.cs_p1_min_shots') | int -1 }}" # Check if count >= min_shots
+            sequence:
+              - service: input_select.select_option
+                target:
+                  entity_id: input_select.cs_crop_steering_phase # Renamed
+                data:
+                  option: P2
+              - service: notify.mobile_app_notify # Assuming this service name is correct
+                data:
+                  title: "Crop Steering Phase Change"
+                  message: >
+                    Transitioned to P2 (Maintenance Phase) after reaching EC target.
+                    Current EC: {{ states('sensor.cs_configured_avg_ec') }} mS/cm # Use configured entity
+                    Current VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+                  data:
+                    tag: crop_steering_phase_change
+    mode: single
+
+  # P2 to P3 Transition - Based on calculated time before lights-off
+  - id: improved_crop_steering_to_p3
+    alias: Crop Steering - P2 to P3 Transition
+    description: "Transitions from P2 to P3 based on calculated time before lights-off"
+    trigger:
+      - platform: template
+        value_template: >
+          {% set current_timestamp = as_timestamp(now()) %}
+          {% set p3_start = as_timestamp(today_at(states('sensor.cs_p3_start_time_calculated'))) %} # Renamed sensor dependency
+          {% set diff_seconds = current_timestamp - p3_start %}
+          {{ diff_seconds >= 0 and diff_seconds < 60 }}
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P2
+    action:
+      - service: input_select.select_option
+        data:
+          option: P3
+        target:
+          entity_id: input_select.cs_crop_steering_phase # Renamed
+      - service: notify.mobile_app_notify # Assuming this service name is correct
+        data:
+          title: "Crop Steering Phase Change"
+          message: >
+            Transitioned to P3 (Overnight Dry Back Phase).
+            {% if is_state('input_select.cs_steering_mode', 'Vegetative') %} # Renamed
+            Using vegetative dry back strategy ({{ states('input_number.cs_p3_veg_last_irrigation') }} min before lights-off). # Renamed
+            {% else %}
+            Using generative dry back strategy ({{ states('input_number.cs_p3_gen_last_irrigation') }} min before lights-off). # Renamed
+            {% endif %}
+          data:
+            tag: crop_steering_phase_change
+    mode: single
+
+#==============================================================================
+# IRRIGATION CONTROL AUTOMATIONS
+#==============================================================================
+
+  # P1 Ramp-Up Phase Irrigation
+  - id: improved_crop_steering_p1_irrigation
+    alias: Crop Steering - P1 Ramp-Up Irrigation
+    description: "Controls irrigation during P1 with gradually increasing shot sizes"
+    trigger:
+      - platform: time_pattern
+        minutes: /1
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P1
+      - condition: template
+        value_template: >
+          {% set current_minute = now().minute | int %}
+          {% set interval = states('input_number.cs_p1_time_between_shots') | int %} # Renamed
+          {{ current_minute % interval == 0 }}
+      - condition: template
+        value_template: "{{ states('input_number.cs_p1_shot_count') | int < states('input_number.cs_p1_max_shots') | int }}" # Renamed
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        state: 'off'
+    action:
+      # Calculate shot duration based on current shot size percentage
+      - variables:
+          shot_duration: "{{ states('sensor.cs_p1_shot_duration_seconds') | float }}" # Renamed
+          shot_count: "{{ states('input_number.cs_p1_shot_count') | int }}" # Renamed
+          shot_size_percent: "{{ states('sensor.cs_p1_current_shot_size_percent') | float }}" # Renamed
+      
+      # Turn on pump
+      - service: switch.turn_on
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Wait for calculated duration
+      - delay:
+          seconds: "{{ shot_duration }}"
+      
+      # Turn off pump
+      - service: switch.turn_off
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Increment shot count
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p1_shot_count # Renamed
+        data:
+          value: "{{ shot_count + 1 }}"
+      
+      # Log the irrigation event
+      - service: logbook.log
+        data:
+          name: "P1 Irrigation"
+          message: >
+            Ramp-Up Shot {{ shot_count + 1 }}: {{ shot_duration }}s ({{ shot_size_percent }}% of substrate volume)
+            VWC Before: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+            EC: {{ states('sensor.cs_configured_avg_ec') }} mS/cm # Use configured entity
+    mode: single
+
+  # P2 Maintenance Phase Irrigation - EC-Adjusted
+  - id: improved_crop_steering_p2_irrigation_on
+    alias: Crop Steering - P2 EC-Adjusted Irrigation On
+    description: "Turns on irrigation during P2 based on EC-adjusted VWC threshold"
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.cs_configured_avg_vwc # Use configured entity
+      - platform: state
+        entity_id:
+          - sensor.cs_p2_vwc_threshold_ec_adjusted # Renamed
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.cs_configured_avg_vwc # Use configured entity
+        below: sensor.cs_p2_vwc_threshold_ec_adjusted # Renamed
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P2
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        state: 'off'
+    action:
+      - variables:
+          threshold: "{{ states('sensor.cs_p2_vwc_threshold_ec_adjusted') | float }}" # Renamed
+          current_vwc: "{{ states('sensor.cs_configured_avg_vwc') | float }}" # Use configured entity
+          ec_ratio: "{{ states('sensor.cs_ec_ratio') | float }}" # Renamed
+          shot_duration: "{{ states('sensor.cs_p2_shot_duration_seconds') | float }}" # Renamed
+      
+      # Turn on pump
+      - service: switch.turn_on
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Log the irrigation event
+      - service: logbook.log
+        data:
+          name: "P2 Irrigation Started"
+          message: >
+            Maintenance Irrigation: {{ shot_duration }}s
+            VWC Before: {{ current_vwc }}%
+            EC Ratio: {{ ec_ratio }}
+            Adjusted Threshold: {{ threshold }}%
+    mode: single
+
+  # P2 Maintenance Phase Irrigation - Timed Off
+  - id: improved_crop_steering_p2_irrigation_off_timed
+    alias: Crop Steering - P2 Timed Irrigation Off
+    description: "Turns off irrigation during P2 after calculated duration"
+    trigger:
+      - platform: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        from: 'off'
+        to: 'on'
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P2
+    action:
+      - variables:
+          shot_duration: "{{ states('sensor.cs_p2_shot_duration_seconds') | float }}" # Renamed
+      
+      # Wait for calculated duration
+      - delay:
+          seconds: "{{ shot_duration if shot_duration > 0 else 1 }}"
+      
+      # Turn off pump
+      - service: switch.turn_off
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Increment shot count
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p2_shot_count # Renamed
+        data:
+          value: "{{ (states('input_number.cs_p2_shot_count') | int) + 1 }}" # Renamed
+      
+      # Log the irrigation event
+      - service: logbook.log
+        data:
+          name: "P2 Irrigation Completed"
+          message: >
+            Maintenance Irrigation Completed
+            Duration: {{ shot_duration }}s
+            VWC After: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+            EC: {{ states('sensor.cs_configured_avg_ec') }} mS/cm # Use configured entity
+    mode: single
+
+  # P2 Maintenance Phase Irrigation - Field Capacity Reached
+  - id: improved_crop_steering_p2_irrigation_off_capacity
+    alias: Crop Steering - P2 Irrigation Off at Field Capacity
+    description: "Turns off irrigation during P2 when field capacity is reached"
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.cs_configured_avg_vwc # Use configured entity
+        above: input_number.cs_substrate_field_capacity # Renamed (using substrate setting)
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P2
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        state: 'on'
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Log the irrigation event
+      - service: logbook.log
+        data:
+          name: "P2 Irrigation Stopped"
+          message: >
+            Maintenance Irrigation Stopped - Field Capacity Reached
+            VWC: {{ states('sensor.cs_configured_avg_vwc') }}% # Use configured entity
+            Field Capacity: {{ states('input_number.cs_substrate_field_capacity') }}% # Renamed
+    mode: single
+
+  # P3 Emergency Irrigation
+  - id: improved_crop_steering_p3_emergency_irrigation
+    alias: Crop Steering - P3 Emergency Irrigation
+    description: "Provides emergency irrigation during P3 if VWC drops too low"
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.cs_configured_min_vwc # Use configured entity
+        below: sensor.cs_dynamic_p3_dryback # Renamed
+    condition:
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase # Renamed
+        state: P3
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Use configured entity
+        state: 'off'
+    action:
+      - variables:
+          shot_duration: "{{ states('sensor.cs_p3_emergency_shot_duration_seconds') | float }}" # Renamed
+          current_vwc: "{{ states('sensor.cs_configured_min_vwc') | float }}" # Use configured entity
+          threshold: "{{ states('sensor.cs_dynamic_p3_dryback') | float }}" # Renamed
+      
+      # Turn on pump
+      - service: switch.turn_on
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Wait for calculated duration
+      - delay:
+          seconds: "{{ shot_duration }}"
+      
+      # Turn off pump
+      - service: switch.turn_off
+        target:
+          entity_id: switch.cs_configured_pump_switch # Use configured entity
+      
+      # Increment shot count
+      - service: input_number.set_value
+        target:
+          entity_id: input_number.cs_p3_shot_count # Renamed
+        data:
+          value: "{{ (states('input_number.cs_p3_shot_count') | int) + 1 }}" # Renamed
+      
+      # Log and notify about emergency irrigation
+      - service: logbook.log
+        data:
+          name: "P3 Emergency Irrigation"
+          message: >
+            Emergency Irrigation During P3
+            Duration: {{ shot_duration }}s
+            VWC Before: {{ current_vwc }}%
+            Emergency Threshold: {{ threshold }}%
+      
+      - service: notify.mobile_app_notify # Assuming this service name is correct
+        data:
+          title: "Emergency Irrigation"
+          message: >
+            Emergency irrigation triggered during P3 phase.
+            VWC dropped to {{ current_vwc }}% (below threshold of {{ threshold }}%).
+          data:
+            tag: emergency_irrigation
+    mode: single
+
+#==============================================================================
+# GROWTH MODE MANAGEMENT
+#==============================================================================
+
+  # Update parameters when steering mode changes
+  - id: improved_steering_mode_changed
+    alias: Improved Steering Mode Changed
+    description: "Updates parameters when steering mode changes"
+    trigger:
+      - platform: state
+        entity_id: input_select.cs_steering_mode # Renamed
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id:
+            - sensor.cs_dynamic_p0_dryback # Renamed
+            - sensor.cs_p3_start_time_calculated # Renamed
+            - sensor.cs_current_ec_target # Renamed
+      
+      - service: notify.mobile_app_notify # Assuming this service name is correct
+        data:
+          title: "Growth Steering Mode Changed"
+          message: >
+            {% if is_state('input_select.cs_steering_mode', 'Vegetative') %} # Renamed
+            Switched to Vegetative steering mode.
+            P0 Dryback: {{ states('input_number.cs_p0_veg_dryback_target') }}% # Renamed
+            P3 Start: {{ states('input_number.cs_p3_veg_last_irrigation') }} min before lights-off # Renamed
+            {% else %}
+            Switched to Generative steering mode.
+            P0 Dryback: {{ states('input_number.cs_p0_gen_dryback_target') }}% # Renamed
+            P3 Start: {{ states('input_number.cs_p3_gen_last_irrigation') }} min before lights-off # Renamed
+            {% endif %}
+          data:
+            tag: steering_mode_update
+    mode: single

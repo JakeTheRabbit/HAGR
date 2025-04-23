@@ -1,0 +1,239 @@
+blueprint:
+  name: Crop Steering Entity Setup
+  description: Select your crop steering sensors and switches to automatically configure the required input_text helpers for the Crop Steering Package. Run this automation once after setup or when entities change.
+  domain: automation
+  input:
+    vwc_sensors:
+      name: VWC Sensors
+      description: Select all VWC sensor entities for aggregation.
+      selector:
+        entity:
+          domain: sensor
+          multiple: true
+    ec_sensors:
+      name: EC Sensors
+      description: Select all EC sensor entities for aggregation.
+      selector:
+        entity:
+          domain: sensor
+          multiple: true
+    # temp_sensors:
+    #   name: Temperature Sensors (Optional)
+    #   description: Select all Temperature sensor entities for aggregation.
+    #   selector:
+    #     entity:
+    #       domain: sensor
+    #       multiple: true
+    irrigation_pump_switch:
+      name: Irrigation Pump Switch
+      description: Select the main switch controlling your irrigation pump.
+      selector:
+        entity:
+          domain: switch
+    zone_switches:
+      name: Zone Switches
+      description: Select the switches controlling each irrigation zone, IN ORDER.
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+    waste_switch:
+      name: Waste/Flush Switch (Optional)
+      description: Select the switch controlling your waste/flush valve.
+      selector:
+        entity:
+          domain: switch
+    # Zone 1 Sensors
+    z1_vwc_front:
+      name: Zone 1 VWC Front Sensor
+      description: Select the VWC sensor for the front of Zone 1.
+      selector:
+        entity:
+          domain: sensor
+    z1_vwc_back:
+      name: Zone 1 VWC Back Sensor
+      description: Select the VWC sensor for the back of Zone 1.
+      selector:
+        entity:
+          domain: sensor
+    z1_ec_front:
+      name: Zone 1 EC Front Sensor
+      description: Select the EC sensor for the front of Zone 1.
+      selector:
+        entity:
+          domain: sensor
+    z1_ec_back:
+      name: Zone 1 EC Back Sensor
+      description: Select the EC sensor for the back of Zone 1.
+      selector:
+        entity:
+          domain: sensor
+    # Zone 2 Sensors
+    z2_vwc_front:
+      name: Zone 2 VWC Front Sensor
+      description: Select the VWC sensor for the front of Zone 2.
+      selector:
+        entity:
+          domain: sensor
+    z2_vwc_back:
+      name: Zone 2 VWC Back Sensor
+      description: Select the VWC sensor for the back of Zone 2.
+      selector:
+        entity:
+          domain: sensor
+    z2_ec_front:
+      name: Zone 2 EC Front Sensor
+      description: Select the EC sensor for the front of Zone 2.
+      selector:
+        entity:
+          domain: sensor
+    z2_ec_back:
+      name: Zone 2 EC Back Sensor
+      description: Select the EC sensor for the back of Zone 2.
+      selector:
+        entity:
+          domain: sensor
+    # Zone 3 Sensors
+    z3_vwc_front:
+      name: Zone 3 VWC Front Sensor
+      description: Select the VWC sensor for the front of Zone 3.
+      selector:
+        entity:
+          domain: sensor
+    z3_vwc_back:
+      name: Zone 3 VWC Back Sensor
+      description: Select the VWC sensor for the back of Zone 3.
+      selector:
+        entity:
+          domain: sensor
+    z3_ec_front:
+      name: Zone 3 EC Front Sensor
+      description: Select the EC sensor for the front of Zone 3.
+      selector:
+        entity:
+          domain: sensor
+    z3_ec_back:
+      name: Zone 3 EC Back Sensor
+      description: Select the EC sensor for the back of Zone 3.
+      selector:
+        entity:
+          domain: sensor
+    # light_entity:
+    #   name: Light Entity (Optional)
+    #   description: Select the main light entity or group for schedule control.
+    #   selector:
+    #     entity:
+    #       domain: light
+
+# Trigger this automation manually or once on startup
+trigger:
+  - platform: homeassistant
+    event: start
+  # Or add a manual trigger button helper if preferred
+
+# This automation runs once to set the input_text values
+action:
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_vwc_sensor_entities
+    data:
+      value: "{{ vwc_sensors | join(', ') }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_ec_sensor_entities
+    data:
+      value: "{{ ec_sensors | join(', ') }}"
+  # - service: input_text.set_value
+  #   target:
+  #     entity_id: input_text.cs_config_temp_sensor_entities
+  #   data:
+  #     value: "{{ temp_sensors | join(', ') }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_pump_switch_entity
+    data:
+      value: "{{ irrigation_pump_switch }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_zone_switch_entities
+    data:
+      value: "{{ zone_switches | join(', ') }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_waste_switch_entity
+    data:
+      value: "{{ waste_switch | default('') }}"
+  # Zone 1 Sensors
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z1_vwc_front
+    data:
+      value: "{{ z1_vwc_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z1_vwc_back
+    data:
+      value: "{{ z1_vwc_back }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z1_ec_front
+    data:
+      value: "{{ z1_ec_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z1_ec_back
+    data:
+      value: "{{ z1_ec_back }}"
+  # Zone 2 Sensors
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z2_vwc_front
+    data:
+      value: "{{ z2_vwc_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z2_vwc_back
+    data:
+      value: "{{ z2_vwc_back }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z2_ec_front
+    data:
+      value: "{{ z2_ec_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z2_ec_back
+    data:
+      value: "{{ z2_ec_back }}"
+  # Zone 3 Sensors
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z3_vwc_front
+    data:
+      value: "{{ z3_vwc_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z3_vwc_back
+    data:
+      value: "{{ z3_vwc_back }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z3_ec_front
+    data:
+      value: "{{ z3_ec_front }}"
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.cs_config_z3_ec_back
+    data:
+      value: "{{ z3_ec_back }}"
+  # - service: input_text.set_value
+  #   target:
+  #     entity_id: input_text.cs_config_light_entity
+  #   data:
+  #     value: "{{ light_entity }}"
+  - service: system_log.write # Optional: Log confirmation
+    data:
+      message: "Crop Steering input_text helpers configured from blueprint."
+      level: info
+
+mode: single

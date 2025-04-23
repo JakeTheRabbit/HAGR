@@ -1,0 +1,305 @@
+# Improved Crop Steering Sensors
+# This file contains template sensors for precise irrigation control based on
+# dripper flow rate, substrate characteristics, and growth mode
+
+#==============================================================================
+# TIME TRACKING SENSORS
+#==============================================================================
+
+# Modern template integration format - List of sensors for inclusion
+- sensor:
+    - name: "cs_minutes_since_lights_on" # Use 'name' instead of entity ID key
+      unique_id: cs_minutes_since_lights_on # Add unique_id for consistency
+      state: > # Use 'state' instead of 'value_template' # Corrected Indentation
+          {% set lights_on_time = states('input_datetime.cs_lights_on_time') %} {# Renamed #}
+          {% if lights_on_time is not none and lights_on_time not in ['unknown', 'unavailable', ''] %}
+            {% set lights_on_dt = strptime(lights_on_time, '%H:%M:%S').replace(year=now().year, month=now().month, day=now().day) %}
+            {% set current_dt = now() %}
+            {% if current_dt < lights_on_dt %}
+              {% set lights_on_dt = lights_on_dt - timedelta(days=1) %}
+            {% endif %}
+            {% set diff_seconds = (current_dt - lights_on_dt).total_seconds() %}
+            {{ (diff_seconds / 60) | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+      icon: "mdi:clock-time-eight" # Use 'icon' instead of 'icon_template' # Corrected Indentation
+
+    - name: "cs_minutes_until_lights_off" # Use 'name'
+      unique_id: cs_minutes_until_lights_off # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set lights_off_time = states('input_datetime.cs_lights_off_time') %} {# Renamed #}
+          {% if lights_off_time is not none and lights_off_time not in ['unknown', 'unavailable', ''] %}
+            {% set lights_off_dt = strptime(lights_off_time, '%H:%M:%S').replace(year=now().year, month=now().month, day=now().day) %}
+            {% set current_dt = now() %}
+            {% if current_dt > lights_off_dt %}
+              {% set lights_off_dt = lights_off_dt + timedelta(days=1) %}
+            {% endif %}
+            {% set diff_seconds = (lights_off_dt - current_dt).total_seconds() %}
+            {{ (diff_seconds / 60) | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+      icon: "mdi:clock-time-eight" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_p3_start_time_calculated" # Use 'name'
+      unique_id: cs_p3_start_time_calculated # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set lights_off = states('input_datetime.cs_lights_off_time') %} {# Renamed #}
+          {% if lights_off is not none and lights_off not in ['unknown', 'unavailable', ''] %}
+            {% set lights_off_dt = strptime(lights_off, '%H:%M:%S') %}
+            
+            {% if is_state('input_select.cs_steering_mode', 'Vegetative') %}
+              {% set minutes_before = states('input_number.cs_p3_veg_last_irrigation') | int(0) %}
+            {% else %}
+              {% set minutes_before = states('input_number.cs_p3_gen_last_irrigation') | int(0) %}
+            {% endif %}
+            
+            {% set p3_start = (lights_off_dt - timedelta(minutes=minutes_before)) %}
+            {{ p3_start.strftime('%H:%M:%S') }}
+          {% else %}
+            {{ now().strftime('%H:%M:%S') }} {# Default to now if lights off time is invalid #}
+          {% endif %}
+      icon: "mdi:clock-time-four" # Use 'icon' # Corrected Indentation
+
+#==============================================================================
+# SHOT CALCULATION SENSORS
+#==============================================================================
+
+    - name: "cs_p1_current_shot_size_percent" # Use 'name'
+      unique_id: cs_p1_current_shot_size_percent # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set initial = states('input_number.cs_p1_initial_shot_size_percent') | float(0) %}
+          {% set increment = states('input_number.cs_p1_shot_size_increment_percent') | float(0) %}
+          {% set shot_count = states('input_number.cs_p1_shot_count') | int(0) %}
+          {% set max_size = states('input_number.cs_p1_max_shot_size_percent') | float(100) %} {# Default max to 100% #}
+          {% set size_percent = initial + (shot_count * increment) %}
+          {% if size_percent > max_size %}{% set size_percent = max_size %}{% endif %}
+          {{ size_percent }}
+      unit_of_measurement: "%" # Corrected Indentation
+      icon: "mdi:water-percent" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_p1_shot_duration_seconds" # Use 'name'
+      unique_id: cs_p1_shot_duration_seconds # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set dripper_flow_rate = states('input_number.cs_dripper_flow_rate') | float(0) %}  # L/hr
+          {% set substrate_volume = states('input_number.cs_substrate_volume') | float(0) %}   # L
+          {% set shot_size_percent = states('sensor.cs_p1_current_shot_size_percent') | float(0) %} {# Renamed #}
+          {% if dripper_flow_rate > 0 %}
+            {% set volume_to_add = substrate_volume * (shot_size_percent / 100) %}
+            {% set duration_hours = volume_to_add / dripper_flow_rate %}
+            {{ (duration_hours * 3600) | round(1) }}
+          {% else %}
+            0 {# Avoid division by zero #}
+          {% endif %}
+      unit_of_measurement: "s" # Corrected Indentation
+      icon: "mdi:timer-sand" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_p2_shot_duration_seconds" # Use 'name'
+      unique_id: cs_p2_shot_duration_seconds # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set dripper_flow_rate = states('input_number.cs_dripper_flow_rate') | float(0) %}  # L/hr
+          {% set substrate_volume = states('input_number.cs_substrate_volume') | float(0) %}   # L
+          {% set shot_size_percent = states('input_number.cs_p2_shot_size_percent') | float(0) %}
+          {% if dripper_flow_rate > 0 %}
+            {% set volume_to_add = substrate_volume * (shot_size_percent / 100) %}
+            {% set duration_hours = volume_to_add / dripper_flow_rate %}
+            {{ (duration_hours * 3600) | round(1) }}
+          {% else %}
+            0 {# Avoid division by zero #}
+          {% endif %}
+      unit_of_measurement: "s" # Corrected Indentation
+      icon: "mdi:timer-sand" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_p3_emergency_shot_duration_seconds" # Use 'name'
+      unique_id: cs_p3_emergency_shot_duration_seconds # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set dripper_flow_rate = states('input_number.cs_dripper_flow_rate') | float(0) %}  # L/hr
+          {% set substrate_volume = states('input_number.cs_substrate_volume') | float(0) %}   # L
+          {% set shot_size_percent = states('input_number.cs_p3_emergency_shot_size_percent') | float(0) %}
+          {% if dripper_flow_rate > 0 %}
+            {% set volume_to_add = substrate_volume * (shot_size_percent / 100) %}
+            {% set duration_hours = volume_to_add / dripper_flow_rate %}
+            {{ (duration_hours * 3600) | round(1) }}
+          {% else %}
+            0 {# Avoid division by zero #}
+          {% endif %}
+      unit_of_measurement: "s" # Corrected Indentation
+      icon: "mdi:timer-sand" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_precise_shot_duration_seconds" # Use 'name'
+      unique_id: cs_precise_shot_duration_seconds # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set dripper_flow_rate = states('input_number.cs_dripper_flow_rate') | float(0) %}  # L/hr
+          {% set substrate_volume = states('input_number.cs_substrate_volume') | float(0) %}   # L
+          {% set current_vwc = states('sensor.cs_configured_avg_vwc') | float(0) %} {# Use configured entity #}
+          {% set target_vwc = states('input_number.cs_substrate_field_capacity') | float(0) %}
+          {% set retention_factor = states('input_number.cs_substrate_water_retention_factor') | float(1) %} {# Default retention to 1 #}
+          
+          {% if current_vwc >= target_vwc or dripper_flow_rate <= 0 %}
+            0
+          {% else %}
+            {% set vwc_diff = target_vwc - current_vwc %}
+            {% set vwc_percent = vwc_diff / 100 %}
+            {% set water_volume = substrate_volume * vwc_percent * retention_factor %}
+            {% set duration_hours = water_volume / dripper_flow_rate %}
+            {{ (duration_hours * 3600) | round(1) }}  # Convert to seconds
+          {% endif %}
+      unit_of_measurement: "s" # Corrected Indentation
+      icon: "mdi:timer-sand" # Use 'icon' # Corrected Indentation
+
+#==============================================================================
+# EC MANAGEMENT SENSORS
+#==============================================================================
+
+    - name: "cs_current_ec_target" # Use 'name'
+      unique_id: cs_current_ec_target # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set phase = states('input_select.cs_crop_steering_phase') %} {# Renamed #}
+          {% set mode = states('input_select.cs_steering_mode').lower() %}
+          {% if phase == 'P0' and mode == 'vegetative' %}
+            {{ states('input_number.cs_ec_target_veg_p0') | float(0) }}
+          {% elif phase == 'P1' and mode == 'vegetative' %}
+            {{ states('input_number.cs_ec_target_veg_p1') | float(0) }}
+          {% elif phase == 'P2' and mode == 'vegetative' %}
+            {{ states('input_number.cs_ec_target_veg_p2') | float(0) }}
+          {% elif phase == 'P3' and mode == 'vegetative' %}
+            {{ states('input_number.cs_ec_target_veg_p3') | float(0) }}
+          {% elif phase == 'P0' and mode == 'generative' %}
+            {{ states('input_number.cs_ec_target_gen_p0') | float(0) }}
+          {% elif phase == 'P1' and mode == 'generative' %}
+            {{ states('input_number.cs_ec_target_gen_p1') | float(0) }}
+          {% elif phase == 'P2' and mode == 'generative' %}
+            {{ states('input_number.cs_ec_target_gen_p2') | float(0) }}
+          {% elif phase == 'P3' and mode == 'generative' %}
+            {{ states('input_number.cs_ec_target_gen_p3') | float(0) }}
+          {% else %}
+            {{ states('input_number.cs_ec_target_veg_p0') | float(0) }} {# Default #}
+          {% endif %}
+      unit_of_measurement: "mS/cm" # Corrected Indentation
+      icon: "mdi:flash" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_ec_ratio" # Use 'name'
+      unique_id: cs_ec_ratio # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set current_ec = states('sensor.cs_configured_avg_ec') | float(0) %} {# Use configured entity #}
+          {% set target_ec = states('sensor.cs_current_ec_target') | float(0) %} {# Renamed #}
+          {% if target_ec > 0 %}
+            {{ (current_ec / target_ec) | round(2) }}
+          {% else %}
+            1 {# Avoid division by zero, assume ratio is 1 if target is 0 #}
+          {% endif %}
+      icon: "mdi:division" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_p2_vwc_threshold_ec_adjusted" # Use 'name'
+      unique_id: cs_p2_vwc_threshold_ec_adjusted # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set base_threshold = states('input_number.cs_p2_vwc_threshold') | float(0) %}
+          {% set ec_ratio = states('sensor.cs_ec_ratio') | float(1) %} {# Renamed, default ratio to 1 #}
+          {% set ec_high_threshold = states('input_number.cs_p2_ec_high_threshold') | float(1.2) %}
+          {% set ec_low_threshold = states('input_number.cs_p2_ec_low_threshold') | float(0.8) %}
+          {% set high_adjustment = states('input_number.cs_p2_vwc_adjustment_high_ec') | float(0) %}
+          {% set low_adjustment = states('input_number.cs_p2_vwc_adjustment_low_ec') | float(0) %}
+          
+          {% if ec_ratio > ec_high_threshold %}
+            {# If EC is too high, trigger irrigation sooner (higher VWC threshold) #}
+            {{ (base_threshold + high_adjustment) | round(2) }}
+          {% elif ec_ratio < ec_low_threshold %}
+            {# If EC is too low, delay irrigation (lower VWC threshold) #}
+            {{ (base_threshold + low_adjustment) | round(2) }}
+          {% else %}
+            {# EC is in acceptable range, use normal threshold #}
+            {{ base_threshold | round(2) }}
+          {% endif %}
+      unit_of_measurement: "%" # Corrected Indentation
+      icon: "mdi:water-percent" # Use 'icon' # Corrected Indentation
+
+#==============================================================================
+# DYNAMIC DRYBACK TARGETS
+#==============================================================================
+
+    - name: "cs_dynamic_p0_dryback" # Use 'name'
+      unique_id: cs_dynamic_p0_dryback # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% if is_state('input_select.cs_steering_mode', 'Vegetative') %}
+            {{ states('input_number.cs_p0_veg_dryback_target') | float(0) }}
+          {% else %}
+            {{ states('input_number.cs_p0_gen_dryback_target') | float(0) }}
+          {% endif %}
+      unit_of_measurement: "%" # Corrected Indentation
+      icon: "mdi:water-percent" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_dynamic_p2_dryback" # Use 'name'
+      unique_id: cs_dynamic_p2_dryback # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% if is_state('input_select.cs_crop_steering_phase', 'P2') %} {# Renamed #}
+            {{ states('sensor.cs_p2_vwc_threshold_ec_adjusted') | float(0) }} {# Renamed #}
+          {% else %}
+            {{ states('input_number.cs_p2_vwc_threshold') | float(0) }}
+          {% endif %}
+      unit_of_measurement: "%" # Corrected Indentation
+      icon: "mdi:water-percent" # Use 'icon' # Corrected Indentation
+
+    - name: "cs_dynamic_p3_dryback" # Use 'name'
+      unique_id: cs_dynamic_p3_dryback # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {{ states('input_number.cs_p3_emergency_vwc_threshold') | float(0) }}
+      unit_of_measurement: "%" # Corrected Indentation
+      icon: "mdi:water-percent" # Use 'icon' # Corrected Indentation
+
+#==============================================================================
+# SYSTEM STATUS SENSORS
+#==============================================================================
+
+    - name: "cs_current_phase_description" # Use 'name'
+      unique_id: cs_current_phase_description # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% set phase = states('input_select.cs_crop_steering_phase') %} {# Renamed #}
+          {% if phase == 'P0' %}
+            Pre-Irrigation Dry Back ({{ states('sensor.cs_minutes_since_lights_on') | int(0) }} min since lights-on) {# Renamed #}
+          {% elif phase == 'P1' %}
+            Ramp-Up Phase (Shot {{ states('input_number.cs_p1_shot_count') | int(0) }}/{{ states('input_number.cs_p1_max_shots') | int(0) }})
+          {% elif phase == 'P2' %}
+            Maintenance Phase (EC Ratio: {{ states('sensor.cs_ec_ratio') | float(0) }}) {# Renamed #}
+          {% elif phase == 'P3' %}
+            Overnight Dry Back ({{ states('sensor.cs_minutes_until_lights_off') | int(0) }} min until lights-off) {# Renamed #}
+          {% else %}
+            Unknown Phase
+          {% endif %}
+      icon: > # Use 'icon' # Corrected Indentation
+          {% set phase = states('input_select.cs_crop_steering_phase') %} {# Renamed #}
+          {% if phase == 'P0' %}
+            mdi:weather-sunset-up
+          {% elif phase == 'P1' %}
+            mdi:trending-up
+          {% elif phase == 'P2' %}
+            mdi:chart-bell-curve
+          {% elif phase == 'P3' %}
+            mdi:weather-sunset-down
+          {% else %}
+            mdi:help-circle
+          {% endif %}
+
+    - name: "cs_irrigation_status" # Use 'name'
+      unique_id: cs_irrigation_status # Add unique_id
+      state: > # Use 'state' # Corrected Indentation
+          {% if is_state('switch.cs_configured_pump_switch', 'on') %} {# Use configured entity #}
+            {% set phase = states('input_select.cs_crop_steering_phase') %} {# Renamed #}
+            {% if phase == 'P1' %}
+              Ramp-Up Shot {{ states('input_number.cs_p1_shot_count') | int(0) }} ({{ states('sensor.cs_p1_shot_duration_seconds') | float(0) }}s) {# Renamed #}
+            {% elif phase == 'P2' %}
+              Maintenance Irrigation ({{ states('sensor.cs_p2_shot_duration_seconds') | float(0) }}s) {# Renamed #}
+            {% elif phase == 'P3' %}
+              Emergency Irrigation ({{ states('sensor.cs_p3_emergency_shot_duration_seconds') | float(0) }}s) {# Renamed #}
+            {% else %}
+              Irrigating
+            {% endif %}
+          {% else %}
+            Idle
+          {% endif %}
+      icon: > # Use 'icon' # Corrected Indentation
+          {% if is_state('switch.cs_configured_pump_switch', 'on') %} {# Use configured entity #}
+            mdi:water-pump
+          {% else %}
+            mdi:water-pump-off
+          {% endif %}

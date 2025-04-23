@@ -1,0 +1,712 @@
+# Zone-specific Irrigation Controls for Crop Steering
+# This component adds support for multiple irrigation zones with individual control
+
+# Input helpers for zone selection
+input_select:
+  active_irrigation_zones:
+    name: Active Irrigation Zones
+    options:
+      - All Zones
+      - Zone 1 Only
+      - Zone 2 Only
+      - Zone 3 Only
+      - Zones 1 & 2
+      - Zones 1 & 3
+      - Zones 2 & 3
+      - No Zones (Disabled)
+    initial: All Zones
+    icon: mdi:sprinkler-variant
+
+# Input booleans for individual zone control
+input_boolean:
+  zone_1_enabled:
+    name: Zone 1 Enabled
+    initial: true
+    icon: mdi:sprinkler
+    
+  zone_2_enabled:
+    name: Zone 2 Enabled
+    initial: true
+    icon: mdi:sprinkler
+    
+  zone_3_enabled:
+    name: Zone 3 Enabled
+    initial: true
+    icon: mdi:sprinkler
+
+# Virtual irrigation pump entity (Updated to use configured switches)
+binary_sensor:
+  - platform: template
+    sensors:
+      virtual_irrigation_pump: # Note: Consider if this is still needed with switch.cs_configured_pump_switch
+        friendly_name: "Virtual Irrigation Pump"
+        value_template: >
+          {% set pump_entity = states('input_text.cs_config_pump_switch_entity') %}
+          {% set zone_switches = states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | reject('==', '') | list %}
+          {% set zone1_switch = zone_switches[0] if zone_switches | length > 0 else none %}
+          {% set zone2_switch = zone_switches[1] if zone_switches | length > 1 else none %}
+          {% set zone3_switch = zone_switches[2] if zone_switches | length > 2 else none %}
+
+          {% if is_state(pump_entity, 'on') and 
+                ( (zone1_switch is not none and is_state(zone1_switch, 'on')) or 
+                  (zone2_switch is not none and is_state(zone2_switch, 'on')) or 
+                  (zone3_switch is not none and is_state(zone3_switch, 'on')) ) %}
+            on
+          {% else %}
+            off
+          {% endif %}
+        device_class: running
+        availability: >
+          {{ states('input_text.cs_config_pump_switch_entity') | length > 0 and 
+             states('input_text.cs_config_zone_switch_entities') | length > 0 }}
+
+# Zone-specific monitoring sensors (Updated to use configured sensors)
+sensor:
+  - platform: template
+    sensors:
+      active_zones_count:
+        friendly_name: "Active Zones Count"
+        value_template: >
+          {% set count = 0 %}
+          {% if is_state('input_boolean.zone_1_enabled', 'on') %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {% if is_state('input_boolean.zone_2_enabled', 'on') %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {% if is_state('input_boolean.zone_3_enabled', 'on') %}
+            {% set count = count + 1 %}
+          {% endif %}
+          {{ count }}
+        icon_template: "mdi:counter"
+      
+      zone_1_vwc:
+        friendly_name: "Zone 1 VWC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z1_vwc_front') %}
+          {% set back_entity = states('input_text.cs_config_z1_vwc_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(1) }}
+          {% elif front > 0 %}
+            {{ front | round(1) }}
+          {% elif back > 0 %}
+            {{ back | round(1) }}
+          {% else %}
+            unknown {# Indicate if no valid sensors configured #}
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        availability: >
+          {{ states('input_text.cs_config_z1_vwc_front') | length > 0 or 
+             states('input_text.cs_config_z1_vwc_back') | length > 0 }}
+      
+      zone_2_vwc:
+        friendly_name: "Zone 2 VWC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z2_vwc_front') %}
+          {% set back_entity = states('input_text.cs_config_z2_vwc_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(1) }}
+          {% elif front > 0 %}
+            {{ front | round(1) }}
+          {% elif back > 0 %}
+            {{ back | round(1) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        availability: >
+          {{ states('input_text.cs_config_z2_vwc_front') | length > 0 or 
+             states('input_text.cs_config_z2_vwc_back') | length > 0 }}
+
+      zone_3_vwc:
+        friendly_name: "Zone 3 VWC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z3_vwc_front') %}
+          {% set back_entity = states('input_text.cs_config_z3_vwc_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(1) }}
+          {% elif front > 0 %}
+            {{ front | round(1) }}
+          {% elif back > 0 %}
+            {{ back | round(1) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+        availability: >
+          {{ states('input_text.cs_config_z3_vwc_front') | length > 0 or 
+             states('input_text.cs_config_z3_vwc_back') | length > 0 }}
+      
+      zone_1_ec:
+        friendly_name: "Zone 1 EC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z1_ec_front') %}
+          {% set back_entity = states('input_text.cs_config_z1_ec_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(2) }}
+          {% elif front > 0 %}
+            {{ front | round(2) }}
+          {% elif back > 0 %}
+            {{ back | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "mS/cm"
+        icon_template: "mdi:flash"
+        availability: >
+          {{ states('input_text.cs_config_z1_ec_front') | length > 0 or 
+             states('input_text.cs_config_z1_ec_back') | length > 0 }}
+      
+      zone_2_ec:
+        friendly_name: "Zone 2 EC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z2_ec_front') %}
+          {% set back_entity = states('input_text.cs_config_z2_ec_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(2) }}
+          {% elif front > 0 %}
+            {{ front | round(2) }}
+          {% elif back > 0 %}
+            {{ back | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "mS/cm"
+        icon_template: "mdi:flash"
+        availability: >
+          {{ states('input_text.cs_config_z2_ec_front') | length > 0 or 
+             states('input_text.cs_config_z2_ec_back') | length > 0 }}
+      
+      zone_3_ec:
+        friendly_name: "Zone 3 EC"
+        value_template: >
+          {% set front_entity = states('input_text.cs_config_z3_ec_front') %}
+          {% set back_entity = states('input_text.cs_config_z3_ec_back') %}
+          {% set front = states(front_entity) | float(0) if front_entity else 0 %}
+          {% set back = states(back_entity) | float(0) if back_entity else 0 %}
+          {% if front > 0 and back > 0 %}
+            {{ ((front + back) / 2) | round(2) }}
+          {% elif front > 0 %}
+            {{ front | round(2) }}
+          {% elif back > 0 %}
+            {{ back | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "mS/cm"
+        icon_template: "mdi:flash"
+        availability: >
+          {{ states('input_text.cs_config_z3_ec_front') | length > 0 or 
+             states('input_text.cs_config_z3_ec_back') | length > 0 }}
+      
+      # Zone-specific dryback tracking (Uses zone sensors defined above)
+      zone_1_dryback_percentage:
+        friendly_name: "Zone 1 Dryback Percentage"
+        value_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            {% set peak_vwc = states('sensor.dryback_last_peak_vwc') | float(0) %}
+            {% set current_vwc = states('sensor.zone_1_vwc') | float(0) %}
+            {% if peak_vwc > 0 %}
+              {% set percentage = ((peak_vwc - current_vwc) / peak_vwc * 100) | round(1) %}
+              {% if percentage > 0 %}{{ percentage }}{% else %}0{% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+      
+      zone_2_dryback_percentage:
+        friendly_name: "Zone 2 Dryback Percentage"
+        value_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            {% set peak_vwc = states('sensor.dryback_last_peak_vwc') | float(0) %}
+            {% set current_vwc = states('sensor.zone_2_vwc') | float(0) %}
+            {% if peak_vwc > 0 %}
+              {% set percentage = ((peak_vwc - current_vwc) / peak_vwc * 100) | round(1) %}
+              {% if percentage > 0 %}{{ percentage }}{% else %}0{% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+      
+      zone_3_dryback_percentage:
+        friendly_name: "Zone 3 Dryback Percentage"
+        value_template: >
+          {% if is_state('sensor.dryback_in_progress', 'true') %}
+            {% set peak_vwc = states('sensor.dryback_last_peak_vwc') | float(0) %}
+            {% set current_vwc = states('sensor.zone_3_vwc') | float(0) %}
+            {% if peak_vwc > 0 %}
+              {% set percentage = ((peak_vwc - current_vwc) / peak_vwc * 100) | round(1) %}
+              {% if percentage > 0 %}{{ percentage }}{% else %}0{% endif %}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "%"
+        icon_template: "mdi:water-percent"
+
+# Zone control automations (Updated to use configured switches and refactored logic)
+automation:
+  - id: update_zone_status_from_selector
+    alias: Update Zone Status from Selector
+    description: "Updates the individual zone enabled states based on the zone selector"
+    trigger:
+      - platform: state
+        entity_id: input_select.active_irrigation_zones
+    action:
+      - choose:
+          # All Zones
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "All Zones"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_2_enabled
+                    - input_boolean.zone_3_enabled
+          
+          # Zone 1 Only
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zone 1 Only"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.zone_1_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: 
+                    - input_boolean.zone_2_enabled
+                    - input_boolean.zone_3_enabled
+          
+          # Zone 2 Only
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zone 2 Only"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.zone_2_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_3_enabled
+          
+          # Zone 3 Only
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zone 3 Only"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.zone_3_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_2_enabled
+          
+          # Zones 1 & 2
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zones 1 & 2"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_2_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.zone_3_enabled
+          
+          # Zones 1 & 3
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zones 1 & 3"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_3_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.zone_2_enabled
+          
+          # Zones 2 & 3
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "Zones 2 & 3"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: 
+                    - input_boolean.zone_2_enabled
+                    - input_boolean.zone_3_enabled
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.zone_1_enabled
+          
+          # No Zones (Disabled)
+          - conditions:
+              - condition: state
+                entity_id: input_select.active_irrigation_zones
+                state: "No Zones (Disabled)"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: 
+                    - input_boolean.zone_1_enabled
+                    - input_boolean.zone_2_enabled
+                    - input_boolean.zone_3_enabled
+        default: []
+
+  - id: turn_on_irrigation_pump_zones
+    alias: Turn On Irrigation Pump and Zones
+    description: "Turns on the mainline valve and selected zone valves based on configured entities"
+    trigger:
+      - platform: state
+        entity_id: switch.cs_configured_pump_switch # Use configured template switch
+        to: 'on'
+    action:
+      - variables:
+          pump_entity: "{{ states('input_text.cs_config_pump_switch_entity') }}"
+          zone_switches: "{{ states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | reject('==', '') | list }}"
+          waste_switch: "{{ states('input_text.cs_config_waste_switch_entity') }}"
+          zone1_switch: "{{ zone_switches[0] if zone_switches | length > 0 else none }}"
+          zone2_switch: "{{ zone_switches[1] if zone_switches | length > 1 else none }}"
+          zone3_switch: "{{ zone_switches[2] if zone_switches | length > 2 else none }}"
+
+      # First, ensure waste valve is off (if configured)
+      - if:
+          - "{{ waste_switch | length > 0 }}"
+        then:
+          - service: switch.turn_off
+            target:
+              entity_id: "{{ waste_switch }}"
+      
+      # Turn on mainline valve (which is the configured pump switch)
+      - service: switch.turn_on
+        target:
+          entity_id: "{{ pump_entity }}"
+      
+      # Turn on zone valves based on enabled zones
+      - if:
+          - "{{ zone1_switch is not none and is_state('input_boolean.zone_1_enabled', 'on') }}"
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: "{{ zone1_switch }}"
+      
+      - if:
+          - "{{ zone2_switch is not none and is_state('input_boolean.zone_2_enabled', 'on') }}"
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: "{{ zone2_switch }}"
+      
+      - if:
+          - "{{ zone3_switch is not none and is_state('input_boolean.zone_3_enabled', 'on') }}"
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: "{{ zone3_switch }}"
+
+  - id: turn_off_irrigation_pump_zones
+    alias: Turn Off Irrigation Pump and Zones
+    description: "Turns off all configured valves when the configured pump switch is turned off"
+    trigger:
+      - platform: state
+        entity_id: switch.cs_configured_pump_switch # Use configured template switch
+        to: 'off'
+    action:
+      - variables:
+          pump_entity: "{{ states('input_text.cs_config_pump_switch_entity') }}"
+          zone_switches: "{{ states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | reject('==', '') | list }}"
+          zone1_switch: "{{ zone_switches[0] if zone_switches | length > 0 else none }}"
+          zone2_switch: "{{ zone_switches[1] if zone_switches | length > 1 else none }}"
+          zone3_switch: "{{ zone_switches[2] if zone_switches | length > 2 else none }}"
+      
+      # Turn off all zone valves first
+      - service: switch.turn_off
+        target:
+          entity_id: >
+            {% set entities = [] %}
+            {% if zone1_switch is not none %}{% set entities = entities + [zone1_switch] %}{% endif %}
+            {% if zone2_switch is not none %}{% set entities = entities + [zone2_switch] %}{% endif %}
+            {% if zone3_switch is not none %}{% set entities = entities + [zone3_switch] %}{% endif %}
+            {{ entities }}
+      
+      # Then turn off mainline valve (configured pump switch)
+      - service: switch.turn_off
+        target:
+          entity_id: "{{ pump_entity }}"
+
+  # Zone-specific irrigation automations (Refactored: Only sets active zones and triggers main pump)
+  - id: zone_specific_p2_irrigation_trigger
+    alias: Zone-Specific P2 Irrigation Trigger
+    description: "Sets active zones and triggers main pump if any enabled zone needs P2 irrigation"
+    trigger:
+      - platform: template
+        value_template: >
+          {% set phase = states('input_select.cs_crop_steering_phase') %}
+          {% if phase == 'P2' %}
+            {% set zone1_enabled = is_state('input_boolean.zone_1_enabled', 'on') %}
+            {% set zone2_enabled = is_state('input_boolean.zone_2_enabled', 'on') %}
+            {% set zone3_enabled = is_state('input_boolean.zone_3_enabled', 'on') %}
+            
+            {% set zone1_vwc = states('sensor.zone_1_vwc') | float(999) %} {# Use local zone sensor #}
+            {% set zone2_vwc = states('sensor.zone_2_vwc') | float(999) %} {# Use local zone sensor #}
+            {% set zone3_vwc = states('sensor.zone_3_vwc') | float(999) %} {# Use local zone sensor #}
+            
+            {% set dryback_target = states('sensor.cs_dynamic_p2_dryback') | float(0) %} {# Use dynamic target #}
+            
+            {% if (zone1_enabled and zone1_vwc <= dryback_target) or
+                  (zone2_enabled and zone2_vwc <= dryback_target) or
+                  (zone3_enabled and zone3_vwc <= dryback_target) %}
+              true
+            {% else %}
+              false
+            {% endif %}
+          {% else %}
+            false
+          {% endif %}
+    condition:
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Check configured pump switch
+        state: 'off'
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase
+        state: 'P2'
+    action:
+      # Determine which zones need irrigation
+      - variables:
+          dryback_target: "{{ states('sensor.cs_dynamic_p2_dryback') | float(0) }}"
+          zone1_needs_irrigation: >
+            {% set zone1_enabled = is_state('input_boolean.zone_1_enabled', 'on') %}
+            {% set zone1_vwc = states('sensor.zone_1_vwc') | float(999) %}
+            {{ zone1_enabled and zone1_vwc <= dryback_target }}
+          zone2_needs_irrigation: >
+            {% set zone2_enabled = is_state('input_boolean.zone_2_enabled', 'on') %}
+            {% set zone2_vwc = states('sensor.zone_2_vwc') | float(999) %}
+            {{ zone2_enabled and zone2_vwc <= dryback_target }}
+          zone3_needs_irrigation: >
+            {% set zone3_enabled = is_state('input_boolean.zone_3_enabled', 'on') %}
+            {% set zone3_vwc = states('sensor.zone_3_vwc') | float(999) %}
+            {{ zone3_enabled and zone3_vwc <= dryback_target }}
+      
+      # Update zone selection based on which zones need irrigation
+      - choose: # Simplified logic
+          - conditions: "{{ zone1_needs_irrigation and zone2_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "All Zones" }
+          - conditions: "{{ zone1_needs_irrigation and zone2_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 1 & 2" }
+          - conditions: "{{ zone1_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 1 & 3" }
+          - conditions: "{{ zone2_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 2 & 3" }
+          - conditions: "{{ zone1_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 1 Only" }
+          - conditions: "{{ zone2_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 2 Only" }
+          - conditions: "{{ zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 3 Only" }
+        default: [] # Do nothing if no zones need irrigation (shouldn't happen due to trigger)
+
+      # Trigger the main pump switch - the main P2 automation will handle the duration
+      - service: switch.turn_on
+        target:
+          entity_id: switch.cs_configured_pump_switch
+
+  - id: zone_specific_p3_irrigation_trigger
+    alias: Zone-Specific P3 Emergency Irrigation Trigger
+    description: "Sets active zones and triggers main pump if any enabled zone needs P3 emergency irrigation"
+    trigger:
+      - platform: template
+        value_template: >
+          {% set phase = states('input_select.cs_crop_steering_phase') %}
+          {% if phase == 'P3' %}
+            {% set zone1_enabled = is_state('input_boolean.zone_1_enabled', 'on') %}
+            {% set zone2_enabled = is_state('input_boolean.zone_2_enabled', 'on') %}
+            {% set zone3_enabled = is_state('input_boolean.zone_3_enabled', 'on') %}
+            
+            {% set zone1_vwc = states('sensor.zone_1_vwc') | float(999) %} {# Use local zone sensor #}
+            {% set zone2_vwc = states('sensor.zone_2_vwc') | float(999) %} {# Use local zone sensor #}
+            {% set zone3_vwc = states('sensor.zone_3_vwc') | float(999) %} {# Use local zone sensor #}
+            
+            {% set dryback_target = states('sensor.cs_dynamic_p3_dryback') | float(0) %} {# Use dynamic target #}
+            
+            {% if (zone1_enabled and zone1_vwc <= dryback_target) or
+                  (zone2_enabled and zone2_vwc <= dryback_target) or
+                  (zone3_enabled and zone3_vwc <= dryback_target) %}
+              true
+            {% else %}
+              false
+            {% endif %}
+          {% else %}
+            false
+          {% endif %}
+    condition:
+      - condition: state
+        entity_id: switch.cs_configured_pump_switch # Check configured pump switch
+        state: 'off'
+      - condition: state
+        entity_id: input_select.cs_crop_steering_phase
+        state: 'P3'
+    action:
+      # Determine which zones need irrigation
+      - variables:
+          dryback_target: "{{ states('sensor.cs_dynamic_p3_dryback') | float(0) }}"
+          zone1_needs_irrigation: >
+            {% set zone1_enabled = is_state('input_boolean.zone_1_enabled', 'on') %}
+            {% set zone1_vwc = states('sensor.zone_1_vwc') | float(999) %}
+            {{ zone1_enabled and zone1_vwc <= dryback_target }}
+          zone2_needs_irrigation: >
+            {% set zone2_enabled = is_state('input_boolean.zone_2_enabled', 'on') %}
+            {% set zone2_vwc = states('sensor.zone_2_vwc') | float(999) %}
+            {{ zone2_enabled and zone2_vwc <= dryback_target }}
+          zone3_needs_irrigation: >
+            {% set zone3_enabled = is_state('input_boolean.zone_3_enabled', 'on') %}
+            {% set zone3_vwc = states('sensor.zone_3_vwc') | float(999) %}
+            {{ zone3_enabled and zone3_vwc <= dryback_target }}
+      
+      # Update zone selection based on which zones need irrigation
+      - choose: # Simplified logic
+          - conditions: "{{ zone1_needs_irrigation and zone2_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "All Zones" }
+          - conditions: "{{ zone1_needs_irrigation and zone2_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 1 & 2" }
+          - conditions: "{{ zone1_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 1 & 3" }
+          - conditions: "{{ zone2_needs_irrigation and zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zones 2 & 3" }
+          - conditions: "{{ zone1_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 1 Only" }
+          - conditions: "{{ zone2_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 2 Only" }
+          - conditions: "{{ zone3_needs_irrigation }}"
+            sequence:
+              - service: input_select.select_option
+                target: { entity_id: input_select.active_irrigation_zones }
+                data: { option: "Zone 3 Only" }
+        default: [] # Do nothing if no zones need irrigation (shouldn't happen due to trigger)
+      
+      # Trigger the main pump switch - the main P3 automation will handle the duration
+      - service: switch.turn_on
+        target:
+          entity_id: switch.cs_configured_pump_switch
+
+# Dashboard cards for zone control (Updated to use configured switches where applicable)
+# type: entities
+# title: Irrigation Zone Control
+# entities:
+#   - entity: input_select.active_irrigation_zones
+#   - entity: input_boolean.zone_1_enabled
+#   - entity: input_boolean.zone_2_enabled
+#   - entity: input_boolean.zone_3_enabled
+#   - entity: sensor.active_zones_count
+#   - type: divider
+#   - entity: "{{ states('input_text.cs_config_pump_switch_entity') }}" # Mainline Valve (Configured Pump)
+#     name: Mainline Valve
+#   - entity: "{{ (states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | list)[0] | default('') }}" # Zone 1 Valve
+#     name: Zone 1 Valve
+#   - entity: "{{ (states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | list)[1] | default('') }}" # Zone 2 Valve
+#     name: Zone 2 Valve
+#   - entity: "{{ (states('input_text.cs_config_zone_switch_entities').split(',') | map('trim') | list)[2] | default('') }}" # Zone 3 Valve
+#     name: Zone 3 Valve
+#   - entity: "{{ states('input_text.cs_config_waste_switch_entity') }}" # Waste Valve
+#     name: Waste / Hose Valve
+
+# type: custom:apexcharts-card
+# header:
+#   title: Zone VWC Comparison
+#   show: true
+# graph_span: 24h
+# series:
+#   - entity: sensor.zone_1_vwc # Uses sensor defined in this file
+#     name: Zone 1 VWC
+#     stroke_width: 2
+#     show:
+#       in_header: true
+#   - entity: sensor.zone_2_vwc # Uses sensor defined in this file
+#     name: Zone 2 VWC
+#     stroke_width: 2
+#     show:
+#       in_header: true
+#   - entity: sensor.zone_3_vwc # Uses sensor defined in this file
+#     name: Zone 3 VWC
+#     stroke_width: 2
+#     show:
+#       in_header: true

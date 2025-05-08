@@ -1,0 +1,44 @@
+# ==============================================================================
+# Automation: F1 Light Acclimation (complete)
+# ------------------------------------------------------------------------------
+alias: F1 Light Acclimation
+description: Linear increase from 50% to 90% over 21 days, then disable itself
+mode: single
+
+# ------------------------------------------------------------------------------
+# Trigger: runs every day at the “lights on” time
+trigger:
+  - platform: time
+    at: input_datetime.f1_lights_on_time
+
+# ------------------------------------------------------------------------------
+# Actions:
+action:
+  # 1) Apply the current target brightness
+  - service: light.turn_on
+    target:
+      entity_id: light.f1_light_group
+    data:
+      brightness: "{{ states('input_number.f1_target_brightness') | float | round }}"
+
+  # 2) Increment brightness by 5.1, cap at 229.5 (≈90%)
+  - service: input_number.set_value
+    target:
+      entity_id: input_number.f1_target_brightness
+    data:
+      value: >-
+        {{ [states('input_number.f1_target_brightness') | float + 5.1, 229.5] | min }}
+
+  # 3) If we've hit the max, notify and turn this automation off
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: input_number.f1_target_brightness
+            above: 229.4
+        sequence:
+          - service: notify.mobile_app_s23ultra
+            data:
+              message: "✅ F1 Light Acclimation complete: reached 90% brightness."
+          - service: automation.turn_off
+            target:
+              entity_id: automation.f1_light_acclimation

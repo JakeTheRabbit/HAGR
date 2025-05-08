@@ -42,3 +42,25 @@ action:
           - service: automation.turn_off
             target:
               entity_id: automation.f1_light_acclimation
+
+
+# # ===============================
+# # Input Datetime (Helper)
+# # ===============================
+# input_datetime:
+#   f1_lights_on_time:
+#     name: "F1 Lights On Time"
+#     has_date: false
+#     has_time: true
+# Helpers to add in configuration.yaml
+# # ===============================
+# # Input Number (Helper)
+# # ===============================
+# input_number:
+#   f1_target_brightness:
+#     name: "F1 Target Brightness"
+#     initial: 127.5   # 50% of 255
+#     min: 127.5       # do not go below 50%
+#     max: 229.5       # do not exceed ~90%
+#     step: 5.1        # (229.5 − 127.5) / 20
+#     mode: slider

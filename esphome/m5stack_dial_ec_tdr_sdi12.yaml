@@ -1,0 +1,943 @@
+esphome:
+  name: sdi-12-m5dial
+  friendly_name: M5 Dial SDI-12 Logger
+  on_boot:
+    priority: 100
+    then:
+      - pcf8563.read_time:
+      - logger.log: "M5 Dial SDI-12 Logger booting up"
+      - delay: 1s
+      - output.set_level:
+          id: backlight_output
+          level: 100%
+      - lambda: |-
+          id(display_on) = true;
+          id(round_display).set_update_interval(500);
+          id(last_activity_time) = millis() / 1000;
+      - script.execute: update_display
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Add DNS servers
+  manual_ip:
+    static_ip: 192.168.69.69
+    gateway: 192.168.69.1
+    subnet: 255.255.255.0
+    dns1: 8.8.8.8
+    dns2: 1.1.1.1
+  
+  # Fallback hotspot
+  ap:
+    ssid: "m5 scales Fallback Hotspot"
+    password: "42069blazeit"
+
+api:
+  encryption:
+    key: "encyption key"
+  reboot_timeout: 0s  # Disable reboot on connection failure
+  port: 6053  # Set explicit port
+
+status_led:
+  pin: GPIO14
+
+captive_portal:
+
+ota:
+  - platform: esphome
+    password: "42069420"
+
+logger:
+  level: DEBUG
+  logs:
+    sdi12: DEBUG
+    uart: DEBUG
+    sensor: DEBUG
+
+i2c:
+  id: internal_i2c
+  sda: GPIO11
+  scl: GPIO12
+  scan: true
+  frequency: 100kHz
+
+external_components:
+  - source: github://ssieb/esphome@uarthalf
+    components: [ uart ]
+    refresh: 1min
+  - source: github://ssieb/esphome_components@sdi12
+    components: [ sdi12 ]
+    refresh: 1min
+
+uart:
+  - id: sdi12uart
+    tx_pin:
+      number: GPIO13
+      inverted: true
+    rx_pin: GPIO15
+    baud_rate: 1200
+    data_bits: 7
+    parity: even
+    half_duplex: true
+    debug:
+      direction: BOTH
+      after:
+        timeout: 20ms
+      sequence:
+        - lambda: UARTDebug::log_string(direction, bytes);
+
+sdi12:
+  - uart_id: sdi12uart
+    id: sdibus
+
+output:
+  - platform: ledc
+    pin: GPIO3
+    id: buzzer
+  - platform: ledc
+    pin: GPIO9
+    id: backlight_output
+    frequency: 1000 Hz
+    min_power: 0.0
+    max_power: 1.0
+    zero_means_zero: true
+
+rtttl:
+  output: buzzer
+
+globals:
+  - id: logged_vwc
+    type: float[10]
+    initial_value: '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}'
+    restore_value: yes
+  - id: logged_pwec
+    type: float[10]
+    initial_value: '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}'
+    restore_value: yes
+  - id: logged_temp
+    type: float[10]
+    initial_value: '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}'
+    restore_value: yes
+  - id: current_log_index
+    type: int
+    initial_value: '0'
+    restore_value: yes
+  - id: display_mode
+    type: int
+    initial_value: '0'
+  - id: settings_menu_selection
+    type: int
+    initial_value: '0'
+  - id: screen_always_on
+    type: bool
+    initial_value: 'false'
+    restore_value: yes
+  - id: last_activity_time
+    type: uint32_t
+    initial_value: '0'
+  - id: display_on
+    type: bool
+    initial_value: 'false'
+  - id: display_timeout_seconds
+    type: uint32_t
+    initial_value: '300'
+  - id: main_button_is_pressed # Re-add global
+    type: bool
+    initial_value: 'false'
+  - id: main_button_press_time # Re-add global
+    type: uint32_t
+    initial_value: '0'
+
+sensor:
+  - platform: sdi12
+    address: 0
+    update_interval: 10s
+    sensors:
+      # Raw EC reading from BGT sensor
+      - index: 3
+        name: "Raw EC"
+        id: raw_ec
+        internal: true
+        accuracy_decimals: 0
+        unit_of_measurement: 'µS/cm'
+      
+      # Temperature reading from BGT sensor
+      - index: 2
+        name: "Temperature"
+        id: temperature
+        accuracy_decimals: 1
+        unit_of_measurement: '°C'
+        icon: "mdi:thermometer"
+        state_class: "measurement"
+        on_value:
+          - if:
+              condition:
+                and:
+                  - lambda: 'return id(display_on);'
+                  - lambda: 'return id(display_mode) == 0;'
+              then:
+                - script.execute: update_display
+      
+      # VWC reading from BGT sensor with calibration adjustment
+      - index: 1
+        name: "VWC"
+        id: vwc
+        accuracy_decimals: 2
+        unit_of_measurement: '%'
+        icon: "mdi:water-percent"
+        state_class: "measurement"
+        filters:
+          - lambda: |-
+              float RAW = x;
+              float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
+              
+              // Scale factor to match TEROS 12
+              vwc = vwc * 0.7;  
+              
+              // Convert to percentage
+              return vwc * 100;
+        on_value:
+          - if:
+              condition:
+                and:
+                  - lambda: 'return id(display_on);'
+                  - lambda: 'return id(display_mode) == 0;'
+              then:
+                - script.execute: update_display
+
+  # Calculated pore water EC using the BGT measurements
+  - platform: template
+    name: "EC"
+    id: pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+    state_class: "measurement"
+    lambda: |-
+      // Get raw EC reading (in µS/cm)
+      float bulk_ec = id(raw_ec).state;
+      
+      // Get VWC reading (in %)
+      float vwc_percent = id(vwc).state;
+      
+      // Convert VWC to decimal (0-1 range)
+      float vwc_decimal = vwc_percent / 100.0;
+      
+      // Only calculate if we have valid readings
+      if (isnan(bulk_ec) || isnan(vwc_decimal) || vwc_decimal < 0.05) {
+        return NAN; // Not enough water for reliable reading
+      }
+      
+      // Calculate pore water EC with adjusted factors to match TEROS 12
+      // Changed from 1.18 to 1.05 for closer match to TEROS 12
+      float pore_ec = (bulk_ec / vwc_decimal) * 1.05;
+      
+      // Apply temperature compensation to normalize EC to 25°C
+      float temp = id(temperature).state;
+      if (!isnan(temp)) {
+        pore_ec = pore_ec / (1.0 + 0.02 * (temp - 25.0));
+      }
+      
+      // Convert µS/cm to dS/m
+      return pore_ec / 1000.0;
+    update_interval: 10s
+    on_value:
+      - if:
+          condition:
+            and:
+              - lambda: 'return id(display_on);'
+              - lambda: 'return id(display_mode) == 0;'
+          then:
+            - script.execute: update_display
+
+  # Diagnostic sensor for monitoring the conversion factor
+  - platform: template
+    name: "EC Conversion Factor"
+    id: ec_factor
+    unit_of_measurement: ''
+    accuracy_decimals: 2
+    lambda: |-
+      float vwc_percent = id(vwc).state;
+      float vwc_decimal = vwc_percent / 100.0;
+      
+      if (isnan(vwc_decimal) || vwc_decimal < 0.05) {
+        return NAN;
+      }
+      
+      return 1.0 / vwc_decimal;
+    update_interval: 10s
+    internal: true
+
+  - platform: uptime
+    name: Uptime
+    id: system_uptime
+    update_interval: 60s
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+  # Template sensors for logs 1-10
+  - platform: template
+    name: "SDI12 Log 1 VWC"
+    id: sdi12_log_1_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 1 pwEC"
+    id: sdi12_log_1_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 1 Temp"
+    id: sdi12_log_1_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+  
+  # Log 2
+  - platform: template
+    name: "SDI12 Log 2 VWC"
+    id: sdi12_log_2_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 2 pwEC"
+    id: sdi12_log_2_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 2 Temp"
+    id: sdi12_log_2_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 3
+  - platform: template
+    name: "SDI12 Log 3 VWC"
+    id: sdi12_log_3_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 3 pwEC"
+    id: sdi12_log_3_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 3 Temp"
+    id: sdi12_log_3_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 4
+  - platform: template
+    name: "SDI12 Log 4 VWC"
+    id: sdi12_log_4_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 4 pwEC"
+    id: sdi12_log_4_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 4 Temp"
+    id: sdi12_log_4_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 5
+  - platform: template
+    name: "SDI12 Log 5 VWC"
+    id: sdi12_log_5_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 5 pwEC"
+    id: sdi12_log_5_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 5 Temp"
+    id: sdi12_log_5_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 6
+  - platform: template
+    name: "SDI12 Log 6 VWC"
+    id: sdi12_log_6_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 6 pwEC"
+    id: sdi12_log_6_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 6 Temp"
+    id: sdi12_log_6_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 7
+  - platform: template
+    name: "SDI12 Log 7 VWC"
+    id: sdi12_log_7_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 7 pwEC"
+    id: sdi12_log_7_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 7 Temp"
+    id: sdi12_log_7_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 8
+  - platform: template
+    name: "SDI12 Log 8 VWC"
+    id: sdi12_log_8_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 8 pwEC"
+    id: sdi12_log_8_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 8 Temp"
+    id: sdi12_log_8_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 9
+  - platform: template
+    name: "SDI12 Log 9 VWC"
+    id: sdi12_log_9_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 9 pwEC"
+    id: sdi12_log_9_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 9 Temp"
+    id: sdi12_log_9_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    
+  # Log 10
+  - platform: template
+    name: "SDI12 Log 10 VWC"
+    id: sdi12_log_10_vwc
+    unit_of_measurement: '%'
+    accuracy_decimals: 1
+    icon: "mdi:water-percent"
+  - platform: template
+    name: "SDI12 Log 10 pwEC"
+    id: sdi12_log_10_pwec
+    unit_of_measurement: 'dS/m'
+    accuracy_decimals: 2
+    icon: "mdi:water-opacity"
+  - platform: template
+    name: "SDI12 Log 10 Temp"
+    id: sdi12_log_10_temp
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+
+  - platform: rotary_encoder
+    id: encoder
+    pin_a: GPIO40
+    pin_b: GPIO41
+    # pin_button: GPIO46 # Removed - Invalid option here
+    resolution: 1
+    # filters: # Removed - Invalid option here
+    #   - delayed_on: 10ms
+    #   - delayed_off: 10ms
+    on_clockwise:
+      then:
+        - script.execute: handle_encoder_clockwise
+    on_anticlockwise:
+      then:
+        - script.execute: handle_encoder_anticlockwise
+    # on_click: # Removed - Invalid option here
+
+time:
+  - platform: pcf8563
+    id: rtctime
+    i2c_id: internal_i2c
+    address: 0x51
+    update_interval: never
+  - platform: homeassistant
+    id: esptime
+    on_time_sync:
+      then:
+        - pcf8563.write_time:
+
+binary_sensor:
+  # Re-added the button sensor here
+  - platform: gpio
+    name: "Main Button"
+    id: main_button
+    pin:
+      number: GPIO46
+      mode: INPUT_PULLUP # Explicitly set pullup
+    internal: true
+    filters: # Add debouncing
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - lambda: |-
+            id(main_button_is_pressed) = true;
+            id(main_button_press_time) = millis();
+    on_release:
+      then:
+        - lambda: |-
+            if (id(main_button_is_pressed)) {
+              id(main_button_is_pressed) = false;
+              uint32_t press_duration = millis() - id(main_button_press_time);
+              ESP_LOGD("button", "Main button released after %d ms", press_duration);
+              if (press_duration >= 2000) { // Long press threshold
+                id(handle_main_button_long_press).execute();
+              } else if (press_duration >= 50) { // Short press threshold
+                id(handle_main_button_short_press).execute();
+              }
+            }
+
+  - platform: status
+    name: "Device Status"
+    id: device_status
+
+spi:
+  id: spi_bus
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+font:
+  - file: "arial.ttf"
+    id: normal_font
+    size: 20
+  - file: "arial.ttf"
+    id: large_font
+    size: 28
+  - file: "arial.ttf"
+    id: small_font
+    size: 16
+
+display:
+  - platform: ili9xxx
+    id: round_display
+    model: GC9A01A
+    cs_pin: GPIO7
+    reset_pin: GPIO8
+    dc_pin: GPIO4
+    spi_id: spi_bus
+    invert_colors: false
+    rotation: 0
+    update_interval: 0s
+    lambda: |-
+      if (!id(display_on)) {
+        it.fill(Color::BLACK);
+        return;
+      }
+      it.fill(Color::BLACK);
+      int center_x = it.get_width() / 2;
+      int center_y = it.get_height() / 2;
+      int width = it.get_width();
+      int height = it.get_height();
+      if (id(display_mode) == 11) {
+        it.printf(center_x, 20, id(normal_font), TextAlign::CENTER, "Settings");
+        const char* options[] = {"Toggle Timeout", "Clear All Logs", "Exit"};
+        Color yellow = Color(255, 255, 0);
+        for (int i = 0; i < 3; ++i) {
+          Color color = (i == id(settings_menu_selection)) ? yellow : Color::WHITE;
+          it.printf(center_x, 70 + i * 40, id(normal_font), color, TextAlign::CENTER, options[i]);
+        }
+      } else {
+        if (id(display_mode) == 0) {
+          it.printf(center_x, 20, id(normal_font), TextAlign::CENTER, "LIVE Readings");
+        } else {
+          it.printf(center_x, 20, id(normal_font), TextAlign::CENTER, "Log %d / 10", id(display_mode));
+        }
+        float vwc_val = NAN, pwec_val = NAN, temp_val = NAN;
+        if (id(display_mode) == 0) {
+          if (id(vwc).has_state()) vwc_val = id(vwc).state;
+          if (id(pwec).has_state()) pwec_val = id(pwec).state;
+          if (id(temperature).has_state()) temp_val = id(temperature).state;
+        } else {
+          int log_idx = id(display_mode) - 1;
+          vwc_val = id(logged_vwc)[log_idx];
+          pwec_val = id(logged_pwec)[log_idx];
+          temp_val = id(logged_temp)[log_idx];
+        }
+        Color gray = Color(128, 128, 128);
+        it.printf(center_x, 70, id(large_font), TextAlign::CENTER,
+                  (isnan(vwc_val)) ? "--.- %%" : "%.1f %%", vwc_val);
+        it.printf(center_x, 105, id(small_font), gray, TextAlign::CENTER, "VWC");
+        it.printf(center_x, 140, id(large_font), TextAlign::CENTER,
+                  (isnan(pwec_val)) ? "--.-- dS/m" : "%.2f dS/m", pwec_val);
+        it.printf(center_x, 175, id(small_font), gray, TextAlign::CENTER, "pwEC");
+        it.printf(center_x, 210, id(normal_font), TextAlign::CENTER,
+                  (isnan(temp_val)) ? "--.- C" : "%.1f C", temp_val);
+        if (id(screen_always_on)) {
+           Color green = Color(0, 255, 0);
+           it.filled_circle(width - 20, height - 20, 8, green);
+           it.printf(width - 35, height - 25, id(small_font), TextAlign::RIGHT, "ON");
+        } else {
+          uint32_t time_now = millis() / 1000;
+          uint32_t elapsed = time_now - id(last_activity_time);
+          if (elapsed <= id(display_timeout_seconds)) {
+             uint32_t time_left = id(display_timeout_seconds) - elapsed;
+             it.printf(width - 10, height - 25, id(small_font), TextAlign::RIGHT, "%ds", time_left);
+          }
+        }
+      }
+
+light:
+  - platform: monochromatic
+    name: "M5 Dial Backlight"
+    output: backlight_output
+    id: display_backlight
+    default_transition_length: 0.2s
+    restore_mode: ALWAYS_OFF
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            and:
+              - lambda: 'return id(display_on);'
+              - lambda: 'return !id(screen_always_on);'
+          then:
+            - lambda: |-
+                uint32_t time_now = millis() / 1000;
+                uint32_t elapsed_time = time_now - id(last_activity_time);
+                if (elapsed_time > id(display_timeout_seconds)) {
+                  ESP_LOGI("display", "Screen timeout reached.");
+                  id(turn_display_off).execute();
+                } else {
+                  if (id(display_mode) != 11) {
+                     id(round_display).update();
+                  }
+                }
+
+script:
+  # --- Core Actions ---
+  - id: log_reading
+    mode: single
+    then:
+      - lambda: |-
+          int idx = id(current_log_index);
+          float vwc_now = NAN, pwec_now = NAN, temp_now = NAN;
+          if (id(vwc).has_state()) vwc_now = id(vwc).state;
+          if (id(pwec).has_state()) pwec_now = id(pwec).state;
+          if (id(temperature).has_state()) temp_now = id(temperature).state;
+          ESP_LOGI("log", "Logging to index %d: VWC=%.1f, pwEC=%.2f, Temp=%.1f",
+                   idx, vwc_now, pwec_now, temp_now);
+          id(logged_vwc)[idx] = vwc_now;
+          id(logged_pwec)[idx] = pwec_now;
+          id(logged_temp)[idx] = temp_now;
+          
+          // Publish to Home Assistant (one long if/else chain)
+          if (idx == 0) { 
+            id(sdi12_log_1_vwc).publish_state(vwc_now);
+            id(sdi12_log_1_pwec).publish_state(pwec_now);
+            id(sdi12_log_1_temp).publish_state(temp_now);
+          } else if (idx == 1) {
+            id(sdi12_log_2_vwc).publish_state(vwc_now);
+            id(sdi12_log_2_pwec).publish_state(pwec_now);
+            id(sdi12_log_2_temp).publish_state(temp_now);
+          } else if (idx == 2) {
+            id(sdi12_log_3_vwc).publish_state(vwc_now);
+            id(sdi12_log_3_pwec).publish_state(pwec_now);
+            id(sdi12_log_3_temp).publish_state(temp_now);
+          } else if (idx == 3) {
+            id(sdi12_log_4_vwc).publish_state(vwc_now);
+            id(sdi12_log_4_pwec).publish_state(pwec_now);
+            id(sdi12_log_4_temp).publish_state(temp_now);
+          } else if (idx == 4) {
+            id(sdi12_log_5_vwc).publish_state(vwc_now);
+            id(sdi12_log_5_pwec).publish_state(pwec_now);
+            id(sdi12_log_5_temp).publish_state(temp_now);
+          } else if (idx == 5) {
+            id(sdi12_log_6_vwc).publish_state(vwc_now);
+            id(sdi12_log_6_pwec).publish_state(pwec_now);
+            id(sdi12_log_6_temp).publish_state(temp_now);
+          } else if (idx == 6) {
+            id(sdi12_log_7_vwc).publish_state(vwc_now);
+            id(sdi12_log_7_pwec).publish_state(pwec_now);
+            id(sdi12_log_7_temp).publish_state(temp_now);
+          } else if (idx == 7) {
+            id(sdi12_log_8_vwc).publish_state(vwc_now);
+            id(sdi12_log_8_pwec).publish_state(pwec_now);
+            id(sdi12_log_8_temp).publish_state(temp_now);
+          } else if (idx == 8) {
+            id(sdi12_log_9_vwc).publish_state(vwc_now);
+            id(sdi12_log_9_pwec).publish_state(pwec_now);
+            id(sdi12_log_9_temp).publish_state(temp_now);
+          } else if (idx == 9) {
+            id(sdi12_log_10_vwc).publish_state(vwc_now);
+            id(sdi12_log_10_pwec).publish_state(pwec_now);
+            id(sdi12_log_10_temp).publish_state(temp_now);
+          }
+          
+          // Increment index with wraparound
+          id(current_log_index)++;
+          if (id(current_log_index) >= 10) {
+            id(current_log_index) = 0;
+          }
+      - rtttl.play: "log:d=4,o=6,b=100:16c"
+      - script.execute: reset_activity_timer
+      - script.execute: update_display
+
+  - id: clear_logs
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGI("log", "Clearing all logs.");
+          for (int i = 0; i < 10; ++i) {
+            id(logged_vwc)[i] = NAN;
+            id(logged_pwec)[i] = NAN;
+            id(logged_temp)[i] = NAN;
+          }
+          id(current_log_index) = 0;
+          
+          // Clear all Home Assistant entities
+          id(sdi12_log_1_vwc).publish_state(NAN);
+          id(sdi12_log_1_pwec).publish_state(NAN);
+          id(sdi12_log_1_temp).publish_state(NAN);
+          id(sdi12_log_2_vwc).publish_state(NAN);
+          id(sdi12_log_2_pwec).publish_state(NAN);
+          id(sdi12_log_2_temp).publish_state(NAN);
+          id(sdi12_log_3_vwc).publish_state(NAN);
+          id(sdi12_log_3_pwec).publish_state(NAN);
+          id(sdi12_log_3_temp).publish_state(NAN);
+          id(sdi12_log_4_vwc).publish_state(NAN);
+          id(sdi12_log_4_pwec).publish_state(NAN);
+          id(sdi12_log_4_temp).publish_state(NAN);
+          id(sdi12_log_5_vwc).publish_state(NAN);
+          id(sdi12_log_5_pwec).publish_state(NAN);
+          id(sdi12_log_5_temp).publish_state(NAN);
+          id(sdi12_log_6_vwc).publish_state(NAN);
+          id(sdi12_log_6_pwec).publish_state(NAN);
+          id(sdi12_log_6_temp).publish_state(NAN);
+          id(sdi12_log_7_vwc).publish_state(NAN);
+          id(sdi12_log_7_pwec).publish_state(NAN);
+          id(sdi12_log_7_temp).publish_state(NAN);
+          id(sdi12_log_8_vwc).publish_state(NAN);
+          id(sdi12_log_8_pwec).publish_state(NAN);
+          id(sdi12_log_8_temp).publish_state(NAN);
+          id(sdi12_log_9_vwc).publish_state(NAN);
+          id(sdi12_log_9_pwec).publish_state(NAN);
+          id(sdi12_log_9_temp).publish_state(NAN);
+          id(sdi12_log_10_vwc).publish_state(NAN);
+          id(sdi12_log_10_pwec).publish_state(NAN);
+          id(sdi12_log_10_temp).publish_state(NAN);
+      - rtttl.play: "clear:d=4,o=5,b=100:16e,16c"
+      - script.execute: update_display
+
+  # --- UI Handling Scripts ---
+  - id: handle_encoder_clockwise
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(display_on)) {
+            id(turn_display_on).execute();
+            return;
+          }
+          id(reset_activity_timer).execute();
+
+          if (id(display_mode) == 11) {
+            id(settings_menu_selection)++;
+            if (id(settings_menu_selection) > 2) id(settings_menu_selection) = 0;
+          } else {
+            id(display_mode)++;
+            if (id(display_mode) > 10) id(display_mode) = 0;
+          }
+      - script.execute: update_display
+
+  - id: handle_encoder_anticlockwise
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(display_on)) {
+            id(turn_display_on).execute();
+            return;
+          }
+          id(reset_activity_timer).execute();
+
+          if (id(display_mode) == 11) {
+            id(settings_menu_selection)--;
+            if (id(settings_menu_selection) < 0) id(settings_menu_selection) = 2;
+          } else {
+            id(display_mode)--;
+            if (id(display_mode) < 0) id(display_mode) = 10;
+          }
+      - script.execute: update_display
+
+  - id: handle_main_button_short_press
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(display_on)) {
+            id(turn_display_on).execute();
+            return;
+          }
+          id(reset_activity_timer).execute();
+
+          if (id(display_mode) == 11) {
+            id(select_setting).execute();
+          } else if (id(display_mode) == 0) {
+            id(log_reading).execute();
+          }
+      - script.execute: update_display
+
+  - id: handle_main_button_long_press
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(display_on)) {
+            id(turn_display_on).execute();
+          }
+          id(reset_activity_timer).execute();
+
+          ESP_LOGI("ui", "Entering settings menu.");
+          id(display_mode) = 11;
+          id(settings_menu_selection) = 0;
+      - script.execute: update_display
+
+  - id: select_setting
+    mode: single
+    then:
+      - lambda: |-
+          int selection = id(settings_menu_selection);
+          ESP_LOGI("ui", "Settings option selected: %d", selection);
+          if (selection == 0) {
+            id(screen_always_on) = !id(screen_always_on);
+            id(screen_always_on_switch).publish_state(id(screen_always_on));
+            ESP_LOGI("ui", "Screen Always On toggled to: %s", id(screen_always_on) ? "ON" : "OFF");
+            if (id(screen_always_on)) {
+               id(reset_activity_timer).execute();
+            }
+          } else if (selection == 1) {
+            id(clear_logs).execute();
+          } else if (selection == 2) {
+             id(display_mode) = 0;
+             ESP_LOGI("ui", "Exiting settings menu.");
+          }
+      - script.execute: update_display
+
+  # --- Display Control Scripts ---
+  - id: update_display
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(display_on);'
+          then:
+            - lambda: 'id(round_display).update();'
+
+  - id: turn_display_on
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(display_on)) {
+            ESP_LOGI("display", "Turning display ON.");
+            id(display_on) = true;
+            id(round_display).set_update_interval(500);
+            id(display_backlight).turn_on();
+            id(reset_activity_timer).execute();
+            id(update_display).execute();
+          } else {
+             id(reset_activity_timer).execute();
+          }
+
+  - id: turn_display_off
+    mode: single
+    then:
+      - lambda: |-
+          if (id(display_on)) {
+            ESP_LOGI("display", "Turning display OFF.");
+            id(display_on) = false;
+            id(round_display).set_update_interval(0);
+            id(display_backlight).turn_off();
+          }
+
+  - id: reset_activity_timer
+    mode: single
+    then:
+      - lambda: 'id(last_activity_time) = millis() / 1000;'
+
+# Switches / Buttons for Home Assistant Control
+switch:
+  - platform: restart
+    name: "Restart M5 Dial Logger"
+    id: restart_switch
+
+  - platform: template
+    name: "Screen Always On"
+    id: screen_always_on_switch
+    icon: "mdi:lightbulb-on-outline"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          id(screen_always_on) = true;
+          ESP_LOGI("ha", "Screen Always On enabled via HA.");
+          id(turn_display_on).execute();
+    turn_off_action:
+      - lambda: |-
+          id(screen_always_on) = false;
+          ESP_LOGI("ha", "Screen Always On disabled via HA.");
+          id(reset_activity_timer).execute();
+
+button:
+  - platform: template
+    name: "Clear All Logs"
+    id: clear_logs_button
+    icon: "mdi:delete-sweep"
+    on_press:
+      - script.execute: clear_logs
+
+# Web server
+web_server:
+  port: 80

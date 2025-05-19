@@ -1,0 +1,136 @@
+blueprint:
+  name: Temperature-Based Light Dimming for Grow Rooms
+  description: Automatically dims lights when temperature exceeds threshold and gradually continues dimming until temperature normalizes, helping maintain optimal growing conditions.
+  domain: automation
+  input:
+    temperature_sensor:
+      name: Temperature Sensor
+      description: Temperature sensor used to trigger the automation
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+    temperature_threshold:
+      name: Temperature Threshold
+      description: The temperature threshold above which the lights should be dimmed (can be an input_number entity or a fixed value)
+      selector:
+        entity:
+          domain: input_number
+          multiple: false
+    light_group:
+      name: Light Group
+      description: The light or light group to control
+      selector:
+        entity:
+          domain: light
+          multiple: false
+    dimming_percentage:
+      name: Dimming Percentage
+      description: How much to dim the lights each time (in percent)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          unit_of_measurement: "%"
+          mode: slider
+          step: 1
+    check_interval:
+      name: Check Interval
+      description: How often to check if temperature is still high (in minutes)
+      default: 5
+      selector:
+        select:
+          options:
+            - "5"
+            - "10"
+            - "15"
+            - "30"
+    temperature_recover_time:
+      name: Temperature Recovery Time
+      description: Time required below threshold before stopping dimming (in minutes)
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 10
+          unit_of_measurement: min
+          mode: slider
+          step: 1
+    enable_notifications:
+      name: Enable Notifications
+      description: Create notifications when lights are dimmed
+      default: true
+      selector:
+        boolean: {}
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input temperature_sensor
+    above: !input temperature_threshold
+  - platform: numeric_state
+    entity_id: !input temperature_sensor
+    below: !input temperature_threshold
+    for:
+      minutes: !input temperature_recover_time
+  - platform: state
+    entity_id: this.entity_id
+    to: "on"
+  - platform: time_pattern
+    minutes: "/5"
+
+condition: 
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ is_state('input_select.check_interval', '5') or now().minute % (states('input_select.check_interval') | int) == 0 }}"
+
+action:
+  - variables:
+      temp_sensor: !input temperature_sensor
+      temp_threshold: !input temperature_threshold
+      dim_percent: !input dimming_percentage
+      notifications: !input enable_notifications
+      
+  - service: homeassistant.update_entity
+    target:
+      entity_id: !input temperature_sensor
+    
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temperature_sensor
+            above: !input temperature_threshold
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input light_group
+            data:
+              brightness_step_pct: "-{{ dim_percent }}"
+          - if:
+              - condition: template
+                value_template: "{{ notifications }}"
+            then:
+              - service: persistent_notification.create
+                data:
+                  title: "Temperature Alert"
+                  message: >
+                    Lights dimmed by {{ dim_percent }}% because temperature 
+                    ({{ states(temp_sensor) | float(0) }}°C) exceeds threshold 
+                    ({{ states(temp_threshold) | float(0) }}°C)
+                  notification_id: "temp_dim_alert"
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temperature_sensor
+            below: !input temperature_threshold
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ notifications }}"
+            then:
+              - service: persistent_notification.dismiss
+                data:
+                  notification_id: "temp_dim_alert"

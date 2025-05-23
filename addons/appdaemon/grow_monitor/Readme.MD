@@ -1,4 +1,3 @@
-```markdown
 # 🤖 Grow Room AI Monitor v2.0 for Home Assistant
 
 An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI-powered recommendations, smart error detection, and spam-free notifications. Built with pure Python state management—no helper entities required!

@@ -1,0 +1,6 @@
+---
+grow_monitor:
+  module: grow_monitor
+  class: GrowRoomAIMonitor
+  openai_api_key: "!secret openai_api_key"
+

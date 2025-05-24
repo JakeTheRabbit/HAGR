@@ -67,7 +67,8 @@ An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI
    grow_monitor:
      module: grow_monitor
      class: GrowRoomAIMonitor
-     openai_api_key: "sk-YOUR_OPENAI_API_KEY_HERE" # Or use !secret```
+     openai_api_key: "sk-YOUR_OPENAI_API_KEY_HERE"
+```
 3. Create Home Assistant Helper Entities (YAML)Copy and paste the following block into your Home Assistant configuration.yaml file (or a separate YAML file that you !include, like input_helpers.yaml). Then, restart Home Assistant (or Reload Input Helpers from Developer Tools).Replace YOUR_PREFIX_ with your desired prefix (e.g., f1_, grow_room_) and update the ENTITIES dictionary in grow_monitor.py accordingly.# In your configuration.yaml or a dedicated !include file for inputs
 ```yaml
 input_datetime:

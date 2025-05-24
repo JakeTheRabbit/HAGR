@@ -67,9 +67,9 @@ An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI
    grow_monitor:
      module: grow_monitor
      class: GrowRoomAIMonitor
-     openai_api_key: "sk-YOUR_OPENAI_API_KEY_HERE" # Or use !secret
+     openai_api_key: "sk-YOUR_OPENAI_API_KEY_HERE" # Or use !secret```
 3. Create Home Assistant Helper Entities (YAML)Copy and paste the following block into your Home Assistant configuration.yaml file (or a separate YAML file that you !include, like input_helpers.yaml). Then, restart Home Assistant (or Reload Input Helpers from Developer Tools).Replace YOUR_PREFIX_ with your desired prefix (e.g., f1_, grow_room_) and update the ENTITIES dictionary in grow_monitor.py accordingly.# In your configuration.yaml or a dedicated !include file for inputs
-
+```
 input_datetime:
   YOUR_PREFIX_lights_on_time:
     name: "YOUR_PREFIX Lights On Time"
@@ -266,9 +266,10 @@ input_number:
     max: 5.0
     step: 0.1
     unit_of_measurement: "mS/cm"
-    icon: mdi:flash-outline
+    icon: mdi:flash-outline```
 4. Create Home Assistant Mute Script
 In your Home Assistant scripts.yaml file (or a separate file if you include a scripts directory), add the following script:
+```
 grow_monitor_mute_sensor:
   alias: "Grow Monitor Mute Sensor Action"
   description: "Fires an event to mute a specific grow monitor sensor."
@@ -285,7 +286,7 @@ grow_monitor_mute_sensor:
         sensor_to_mute: "{{ sensor_key }}"
         mute_duration_hours: "{{ duration_hours }}"
   mode: single
-
+```
 
 Reload Home Assistant scripts (Developer Tools > YAML Configuration > Reload Scripts).
 5. Configure Entities in grow_monitor.py

@@ -6,6 +6,38 @@ Here is an exmaple of my fertigation control dashboard.
 
 <img width="825" alt="Irrigation Control v2" src="https://github.com/user-attachments/assets/773845f0-8afe-4255-b620-9c46b1f75d23" />
 
+# Crop Steering Home Assistant automation: 
+Advanced irrigation control system for Home Assistant that uses crop steering principles to optimize plant growth and health, with full GUI configuration through blueprints.
+https://github.com/JakeTheRabbit/HA-Irrigation-Strategy
+
+## AI Envornment Alerts for Home Assistant
+
+https://github.com/JakeTheRabbit/HAGR/tree/main/addons/appdaemon/grow_monitor
+
+### 🌱 Advanced Environmental Monitoring
+- **7 Sensor Types**: Temperature, Humidity, CO₂, VPD, Leaf VPD, VWC (Volumetric Water Content), pwEC (Pore Water Electrical Conductivity).
+- **Day/Night Awareness**: Different thresholds for lights-on / lights-off periods.
+- **Trend Analysis**: Calculates sensor trends (RAPID_RISE, STABLE, etc.) to inform alert severity.
+- **Centralized Entity Configuration**: All Home Assistant entities easily defined in `grow_monitor.py`.
+
+### 🧠 AI-Powered Intelligence
+- **OpenAI Integration**: Provides concise AI-generated summaries of current environmental issues in notifications (describes *what* is wrong, not how to fix it).
+- **Periodic AI Trend Analysis**: A framework for future enhancements to analyze overall trends (currently logs a placeholder).
+
+### 🚨 Intelligent Alert System
+- **Smart Summary Notifications**: Consolidates multiple active alerts into a single notification. Notifications use a consistent tag to replace previous ones.
+- **Configurable Severity Levels**: IGNORE, NORMAL, URGENT, CRITICAL, based on violation duration and trend.
+- **Intelligent Rate Limiting**:
+    - Base 1-hour cooldown between summary notifications.
+    - Extends to a 6-hour quiet period after any sensor alert is acknowledged (muted) via a notification action.
+    - New *critical* alerts bypass cooldowns for immediate notification.
+- **Actionable Notifications**:
+    - Buttons to mute specific alerting sensors for 1 hour or 6 hours.
+    - Button to activate a global "Pause ALL Alerts" `input_boolean`.
+- **Per-Sensor Muting:** Temporarily silence alerts for specific sensors if an issue is known or non-critical.
+- **Persistent State**: Remembers user-muted sensors and notification cooldown states across AppDaemon restarts (via a `.pkl` data file).
+
+
 
 For more information on using the Teros-12 / Teros-12 Compatible SDI-12 with ESP32, visit: Teros-12 / Teros-12 Compatible SDI-12 to ESP32.
 
@@ -17,6 +49,7 @@ My Grow SOPs:
 - [Athena batch tank calculator (metric) hosted on github:](https://jaketherabbit.github.io/batch_tank_calculator/)
 - <div></div>
   <img width="100" alt="image" src="https://github.com/user-attachments/assets/7394f98f-7d81-4b6b-bec8-78a4e703786f" />
+
 
 
 ## Useful Links

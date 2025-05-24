@@ -27,76 +27,120 @@ class AlertContext:
 
 class GrowRoomAIMonitor(hass.Hass):
     
-    def initialize(self):
-        """Initialize the AI-powered grow room monitor - NO HELPER ENTITIES NEEDED!"""
+    # HOME ASSISTANT ENTITY CONFIGURATION - EASY TO MODIFY
+    ENTITIES = {
+        # Control entities
+        'lights_on': 'input_datetime.f1_lights_on_time',
+        'lights_off': 'input_datetime.f1_lights_off_time',
+        'alerts_paused': 'input_boolean.f1_environmental_alerts_paused',
         
-        # Sensor configuration with realistic ranges for error detection
+        # Notification targets
+        'mobile_notify': 'notify.mobile_app_s23ultra',
+        'tts': 'assist_satellite.office_home_assistant_voice_assist_satellite',
+        
+        # Environmental sensors
+        'sensors': {
+            'temperature': 'sensor.f1_scd410_back_left_temperature',
+            'humidity': 'sensor.f1_scd410_back_left_humidity',
+            'co2': 'sensor.f1_scd410_back_left_co2',
+            'vpd': 'sensor.f1_scd410_back_left_vpd',
+            'leaf_vpd': 'sensor.middle_leaf_vpd',
+            'vwc': 'sensor.f1_average_rockwool_vwc',
+            'ec': 'sensor.f1_average_rockwool_ec'
+        },
+        
+        # Alert threshold entities
+        'thresholds': {
+            'temp_day_high': 'input_number.f1_day_temp_high_alert',
+            'temp_day_low': 'input_number.f1_day_temp_low_alert',
+            'temp_night_high': 'input_number.f1_night_temp_high_alert',
+            'temp_night_low': 'input_number.f1_night_temp_low_alert',
+            'humidity_day_high': 'input_number.f1_day_humidity_high_alert',
+            'humidity_day_low': 'input_number.f1_day_humidity_low_alert',
+            'humidity_night_high': 'input_number.f1_night_humidity_high_alert',
+            'humidity_night_low': 'input_number.f1_night_humidity_low_alert',
+            'co2_day_high': 'input_number.f1_day_co2_high_alert',
+            'co2_day_low': 'input_number.f1_day_co2_low_alert',
+            'co2_night_high': 'input_number.f1_night_co2_high_alert',
+            'co2_night_low': 'input_number.f1_night_co2_low_alert',
+            'vpd_day_high': 'input_number.f1_day_vpd_high_alert',
+            'vpd_day_low': 'input_number.f1_day_vpd_low_alert',
+            'vpd_night_high': 'input_number.f1_night_vpd_high_alert',
+            'vpd_night_low': 'input_number.f1_night_vpd_low_alert',
+            'leaf_vpd_day_high': 'input_number.f1_day_leaf_vpd_high_alert',
+            'leaf_vpd_day_low': 'input_number.f1_day_leaf_vpd_low_alert',
+            'leaf_vpd_night_high': 'input_number.f1_night_leaf_vpd_high_alert',
+            'leaf_vpd_night_low': 'input_number.f1_night_leaf_vpd_low_alert',
+            'vwc_day_low': 'input_number.f1_day_vwc_low_alert',
+            'vwc_night_low': 'input_number.f1_night_vwc_low_alert',
+            'ec_day_high': 'input_number.f1_day_pwec_high_alert',
+            'ec_night_high': 'input_number.f1_night_pwec_high_alert'
+        }
+    }
+    
+    def initialize(self):
+        """Initialize the AI-powered grow room monitor"""
+        
+        # Sensor configuration using centralized entities
         self.sensors = {
             'temperature': {
-                'entity': 'sensor.f1_scd410_back_left_temperature',
+                'entity': self.ENTITIES['sensors']['temperature'],
                 'unit': '°C',
                 'critical_change_rate': 0.1,
-                'valid_range': (-10.0, 50.0),  # Realistic temp range
-                'day_high': 'input_number.f1_day_temp_high_alert',
-                'day_low': 'input_number.f1_day_temp_low_alert',
-                'night_high': 'input_number.f1_night_temp_high_alert',
-                'night_low': 'input_number.f1_night_temp_low_alert'
+                'day_high': self.ENTITIES['thresholds']['temp_day_high'],
+                'day_low': self.ENTITIES['thresholds']['temp_day_low'],
+                'night_high': self.ENTITIES['thresholds']['temp_night_high'],
+                'night_low': self.ENTITIES['thresholds']['temp_night_low']
             },
             'humidity': {
-                'entity': 'sensor.f1_scd410_back_left_humidity',
+                'entity': self.ENTITIES['sensors']['humidity'],
                 'unit': '%',
                 'critical_change_rate': 2.0,
-                'valid_range': (0.0, 100.0),  # Humidity percentage
-                'day_high': 'input_number.f1_day_humidity_high_alert',
-                'day_low': 'input_number.f1_day_humidity_low_alert',
-                'night_high': 'input_number.f1_night_humidity_high_alert',
-                'night_low': 'input_number.f1_night_humidity_low_alert'
+                'day_high': self.ENTITIES['thresholds']['humidity_day_high'],
+                'day_low': self.ENTITIES['thresholds']['humidity_day_low'],
+                'night_high': self.ENTITIES['thresholds']['humidity_night_high'],
+                'night_low': self.ENTITIES['thresholds']['humidity_night_low']
             },
             'co2': {
-                'entity': 'sensor.f1_scd410_back_left_co2',
+                'entity': self.ENTITIES['sensors']['co2'],
                 'unit': 'ppm',
                 'critical_change_rate': 50,
-                'valid_range': (200.0, 8000.0),  # CO2 ppm range
-                'day_high': 'input_number.f1_day_co2_high_alert',
-                'day_low': 'input_number.f1_day_co2_low_alert',
-                'night_high': 'input_number.f1_night_co2_high_alert',
-                'night_low': 'input_number.f1_night_co2_low_alert'
+                'day_high': self.ENTITIES['thresholds']['co2_day_high'],
+                'day_low': self.ENTITIES['thresholds']['co2_day_low'],
+                'night_high': self.ENTITIES['thresholds']['co2_night_high'],
+                'night_low': self.ENTITIES['thresholds']['co2_night_low']
             },
             'vpd': {
-                'entity': 'sensor.f1_scd410_back_left_vpd',
+                'entity': self.ENTITIES['sensors']['vpd'],
                 'unit': 'kPa',
                 'critical_change_rate': 0.1,
-                'valid_range': (0.0, 6.0),  # VPD kPa range
-                'day_high': 'input_number.f1_day_vpd_high_alert',
-                'day_low': 'input_number.f1_day_vpd_low_alert',
-                'night_high': 'input_number.f1_night_vpd_high_alert',
-                'night_low': 'input_number.f1_night_vpd_low_alert'
+                'day_high': self.ENTITIES['thresholds']['vpd_day_high'],
+                'day_low': self.ENTITIES['thresholds']['vpd_day_low'],
+                'night_high': self.ENTITIES['thresholds']['vpd_night_high'],
+                'night_low': self.ENTITIES['thresholds']['vpd_night_low']
             },
             'leaf_vpd': {
-                'entity': 'sensor.middle_leaf_vpd',
+                'entity': self.ENTITIES['sensors']['leaf_vpd'],
                 'unit': 'kPa',
                 'critical_change_rate': 0.1,
-                'valid_range': (0.0, 6.0),  # Leaf VPD kPa range
-                'day_high': 'input_number.f1_day_leaf_vpd_high_alert',
-                'day_low': 'input_number.f1_day_leaf_vpd_low_alert',
-                'night_high': 'input_number.f1_night_leaf_vpd_high_alert',
-                'night_low': 'input_number.f1_night_leaf_vpd_low_alert'
+                'day_high': self.ENTITIES['thresholds']['leaf_vpd_day_high'],
+                'day_low': self.ENTITIES['thresholds']['leaf_vpd_day_low'],
+                'night_high': self.ENTITIES['thresholds']['leaf_vpd_night_high'],
+                'night_low': self.ENTITIES['thresholds']['leaf_vpd_night_low']
             },
             'vwc': {
-                'entity': 'sensor.f1_average_rockwool_vwc',
+                'entity': self.ENTITIES['sensors']['vwc'],
                 'unit': '%',
                 'critical_change_rate': 1.0,
-                'valid_range': (0.0, 100.0),  # VWC percentage
-                'day_low': 'input_number.f1_day_vwc_low_alert',
-                'night_low': 'input_number.f1_night_vwc_low_alert'
+                'day_low': self.ENTITIES['thresholds']['vwc_day_low'],
+                'night_low': self.ENTITIES['thresholds']['vwc_night_low']
             },
             'ec': {
-                'entity': 'sensor.f1_average_rockwool_ec',
+                'entity': self.ENTITIES['sensors']['ec'],
                 'unit': 'mS/cm',
                 'critical_change_rate': 0.2,
-                'valid_range': (0.0, 15.0),  # EC mS/cm range
-                'day_high': 'input_number.f1_day_pwec_high_alert',
-                'night_high': 'input_number.f1_night_pwec_high_alert'
+                'day_high': self.ENTITIES['thresholds']['ec_day_high'],
+                'night_high': self.ENTITIES['thresholds']['ec_night_high']
             }
         }
         
@@ -109,12 +153,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 'last_alert_time': None,
                 'last_notified_value': None,
                 'previous_value': None,
-                'trend_history': deque(maxlen=36),  # 6 minutes of trends
-                'error_state': False,  # NEW: Track if sensor is in error
-                'error_start_time': None,  # NEW: When error started
-                'last_valid_value': None,  # NEW: Last known good value
-                'error_count': 0,  # NEW: Count of consecutive errors
-                'recovery_notified': False  # NEW: Prevent duplicate recovery notifications
+                'trend_history': deque(maxlen=36)  # 6 minutes of trends
             }
         
         # Global state
@@ -122,24 +161,26 @@ class GrowRoomAIMonitor(hass.Hass):
         self.system_stats = {
             'total_alerts': 0,
             'alerts_by_sensor': {name: 0 for name in self.sensors},
-            'sensor_errors': {name: 0 for name in self.sensors},  # NEW: Track errors
             'start_time': datetime.now()
         }
         
-        # Configuration
-        self.lights_on_entity = 'input_datetime.f1_lights_on_time'
-        self.lights_off_entity = 'input_datetime.f1_lights_off_time'
-        self.alerts_paused_entity = 'input_boolean.f1_environmental_alerts_paused'
+        # Configuration using centralized entities
+        self.lights_on_entity = self.ENTITIES['lights_on']
+        self.lights_off_entity = self.ENTITIES['lights_off']
+        self.alerts_paused_entity = self.ENTITIES['alerts_paused']
+        self.mobile_notify = self.ENTITIES['mobile_notify']
+        self.tts_entity = self.ENTITIES['tts']
+        
+        # Enhanced AI configuration with debugging
         self.openai_api_key = self.args.get('openai_api_key', '')
         self.ai_enabled = bool(self.openai_api_key)
         
-        # Notification targets
-        self.mobile_notify = 'notify.mobile_app_s23ultra'
-        self.tts_entity = 'assist_satellite.office_home_assistant_voice_assist_satellite'
-        
         # Data persistence (optional - survives HA restarts)
-        self.data_file = '/config/apps/grow_monitor_data.pkl'
+        self.data_file = '/config/appdaemon/apps/grow_monitor_data.pkl'
         self.load_persistent_data()
+        
+        # Enhanced startup diagnostics
+        self.startup_diagnostics()
         
         # Initialize sensor listeners
         for sensor_name, config in self.sensors.items():
@@ -151,160 +192,92 @@ class GrowRoomAIMonitor(hass.Hass):
         self.run_every(self.save_persistent_data, "now+60", 60)  # Save data every minute
         self.run_every(self.system_health_check, "now+3600", 3600)  # Hourly health check
         
-        self.log("🤖 AI Grow Room Monitor initialized with Error Detection!")
-        self.log(f"Monitoring {len(self.sensors)} sensors with AI analysis and error handling")
+        self.log("🤖 AI Grow Room Monitor initialized successfully!")
+        self.log(f"Monitoring {len(self.sensors)} sensors with AI analysis")
+
+    def startup_diagnostics(self):
+        """Enhanced startup diagnostics to debug issues"""
+        self.log("🔍 Running startup diagnostics...")
+        
+        # Check alert pause state
+        try:
+            pause_state = self.get_state(self.alerts_paused_entity)
+            self.log(f"📱 Alert pause state: {pause_state} (entity: {self.alerts_paused_entity})")
+        except Exception as e:
+            self.log(f"❌ Error reading alert pause state: {e}")
+        
+        # Check AI configuration
+        if self.openai_api_key:
+            key_preview = f"{self.openai_api_key[:8]}..." if len(self.openai_api_key) > 8 else "TOO SHORT"
+            self.log(f"🤖 AI enabled: {self.ai_enabled} (key: {key_preview})")
+        else:
+            self.log("❌ OpenAI API key not configured - AI disabled")
+        
+        # Check sensor entities
+        missing_sensors = []
+        for sensor_name, config in self.sensors.items():
+            try:
+                state = self.get_state(config['entity'])
+                if state is None:
+                    missing_sensors.append(f"{sensor_name}:{config['entity']}")
+            except Exception as e:
+                missing_sensors.append(f"{sensor_name}:{config['entity']} (error: {e})")
+        
+        if missing_sensors:
+            self.log(f"⚠️ Missing/broken sensors: {missing_sensors}")
+        else:
+            self.log("✅ All sensors accessible")
+        
+        # Check lights schedule
+        try:
+            lights_on = self.get_state(self.lights_on_entity)
+            lights_off = self.get_state(self.lights_off_entity)
+            is_day = self.is_day_period()
+            self.log(f"☀️ Lights schedule: ON={lights_on}, OFF={lights_off}, Current period={'DAY' if is_day else 'NIGHT'}")
+        except Exception as e:
+            self.log(f"❌ Error checking lights schedule: {e}")
 
     def sensor_updated(self, entity, attribute, old, new, kwargs):
-        """Handle sensor updates with error detection and pure Python state management"""
+        """Handle sensor updates with enhanced debugging"""
         sensor_name = kwargs['sensor_name']
         
         try:
             current_value = float(new)
         except (ValueError, TypeError):
-            self.log(f"Error: {sensor_name} sent invalid value: {new}")
-            self.handle_sensor_error(sensor_name, f"Invalid value: {new}")
+            self.log(f"⚠️ Invalid sensor value for {sensor_name}: {new}")
             return
-        
-        # Check if value is within realistic range
-        if not self.is_value_realistic(sensor_name, current_value):
-            self.handle_sensor_error(sensor_name, f"Out of range: {current_value}")
-            return
-        
-        # Check for recovery from error state
-        if self.sensor_data[sensor_name]['error_state']:
-            self.handle_sensor_recovery(sensor_name, current_value)
         
         # Store in Python data structure
         sensor_data = self.sensor_data[sensor_name]
         reading = SensorReading(value=current_value, timestamp=datetime.now())
         sensor_data['history'].append(reading)
-        sensor_data['last_valid_value'] = current_value
-        sensor_data['error_count'] = 0  # Reset error count on valid reading
         
         # Update previous value for trend calculation
         if len(sensor_data['history']) > 1:
             sensor_data['previous_value'] = sensor_data['history'][-2].value
         
-        # Only analyze if sensor is not in error state
-        if not sensor_data['error_state']:
-            self.analyze_sensor(sensor_name, current_value)
-
-    def is_value_realistic(self, sensor_name: str, value: float) -> bool:
-        """Check if sensor value is within realistic range"""
-        valid_range = self.sensors[sensor_name]['valid_range']
-        return valid_range[0] <= value <= valid_range[1]
-
-    def handle_sensor_error(self, sensor_name: str, error_detail: str):
-        """Handle sensor error state"""
-        sensor_data = self.sensor_data[sensor_name]
-        sensor_data['error_count'] += 1
-        
-        # Require 3 consecutive errors before declaring ERROR state
-        if sensor_data['error_count'] >= 3 and not sensor_data['error_state']:
-            sensor_data['error_state'] = True
-            sensor_data['error_start_time'] = datetime.now()
-            sensor_data['violation_count'] = 0  # Reset violation count
-            sensor_data['recovery_notified'] = False
-            
-            # Track in system stats
-            self.system_stats['sensor_errors'][sensor_name] += 1
-            
-            # Send error notification
-            self.send_error_notification(sensor_name, error_detail)
-            
-            self.log(f"⚠️ SENSOR ERROR: {sensor_name} - {error_detail}")
-        
-        elif sensor_data['error_count'] < 3:
-            self.log(f"Warning: {sensor_name} error #{sensor_data['error_count']} - {error_detail}")
-
-    def handle_sensor_recovery(self, sensor_name: str, current_value: float):
-        """Handle sensor recovery from error state"""
-        sensor_data = self.sensor_data[sensor_name]
-        
-        # Reset error count on valid reading
-        sensor_data['error_count'] = 0
-        
-        # Check if we should exit error state (require 5 consecutive good readings)
-        recent_valid_count = 0
-        if len(sensor_data['history']) >= 5:
-            recent_values = [r.value for r in list(sensor_data['history'])[-5:]]
-            recent_valid_count = sum(1 for v in recent_values 
-                                   if self.is_value_realistic(sensor_name, v))
-        
-        # Exit error state if we have enough valid readings
-        if recent_valid_count >= 5 and not sensor_data['recovery_notified']:
-            sensor_data['error_state'] = False
-            error_duration = datetime.now() - sensor_data['error_start_time']
-            sensor_data['error_start_time'] = None
-            sensor_data['recovery_notified'] = True
-            
-            # Send recovery notification
-            self.send_recovery_notification(sensor_name, current_value, error_duration)
-            
-            self.log(f"✅ SENSOR RECOVERED: {sensor_name} - back to normal operation")
-
-    def send_error_notification(self, sensor_name: str, error_detail: str):
-        """Send notification when sensor enters error state"""
-        unit = self.sensors[sensor_name]['unit']
-        last_valid = self.sensor_data[sensor_name]['last_valid_value']
-        
-        message = f"⚠️ SENSOR ERROR ⚠️\n"
-        message += f"Sensor: {sensor_name.upper()}\n"
-        message += f"Issue: {error_detail}\n"
-        message += f"Last Valid: {last_valid:.2f}{unit} " if last_valid else "No previous valid reading\n"
-        message += f"Alerts PAUSED for this sensor until recovery\n"
-        message += f"Time: {datetime.now().strftime('%H:%M:%S')}"
-        
-        try:
-            self.call_service("notify/" + self.mobile_notify.split(".")[1], 
-                            title=f"SENSOR ERROR: {sensor_name}",
-                            message=message,
-                            data={
-                                "priority": "high",
-                                "tag": f"sensor_error_{sensor_name}",
-                                "actions": [
-                                    {"action": "check_sensor", "title": "Check Sensor"},
-                                    {"action": "pause_all_alerts", "title": "Pause All Alerts"}
-                                ]
-                            })
-        except Exception as e:
-            self.log(f"Error sending sensor error notification: {e}")
-
-    def send_recovery_notification(self, sensor_name: str, current_value: float, error_duration: timedelta):
-        """Send notification when sensor recovers from error state"""
-        unit = self.sensors[sensor_name]['unit']
-        duration_str = str(error_duration).split('.')[0]  # Remove microseconds
-        
-        message = f"✅ SENSOR RECOVERED ✅\n"
-        message += f"Sensor: {sensor_name.upper()}\n"
-        message += f"Current Value: {current_value:.2f}{unit}\n"
-        message += f"Error Duration: {duration_str}\n"
-        message += f"Normal monitoring resumed\n"
-        message += f"Time: {datetime.now().strftime('%H:%M:%S')}"
-        
-        try:
-            self.call_service("notify/" + self.mobile_notify.split(".")[1], 
-                            title=f"RECOVERY: {sensor_name}",
-                            message=message,
-                            data={
-                                "priority": "normal",
-                                "tag": f"sensor_recovery_{sensor_name}",
-                                "actions": [
-                                    {"action": "view_trends", "title": "View Trends"}
-                                ]
-                            })
-        except Exception as e:
-            self.log(f"Error sending sensor recovery notification: {e}")
+        # Analyze this reading
+        self.analyze_sensor(sensor_name, current_value)
 
     def analyze_sensor(self, sensor_name: str, current_value: float):
-        """Pure Python analysis - no entity dependencies - SKIP SENSORS IN ERROR STATE"""
+        """Enhanced analysis with better debugging for alert pausing"""
         
-        # Skip analysis if sensor is in error state
-        if self.sensor_data[sensor_name]['error_state']:
-            return
-        
-        if self.get_state(self.alerts_paused_entity) == 'on':
-            return
+        # Enhanced alert pause check with debugging
+        try:
+            pause_state = self.get_state(self.alerts_paused_entity)
+            self.log(f"🔍 Alert pause check - Entity: {self.alerts_paused_entity}, State: '{pause_state}', Type: {type(pause_state)}")
+            
+            if pause_state == 'on':
+                self.log(f"⏸️ Alerts paused - skipping analysis for {sensor_name}")
+                return
+            elif pause_state is None:
+                self.log(f"❌ Alert pause entity not found: {self.alerts_paused_entity}")
+            elif pause_state != 'off':
+                self.log(f"⚠️ Unexpected alert pause state: '{pause_state}' (expected 'on' or 'off')")
+                
+        except Exception as e:
+            self.log(f"❌ Error checking alert pause state: {e}")
+            # Continue with analysis if we can't read the state
         
         sensor_data = self.sensor_data[sensor_name]
         
@@ -349,9 +322,11 @@ class GrowRoomAIMonitor(hass.Hass):
             violation_duration=sensor_data['violation_count'] * 10
         )
         
-        # AI recommendation
+        # AI recommendation with enhanced error handling
         if self.ai_enabled:
             alert_context.recommendation = self.get_ai_recommendation(alert_context)
+        else:
+            alert_context.recommendation = "AI disabled - check API key configuration"
         
         # Send alerts
         self.send_alert(alert_context)
@@ -369,6 +344,10 @@ class GrowRoomAIMonitor(hass.Hass):
             lights_on = self.get_state(self.lights_on_entity)
             lights_off = self.get_state(self.lights_off_entity)
             
+            if lights_on is None or lights_off is None:
+                self.log(f"⚠️ Missing lights schedule entities: ON={lights_on}, OFF={lights_off}")
+                return True
+            
             # Parse times
             on_time = datetime.strptime(lights_on, "%H:%M:%S").time()
             off_time = datetime.strptime(lights_off, "%H:%M:%S").time()
@@ -383,7 +362,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 return current_time >= on_time or current_time <= off_time
                 
         except Exception as e:
-            self.log(f"Error determining day period: {e}")
+            self.log(f"❌ Error determining day period: {e}")
             # Default to day period if error
             return True
 
@@ -401,8 +380,8 @@ class GrowRoomAIMonitor(hass.Hass):
                 try:
                     value = float(self.get_state(config[threshold_key]))
                     thresholds[threshold_type] = value
-                except (ValueError, TypeError):
-                    self.log(f"Error getting threshold {threshold_key} for {sensor_name}")
+                except (ValueError, TypeError) as e:
+                    self.log(f"❌ Error getting threshold {threshold_key} for {sensor_name}: {e}")
         
         return thresholds
 
@@ -482,7 +461,7 @@ class GrowRoomAIMonitor(hass.Hass):
         return (datetime.now() - last_alert).total_seconds() >= cooldown_seconds
 
     def send_alert(self, context: AlertContext):
-        """Send notifications based on severity"""
+        """Send notifications based on severity with enhanced error handling"""
         # Format message
         unit = self.sensors[context.sensor_name]['unit']
         period = "DAY" if context.is_day_period else "NIGHT"
@@ -500,7 +479,8 @@ class GrowRoomAIMonitor(hass.Hass):
         
         # Mobile notification (always send)
         try:
-            self.call_service("notify/" + self.mobile_notify.split(".")[1], 
+            service_name = self.mobile_notify.replace("notify.", "")
+            self.call_service(f"notify/{service_name}", 
                             title=f"{context.severity}: {context.sensor_name}",
                             message=message,
                             data={
@@ -511,8 +491,9 @@ class GrowRoomAIMonitor(hass.Hass):
                                     {"action": "view_trends", "title": "View Trends"}
                                 ]
                             })
+            self.log(f"📱 Mobile notification sent successfully")
         except Exception as e:
-            self.log(f"Error sending mobile notification: {e}")
+            self.log(f"❌ Error sending mobile notification: {e}")
         
         # TTS for critical alerts
         if context.severity == "CRITICAL":
@@ -521,27 +502,28 @@ class GrowRoomAIMonitor(hass.Hass):
                 self.call_service("tts/cloud_say",
                                 entity_id=self.tts_entity,
                                 message=tts_message)
+                self.log(f"🔊 TTS alert sent successfully")
             except Exception as e:
-                self.log(f"Error sending TTS: {e}")
+                self.log(f"❌ Error sending TTS: {e}")
         
-        self.log(f"Alert sent: {context.sensor_name} {context.severity} - {context.current_value}{unit}")
+        self.log(f"🚨 Alert sent: {context.sensor_name} {context.severity} - {context.current_value}{unit}")
 
     def get_ai_recommendation(self, context: AlertContext) -> str:
-        """AI recommendations using current sensor data"""
+        """Enhanced AI recommendations with better error handling"""
         if not self.ai_enabled:
-            return "AI unavailable"
+            self.log("🤖 AI disabled - no API key")
+            return "AI unavailable - check API key configuration"
         
         try:
             # Build context from Python data structures
             sensor_context = {}
             for name, data in self.sensor_data.items():
-                if len(data['history']) > 0 and not data['error_state']:
+                if len(data['history']) > 0:
                     recent_values = [r.value for r in list(data['history'])[-10:]]
                     sensor_context[name] = {
                         'current': recent_values[-1] if recent_values else None,
                         'trend': self.calculate_trend(name),
-                        'recent_readings': recent_values,
-                        'error_state': data['error_state']
+                        'recent_readings': recent_values
                     }
             
             # Prepare AI prompt
@@ -579,30 +561,40 @@ class GrowRoomAIMonitor(hass.Hass):
                 'temperature': 0.7
             }
             
+            self.log("🤖 Calling OpenAI API for recommendation...")
             response = requests.post('https://api.openai.com/v1/chat/completions',
                                    headers=headers, json=data, timeout=10)
             
             if response.status_code == 200:
                 result = response.json()
-                return result['choices'][0]['message']['content'].strip()
+                recommendation = result['choices'][0]['message']['content'].strip()
+                self.log(f"✅ AI recommendation received: {recommendation[:50]}...")
+                return recommendation
             else:
-                self.log(f"AI API error: {response.status_code}")
-                return "AI temporarily unavailable"
+                error_msg = f"API error: {response.status_code}"
+                if response.text:
+                    error_msg += f" - {response.text[:100]}"
+                self.log(f"❌ AI API error: {error_msg}")
+                return "AI temporarily unavailable - API error"
                 
+        except requests.RequestException as e:
+            self.log(f"❌ Network error calling AI API: {e}")
+            return "AI temporarily unavailable - network error"
         except Exception as e:
-            self.log(f"Error getting AI recommendation: {e}")
-            return "AI error occurred"
+            self.log(f"❌ Unexpected error getting AI recommendation: {e}")
+            return "AI error occurred - check logs"
 
     def ai_trend_analysis(self, kwargs=None):
-        """Periodic AI analysis of trends and patterns"""
+        """Periodic AI analysis of trends and patterns with enhanced error handling"""
         if not self.ai_enabled:
+            self.log("🤖 AI trend analysis skipped - AI disabled")
             return
         
         try:
-            # Analyze patterns across all sensors (exclude error sensors)
+            # Analyze patterns across all sensors
             patterns = {}
             for sensor_name, data in self.sensor_data.items():
-                if len(data['history']) >= 30 and not data['error_state']:
+                if len(data['history']) >= 30:  # At least 5 minutes of data
                     values = [r.value for r in list(data['history'])[-30:]]
                     patterns[sensor_name] = {
                         'mean': statistics.mean(values),
@@ -613,6 +605,7 @@ class GrowRoomAIMonitor(hass.Hass):
             
             # Only analyze if we have significant patterns
             if len(patterns) < 3:
+                self.log("🔍 AI trend analysis skipped - insufficient data")
                 return
             
             # Check for concerning multi-sensor patterns
@@ -629,10 +622,12 @@ class GrowRoomAIMonitor(hass.Hass):
                 summary += f"Trending sensors: {', '.join(trending_sensors)}\n"
                 summary += f"Total alerts: {self.system_stats['total_alerts']}\n"
                 
-                self.log(f"AI Trend Summary: {summary}")
+                self.log(f"📊 AI Trend Summary: {summary}")
+            else:
+                self.log("✅ AI trend analysis - no concerning patterns detected")
                 
         except Exception as e:
-            self.log(f"Error in AI trend analysis: {e}")
+            self.log(f"❌ Error in AI trend analysis: {e}")
 
     def save_persistent_data(self, kwargs=None):
         """Save data to survive HA restarts"""
@@ -640,7 +635,8 @@ class GrowRoomAIMonitor(hass.Hass):
             # Convert deques to lists for pickling
             save_data = {
                 'sensor_data': {},
-                'system_stats': self.system_stats
+                'system_stats': self.system_stats,
+                'last_save': datetime.now()
             }
             
             for sensor_name, data in self.sensor_data.items():
@@ -648,11 +644,7 @@ class GrowRoomAIMonitor(hass.Hass):
                     'violation_count': data['violation_count'],
                     'last_alert_time': data['last_alert_time'],
                     'last_notified_value': data['last_notified_value'],
-                    'previous_value': data['previous_value'],
-                    'error_state': data['error_state'],
-                    'error_start_time': data['error_start_time'],
-                    'last_valid_value': data['last_valid_value'],
-                    'error_count': data['error_count']
+                    'previous_value': data['previous_value']
                     # Don't save full history - too large
                 }
             
@@ -660,7 +652,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 pickle.dump(save_data, f)
                 
         except Exception as e:
-            self.log(f"Error saving data: {e}")
+            self.log(f"❌ Error saving persistent data: {e}")
 
     def load_persistent_data(self):
         """Load data from previous sessions"""
@@ -681,39 +673,17 @@ class GrowRoomAIMonitor(hass.Hass):
                 self.log("📊 Persistent data loaded successfully")
                 
         except Exception as e:
-            self.log(f"Error loading data: {e}")
+            self.log(f"❌ Error loading persistent data: {e}")
 
     def system_health_check(self, kwargs=None):
         """Periodic system health reporting"""
         uptime = datetime.now() - self.system_stats['start_time']
         
-        # Count sensors in error state
-        error_sensors = [name for name, data in self.sensor_data.items() if data['error_state']]
-        
         health_report = {
             'uptime_hours': uptime.total_seconds() / 3600,
             'total_alerts': self.system_stats['total_alerts'],
-            'total_sensor_errors': sum(self.system_stats['sensor_errors'].values()),
-            'sensors_in_error': error_sensors,
             'alerts_by_sensor': self.system_stats['alerts_by_sensor'],
-            'errors_by_sensor': self.system_stats['sensor_errors'],
-            'sensors_active': len([s for s in self.sensor_data.values() 
-                                 if len(s['history']) > 0 and not s['error_state']])
+            'sensors_active': len([s for s in self.sensor_data.values() if len(s['history']) > 0])
         }
         
         self.log(f"🏥 System Health: {health_report}")
-        
-        # Send notification if multiple sensors in error
-        if len(error_sensors) >= 2:
-            error_message = f"⚠️ MULTIPLE SENSOR ERRORS ⚠️\n"
-            error_message += f"Sensors in error: {', '.join(error_sensors)}\n"
-            error_message += f"Check sensor connections and power\n"
-            error_message += f"System uptime: {uptime.total_seconds() / 3600:.1f}h"
-            
-            try:
-                self.call_service("notify/" + self.mobile_notify.split(".")[1], 
-                                title="SYSTEM ALERT: Multiple Sensor Errors",
-                                message=error_message,
-                                data={"priority": "high"})
-            except Exception as e:
-                self.log(f"Error sending system health notification: {e}")

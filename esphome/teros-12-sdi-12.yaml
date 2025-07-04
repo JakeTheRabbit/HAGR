@@ -1,0 +1,208 @@
+esphome:
+  name: f1-row1-back-sdi12
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  
+  # Enable fallback hotspot in case of connection failure
+  ap:
+    ssid: "F1-Row1-Back-Sdi12"
+    password: ""
+
+web_server:
+  port: 80
+  local: true
+  version: 2
+  include_internal: true
+
+external_components:
+  - source: github://ssieb/esphome@uarthalf
+    components: [ uart ]
+    refresh: 1min
+  - source: github://ssieb/esphome_components@sdi12
+    components: [ sdi12 ]
+    refresh: 1min
+
+uart:
+  - id: sdi12uart
+    tx_pin:
+      number: GPIO26
+      inverted: true
+    rx_pin: GPIO32
+    baud_rate: 1200
+    data_bits: 7
+    parity: even
+    half_duplex: true
+    debug:
+      direction: BOTH
+      after:
+        timeout: 20ms
+      sequence:
+        - lambda: UARTDebug::log_string(direction, bytes);
+
+sdi12:
+  - uart_id: sdi12uart
+    id: sdibus
+
+# Button configuration
+binary_sensor:
+  - platform: gpio
+    pin: GPIO39
+    name: "Physical Button"
+    id: physical_button
+    on_click:
+      min_length: 3s
+      max_length: 10s
+      then:
+        - switch.toggle: restart_switch
+
+# Restart switch
+switch:
+  - platform: restart
+    name: "Restart Device"
+    id: restart_switch
+
+# sensor:
+#   - platform: uptime
+#     name: Uptime
+    
+#   - platform: sdi12
+#     address: 0
+#     update_interval: 10s
+#     sensors:
+#       - index: 3
+#         name: EC
+#         id: pwec
+#         accuracy_decimals: 2
+#         unit_of_measurement: 'ds/m'
+#         filters:
+#           -  lambda: return x / 1000;
+#       - index: 2
+#         name: Temperature
+#         id: temperature
+#         accuracy_decimals: 1
+#         unit_of_measurement: '°C'
+#       - index: 1
+#         name: VWC
+#         id: vwc
+#         accuracy_decimals: 2
+#         unit_of_measurement: '%'
+#         filters:
+#           - lambda: |-
+#               float RAW = x;
+#               float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
+#               vwc = vwc * 0.8;  // Scale from 0-100 to 0-80
+#               return vwc * 100;  // Convert to percentage
+
+sensor:
+  - platform: uptime
+    name: Uptime
+    
+  - platform: sdi12
+    address: 0
+    update_interval: 10s
+    sensors:
+      # Raw EC reading from BGT sensor
+      - index: 3
+        name: "Raw EC"
+        id: raw_ec
+        internal: true
+        accuracy_decimals: 0
+        unit_of_measurement: 'µS/cm'
+      
+      # Temperature reading from BGT sensor
+      - index: 2
+        name: Temperature
+        id: temperature
+        accuracy_decimals: 1
+        unit_of_measurement: '°C'
+      
+      # VWC reading from BGT sensor with calibration adjustment
+      - index: 1
+        name: VWC
+        id: vwc
+        accuracy_decimals: 2
+        unit_of_measurement: '%'
+        filters:
+          - lambda: |-
+              float RAW = x;
+              float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
+              
+              // Scale factor to match TEROS 12
+              vwc = vwc * 0.7;  
+              
+              // Convert to percentage
+              return vwc * 100;  
+  
+  # Calculated pore water EC using the BGT measurements
+  - platform: template
+    name: "EC"
+    id: pwec
+    unit_of_measurement: 'ds/m'
+    accuracy_decimals: 2
+    lambda: |-
+      // Get raw EC reading (in µS/cm)
+      float bulk_ec = id(raw_ec).state;
+      
+      // Get VWC reading (in %)
+      float vwc_percent = id(vwc).state;
+      
+      // Convert VWC to decimal (0-1 range)
+      float vwc_decimal = vwc_percent / 100.0;
+      
+      // Only calculate if we have valid readings
+      if (isnan(bulk_ec) || isnan(vwc_decimal) || vwc_decimal < 0.05) {
+        return NAN; // Not enough water for reliable reading
+      }
+      
+      // Calculate pore water EC with adjusted factors to match TEROS 12
+      // Changed from 1.18 to 1.05 for closer match to TEROS 12
+      float pore_ec = (bulk_ec / vwc_decimal) * 1.05;
+      
+      // Apply temperature compensation to normalize EC to 25°C
+      float temp = id(temperature).state;
+      if (!isnan(temp)) {
+        pore_ec = pore_ec / (1.0 + 0.02 * (temp - 25.0));
+      }
+      
+      // Convert µS/cm to dS/m
+      return pore_ec / 1000.0;
+    update_interval: 10s
+
+  # Diagnostic sensor for monitoring the conversion factor
+  - platform: template
+    name: "EC Conversion Factor"
+    id: ec_factor
+    unit_of_measurement: ''
+    accuracy_decimals: 2
+    lambda: |-
+      float vwc_percent = id(vwc).state;
+      float vwc_decimal = vwc_percent / 100.0;
+      
+      if (isnan(vwc_decimal) || vwc_decimal < 0.05) {
+        return NAN;
+      }
+      
+      return 1.0 / vwc_decimal;
+    update_interval: 10s
+    internal: true

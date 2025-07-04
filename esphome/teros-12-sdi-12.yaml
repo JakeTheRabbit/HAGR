@@ -1,58 +1,105 @@
+# ===================================================================
+# ESPHome Configuration for an M5Stack Atom-based SDI-12 Sensor Node
+# -------------------------------------------------------------------
+# Project: f1-row1-back-sdi12
+# Author: [Your Name/Organization]
+# Description: This configuration reads data from an SDI-12 soil
+#              sensor, performs calibration and calculations for VWC
+#              and Pore Water EC, and exposes the data to Home
+#              Assistant.
+# ===================================================================
+
 esphome:
+  # The name of the node as it will appear in ESPHome and Home Assistant.
   name: f1-row1-back-sdi12
 
+# -------------------------------------------------------------------
+# Board and Framework Configuration
+# -------------------------------------------------------------------
 esp32:
+  # Specifies the target board. M5Stack Atom is a compact ESP32 board.
   board: m5stack-atom
   framework:
+    # Using the ESP-IDF framework, which is the official IoT Development
+    # Framework from Espressif.
     type: esp-idf
 
-# Enable logging
+# -------------------------------------------------------------------
+# Core Services
+# -------------------------------------------------------------------
+# Enable logging for debugging purposes.
 logger:
 
-# Enable Home Assistant API
+# Enable the native Home Assistant API for seamless integration.
 api:
   encryption:
+    # IMPORTANT: Set a strong encryption key for production use.
+    # This key must match the one in the Home Assistant device integration.
     key: ""
 
+# Over-The-Air (OTA) update settings.
 ota:
   - platform: esphome
+    # IMPORTANT: Set a strong password to secure OTA updates.
     password: ""
 
-
+# -------------------------------------------------------------------
+# Network Configuration
+# -------------------------------------------------------------------
 wifi:
+  # Credentials for your primary WiFi network.
+  # It's best practice to store these in a `secrets.yaml` file.
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  
-  
-  # Enable fallback hotspot in case of connection failure
+
+  # Fallback Access Point (AP) configuration.
+  # If the device cannot connect to the primary WiFi, it will create its
+  # own hotspot, allowing for direct connection and configuration.
   ap:
     ssid: "F1-Row1-Back-Sdi12"
-    password: ""
+    password: "" # Set a password for the AP if needed.
 
+# Enable the web server for a web-based interface to the device.
 web_server:
   port: 80
   local: true
   version: 2
-  include_internal: true
+  include_internal: true # Allows viewing internal sensors/switches in the web UI.
 
+# -------------------------------------------------------------------
+# External Components for SDI-12 Communication
+# -------------------------------------------------------------------
 external_components:
+  # Custom UART component with half-duplex support, necessary for SDI-12.
+  # Source: https://github.com/ssieb/esphome
   - source: github://ssieb/esphome@uarthalf
     components: [ uart ]
-    refresh: 1min
+    refresh: 1min # How often to check for updates to the component.
+  # Custom SDI-12 component.
+  # Source: https://github.com/ssieb/esphome_components
   - source: github://ssieb/esphome_components@sdi12
     components: [ sdi12 ]
     refresh: 1min
 
+# -------------------------------------------------------------------
+# UART Configuration for SDI-12 Bus
+# -------------------------------------------------------------------
 uart:
   - id: sdi12uart
+    # TX pin for SDI-12 communication.
     tx_pin:
       number: GPIO26
+      # SDI-12 requires an inverted signal.
       inverted: true
+    # RX pin for SDI-12 communication.
     rx_pin: GPIO32
+    # SDI-12 standard communication parameters.
     baud_rate: 1200
     data_bits: 7
     parity: even
+    # half_duplex is crucial for single-wire SDI-12 communication.
     half_duplex: true
+    # Debugging configuration to log raw UART traffic.
     debug:
       direction: BOTH
       after:
@@ -60,84 +107,70 @@ uart:
       sequence:
         - lambda: UARTDebug::log_string(direction, bytes);
 
+# -------------------------------------------------------------------
+# SDI-12 Bus Definition
+# -------------------------------------------------------------------
 sdi12:
   - uart_id: sdi12uart
-    id: sdibus
+    id: sdibus # An ID to reference this SDI-12 bus from sensors.
 
-# Button configuration
+# -------------------------------------------------------------------
+# Physical Button and Restart Switch
+# -------------------------------------------------------------------
+# Configuration for the built-in button on the M5Stack Atom.
 binary_sensor:
   - platform: gpio
     pin: GPIO39
     name: "Physical Button"
     id: physical_button
+    # Trigger an action when the button is held for 3-10 seconds.
     on_click:
       min_length: 3s
       max_length: 10s
       then:
+        # Toggle the restart switch.
         - switch.toggle: restart_switch
 
-# Restart switch
+# A software switch to safely restart the device.
 switch:
   - platform: restart
     name: "Restart Device"
     id: restart_switch
 
-# sensor:
-#   - platform: uptime
-#     name: Uptime
-    
-#   - platform: sdi12
-#     address: 0
-#     update_interval: 10s
-#     sensors:
-#       - index: 3
-#         name: EC
-#         id: pwec
-#         accuracy_decimals: 2
-#         unit_of_measurement: 'ds/m'
-#         filters:
-#           -  lambda: return x / 1000;
-#       - index: 2
-#         name: Temperature
-#         id: temperature
-#         accuracy_decimals: 1
-#         unit_of_measurement: '°C'
-#       - index: 1
-#         name: VWC
-#         id: vwc
-#         accuracy_decimals: 2
-#         unit_of_measurement: '%'
-#         filters:
-#           - lambda: |-
-#               float RAW = x;
-#               float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
-#               vwc = vwc * 0.8;  // Scale from 0-100 to 0-80
-#               return vwc * 100;  // Convert to percentage
-
+# -------------------------------------------------------------------
+# Sensor Definitions
+# -------------------------------------------------------------------
 sensor:
+  # Uptime sensor for monitoring device stability.
   - platform: uptime
     name: Uptime
-    
+
+  # SDI-12 sensor platform to read from the connected device.
   - platform: sdi12
+    # The address of the SDI-12 sensor on the bus (usually '0').
     address: 0
     update_interval: 10s
     sensors:
-      # Raw EC reading from BGT sensor
+      # --- Raw Sensor Readings ---
+
+      # Raw Bulk EC reading from the sensor.
+      # This is marked 'internal' as it's only used for calculations.
       - index: 3
         name: "Raw EC"
         id: raw_ec
         internal: true
         accuracy_decimals: 0
         unit_of_measurement: 'µS/cm'
-      
-      # Temperature reading from BGT sensor
+
+      # Temperature reading from the sensor.
       - index: 2
         name: Temperature
         id: temperature
         accuracy_decimals: 1
         unit_of_measurement: '°C'
-      
-      # VWC reading from BGT sensor with calibration adjustment
+
+      # Volumetric Water Content (VWC) reading from the sensor.
+      # A lambda filter is used to apply a calibration formula.
       - index: 1
         name: VWC
         id: vwc
@@ -145,51 +178,54 @@ sensor:
         unit_of_measurement: '%'
         filters:
           - lambda: |-
+              // Apply the sensor-specific polynomial calibration formula.
               float RAW = x;
               float vwc = 6.771e-10 * RAW * RAW * RAW - 5.105e-6 * RAW * RAW + 1.302e-2 * RAW - 10.848;
               
-              // Scale factor to match TEROS 12
+              // Apply a scaling factor to better align with a reference sensor (e.g., TEROS 12).
               vwc = vwc * 0.7;  
               
-              // Convert to percentage
-              return vwc * 100;  
-  
-  # Calculated pore water EC using the BGT measurements
+              // Convert the decimal VWC value to a percentage for reporting.
+              return vwc * 100;
+
+      # --- Calculated Template Sensors ---
+
+      # Calculated Pore Water EC (PWEC).
+      # This provides a more accurate measure of the EC available to the plant roots.
   - platform: template
     name: "EC"
     id: pwec
     unit_of_measurement: 'ds/m'
     accuracy_decimals: 2
     lambda: |-
-      // Get raw EC reading (in µS/cm)
+      // Retrieve the required raw values from their respective sensors.
       float bulk_ec = id(raw_ec).state;
-      
-      // Get VWC reading (in %)
       float vwc_percent = id(vwc).state;
       
-      // Convert VWC to decimal (0-1 range)
+      // Convert VWC from percentage to a decimal (e.g., 35% -> 0.35).
       float vwc_decimal = vwc_percent / 100.0;
       
-      // Only calculate if we have valid readings
+      // Validate inputs. Return NAN (Not a Number) if readings are invalid or VWC is too low.
       if (isnan(bulk_ec) || isnan(vwc_decimal) || vwc_decimal < 0.05) {
-        return NAN; // Not enough water for reliable reading
+        return NAN; // Not enough water for a reliable reading.
       }
       
-      // Calculate pore water EC with adjusted factors to match TEROS 12
-      // Changed from 1.18 to 1.05 for closer match to TEROS 12
+      // Calculate pore water EC using the Hilhorst model, with an adjusted factor.
+      // This factor is fine-tuned to match a reference sensor (e.g., TEROS 12).
       float pore_ec = (bulk_ec / vwc_decimal) * 1.05;
       
-      // Apply temperature compensation to normalize EC to 25°C
+      // Apply temperature compensation to normalize the EC reading to a standard 25°C.
       float temp = id(temperature).state;
       if (!isnan(temp)) {
         pore_ec = pore_ec / (1.0 + 0.02 * (temp - 25.0));
       }
       
-      // Convert µS/cm to dS/m
+      // Convert the final value from µS/cm to dS/m for standard reporting.
       return pore_ec / 1000.0;
     update_interval: 10s
 
-  # Diagnostic sensor for monitoring the conversion factor
+  # Diagnostic sensor for monitoring the EC conversion factor.
+  # This helps in debugging and understanding the relationship between Bulk EC and PWEC.
   - platform: template
     name: "EC Conversion Factor"
     id: ec_factor
@@ -203,6 +239,7 @@ sensor:
         return NAN;
       }
       
+      // The conversion factor is the inverse of the decimal VWC.
       return 1.0 / vwc_decimal;
     update_interval: 10s
-    internal: true
+    internal: true # This is for diagnostics, so it's not exposed to Home Assistant by default.

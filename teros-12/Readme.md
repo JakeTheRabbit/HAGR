@@ -1,3 +1,5 @@
+# DEPRECATED: New version here: https://github.com/JakeTheRabbit/TDR-Sensor
+
 # TEROS-12 Soil Moisture Sensor with ESP32 and MQTT
 
 This project integrates TEROS-12 soil moisture sensors (and compatible alternatives) with ESP32 microcontrollers, sending data to Home Assistant via MQTT.

@@ -1,0 +1,168 @@
+substitutions:
+  name: atlas-legacy-1
+  friendly_name: Atlas Legacy 1
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  on_boot:
+    priority: 700
+    then:
+      - lambda: |-
+          id(ph_res1).send_custom("L,0");
+          id(rtd_res1).send_custom("L,0");
+          id(ec_res1).send_custom("L,0");
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Atlas-Legacy Fallback Hotspot"
+    password: "T8fzdV2F2MdI"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+i2c:
+  sda: 23
+  scl: 22
+  scan: true
+
+sensor:
+  - platform: ezo
+    id: ph_res1
+    name: "pH Res1"
+    address: 99
+    unit_of_measurement: "pH"
+    accuracy_decimals: 2
+    update_interval: 10s
+
+  - platform: ezo
+    id: rtd_res1
+    name: "Temp Res1"
+    address: 102
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 10s
+
+  - platform: ezo
+    id: ec_res1
+    name: "EC Res1"
+    address: 100
+    accuracy_decimals: 2
+    filters:
+      - lambda: return x / 2 / 500;   # μS → EC (ppm 500)
+    unit_of_measurement: "EC (ppm 500)"
+    update_interval: 10s
+
+number:
+  - platform: template
+    id: ec_cal_value
+    name: "EC Calibration Value (μS/cm)"
+    min_value: 0
+    max_value: 100000
+    step: 1
+    initial_value: 1000
+    restore_value: true
+    optimistic: true        # <- required
+
+button:
+  # ---- pH buttons ----
+  - platform: template
+    name: "pH Clear Calibration"
+    on_press:
+      - lambda: id(ph_res1).clear_calibration();
+
+  - platform: template
+    name: "pH Set Cal Midpoint 7.00"
+    on_press:
+      - lambda: id(ph_res1).send_custom("Cal,mid,7.00");
+
+  - platform: template
+    name: "pH Set Cal Lowpoint 4.00"
+    on_press:
+      - lambda: id(ph_res1).send_custom("Cal,low,4.00");
+
+  - platform: template
+    name: "pH Verify Calibration"
+    on_press:
+      - lambda: id(ph_res1).get_calibration();
+
+  - platform: template
+    name: "pH View Slope"
+    on_press:
+      - lambda: id(ph_res1).send_custom("slope,?");
+
+  - platform: template
+    name: "pH Status Check"
+    on_press:
+      - lambda: id(ph_res1).send_custom("Status");
+
+  # ---- EC buttons ----
+  - platform: template
+    name: "EC Clear Calibration"
+    on_press:
+      - lambda: id(ec_res1).clear_calibration();
+
+  - platform: template
+    name: "EC Dry Calibration"
+    on_press:
+      - lambda: id(ec_res1).send_custom("cal,dry");
+
+# EC Set Cal One
+  - platform: template
+    name: "EC Set Cal One"
+    on_press:
+      then:
+        - lambda: |-
+            id(ec_res1).send_custom(
+              str_sprintf("cal,one,%.2f", id(ec_cal_value).state)
+            );   
+
+# EC Set Cal Low
+  - platform: template
+    name: "EC Set Cal Low"
+    on_press:
+      then:
+        - lambda: |-
+            id(ec_res1).send_custom(
+              str_sprintf("cal,low,%.2f", id(ec_cal_value).state)
+            );  
+
+# EC Set Cal High
+  - platform: template
+    name: "EC Set Cal High"
+    on_press:
+      then:
+        - lambda: |-
+            id(ec_res1).send_custom(
+              str_sprintf("cal,high,%.2f", id(ec_cal_value).state)
+            );   
+
+  - platform: template
+    name: "EC Verify Calibration"
+    on_press:
+      - lambda: id(ec_res1).get_calibration();
+
+  - platform: template
+    name: "EC Status Check"
+    on_press:
+      - lambda: id(ec_res1).send_custom("Status");

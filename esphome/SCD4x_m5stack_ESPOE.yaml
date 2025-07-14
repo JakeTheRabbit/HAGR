@@ -1,0 +1,277 @@
+# SCD41 PoE Environmental Sensor with Advanced Template Sensors
+# Perfect for cannabis growing environmental monitoring
+# Includes VPD calculation, daily min/max tracking, configurable CO2 alerts
+# Features user-configurable daily reset time for min/max values
+
+substitutions:
+  name: scd41-poe
+  friendly_name: SCD41 PoE Sensor
+  comment: Advanced SCD41 Environmental Sensor with PoE
+  api_key: "JTJQHKwOJ+MX81qHJo7KTGXSubkM7bU1hZvIvLjZQHI="
+  ota_password: "a5f2cd976a0e850f59bd3e99cb4b6ece"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  comment: ${comment}
+
+esp32:
+  board: m5stack-core-esp32
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ${api_key}
+
+# Over-the-air updates
+ota:
+  - platform: esphome
+    password: ${ota_password}
+
+# PoE Ethernet configuration for IP101 controller
+ethernet:
+  type: IP101
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO5
+  use_address: ${name}.local
+
+  # Uncomment for static IP
+  # manual_ip:
+  #   static_ip: 192.168.1.54
+  #   gateway: 192.168.1.1
+  #   subnet: 255.255.255.0
+
+# I2C bus for SCD41 sensor
+i2c:
+  id: bus_a
+  scan: True
+  sda: 16
+  scl: 17
+
+# Home Assistant time for daily resets
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Global variables for configurable CO2 thresholds
+globals:
+  - id: co2_high_threshold
+    type: float
+    initial_value: '1500'  # Default high alert at 1500ppm
+  - id: co2_low_threshold
+    type: float
+    initial_value: '800'   # Default low alert at 800ppm
+
+# Number inputs for adjustable settings via Home Assistant UI
+number:
+  # CO2 alert thresholds
+  - platform: template
+    name: "CO2 High Threshold"
+    id: co2_high_input
+    optimistic: true
+    min_value: 500
+    max_value: 2000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    on_value:
+      then:
+        - globals.set:
+            id: co2_high_threshold
+            value: !lambda "return x;"
+
+  - platform: template
+    name: "CO2 Low Threshold"
+    id: co2_low_input
+    optimistic: true
+    min_value: 400
+    max_value: 1000
+    step: 50
+    unit_of_measurement: "ppm"
+    icon: "mdi:molecule-co2"
+    on_value:
+      then:
+        - globals.set:
+            id: co2_low_threshold
+            value: !lambda "return x;"
+
+  # Daily reset time configuration - perfect for lights-on reset
+  - platform: template
+    name: "Daily Reset Hour"
+    id: daily_reset_hour
+    optimistic: true
+    min_value: 0
+    max_value: 23
+    step: 1
+    initial_value: 0  # Default to midnight
+    icon: "mdi:clock-outline"
+    
+  - platform: template
+    name: "Daily Reset Minute"
+    id: daily_reset_minute
+    optimistic: true
+    min_value: 0
+    max_value: 59
+    step: 1
+    initial_value: 0  # Default to :00
+    icon: "mdi:clock-outline"
+
+sensor:
+  # SCD41 sensor - CO2, Temperature, Humidity
+  - platform: scd4x
+    id: scd412
+    co2:
+      name: "CO2"
+      id: co2_sensor
+      accuracy_decimals: 1
+      filters:
+        - timeout: 
+            seconds: 10  # Timeout after 10 seconds if no reading
+    temperature:
+      name: "Temperature"
+      id: temperature_sensor
+      accuracy_decimals: 2
+      filters:
+        - timeout: 
+            seconds: 10
+    humidity:
+      name: "Humidity"
+      id: humidity_sensor
+      accuracy_decimals: 1
+      filters:
+        - timeout: 
+            seconds: 10
+    update_interval: 5s  # Read sensor every 5 seconds
+
+  # System uptime sensor
+  - platform: uptime
+    name: "Uptime"
+
+  # VPD (Vapor Pressure Deficit) calculation - critical for plant transpiration
+  # Formula: SVP * (1 - (RH/100)) where SVP = 0.61078 * exp((17.27 * T) / (T + 237.3))
+  # Optimal ranges: Seedlings 0.4-0.8kPa, Veg 0.8-1.0kPa, Flower 1.0-1.2kPa
+  - platform: template
+    name: "VPD"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 2
+    icon: "mdi:water-percent"
+    lambda: |-
+      if (!id(temperature_sensor).has_state() || !id(humidity_sensor).has_state()) {
+        return NAN;
+      }
+      float temp = id(temperature_sensor).state;
+      float humidity = id(humidity_sensor).state;
+      float svp = 0.61078 * exp((17.27 * temp) / (temp + 237.3));
+      float vpd = svp * (1.0 - (humidity / 100.0));
+      return vpd;
+  # Daily maximum CO2 reading - resets at user-defined time
+  # Useful for monitoring CO2 injection effectiveness
+  # Configure reset time via "Daily Reset Hour" and "Daily Reset Minute" inputs
+  - platform: template
+    name: "Daily Max CO2"
+    unit_of_measurement: "ppm"
+    accuracy_decimals: 0
+    icon: "mdi:molecule-co2"
+    lambda: |-
+      static float daily_max = 0;
+      if (!id(co2_sensor).has_state()) {
+        return NAN;
+      }
+      if (id(co2_sensor).state > daily_max) {
+        daily_max = id(co2_sensor).state;
+      }
+      
+      // Reset at user-defined time
+      int reset_hour = (int)id(daily_reset_hour).state;
+      int reset_minute = (int)id(daily_reset_minute).state;
+      
+      if (id(homeassistant_time).now().hour == reset_hour && 
+          id(homeassistant_time).now().minute == reset_minute) {
+        daily_max = 0;
+      }
+      return daily_max;
+  # Daily minimum temperature - resets at user-defined time
+  # Useful for detecting cold stress or heating system failures
+  # Configure reset time via "Daily Reset Hour" and "Daily Reset Minute" inputs
+  - platform: template
+    name: "Daily Min Temperature"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    icon: "mdi:thermometer-low"
+    lambda: |-
+      static float daily_min = 100;
+      if (!id(temperature_sensor).has_state()) {
+        return NAN;
+      }
+      if (id(temperature_sensor).state < daily_min) {
+        daily_min = id(temperature_sensor).state;
+      }
+      
+      // Reset at user-defined time
+      int reset_hour = (int)id(daily_reset_hour).state;
+      int reset_minute = (int)id(daily_reset_minute).state;
+      
+      if (id(homeassistant_time).now().hour == reset_hour && 
+          id(homeassistant_time).now().minute == reset_minute) {
+        daily_min = 100;
+      }
+      return daily_min;
+  # 5-reading moving average for CO2 - smooths out sensor noise
+  # Better for automation triggers than raw readings
+  - platform: template
+    name: "CO2 Moving Average"
+    unit_of_measurement: "ppm"
+    accuracy_decimals: 0
+    icon: "mdi:molecule-co2"
+    lambda: |-
+      if (!id(co2_sensor).has_state()) {
+        return NAN;
+      }
+      static float values[5] = {0};
+      static int index = 0;
+      values[index] = id(co2_sensor).state;
+      index = (index + 1) % 5;
+      float sum = 0;
+      for (int i = 0; i < 5; i++) {
+        sum += values[i];
+      }
+      return sum / 5;
+# Binary sensors for CO2 alerts
+binary_sensor:
+  # High CO2 alert - triggers when CO2 exceeds configurable threshold
+  # Use for exhaust fan automation, CO2 injection shutoff
+  - platform: template
+    name: "CO2 High Alert"
+    icon: "mdi:alert-circle"
+    lambda: |-
+      return id(co2_sensor).state > id(co2_high_threshold);
+    
+  # Low CO2 alert - triggers when CO2 falls below configurable threshold
+  # Use for CO2 injection automation, ventilation reduction
+  - platform: template
+    name: "CO2 Low Alert"
+    icon: "mdi:alert-circle-outline"
+    lambda: |-
+      return id(co2_sensor).state < id(co2_low_threshold);
+# System controls
+switch:
+  - platform: restart
+    name: "Restart"
+    id: restart_switch
+
+# System information
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "IP Address"
+  - platform: version
+    name: "ESPHome Version"

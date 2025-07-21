@@ -1,6 +1,7 @@
 # M5Stack Dial Tank Monitor
 
-![Tank Monitor Demo](tank-monitor-demo.jpg)
+<img width="539" height="913" alt="image" src="https://github.com/user-attachments/assets/bf5b5ddd-a864-4d4c-896a-2c9a4a5688de" />
+
 
 A sophisticated water tank level monitoring system using an M5Stack Dial and ultrasonic distance sensor. The sensor is mounted on the inside of the tank lid to provide accurate water level readings displayed as both distance and percentage values.
 

@@ -1,6 +1,8 @@
 # M5Stack Dial Tank Monitor
 
 <img width="539" height="913" alt="image" src="https://github.com/user-attachments/assets/bf5b5ddd-a864-4d4c-896a-2c9a4a5688de" />
+<img width="613" height="704" alt="image" src="https://github.com/user-attachments/assets/e78ccffd-5884-4fd4-b039-688a5f7d03dc" />
+
 
 ESPHOME Yaml: https://github.com/JakeTheRabbit/HAGR/blob/main/esphome/m5stack-dial-tank-monitor.yaml
 

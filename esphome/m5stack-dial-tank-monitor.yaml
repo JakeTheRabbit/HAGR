@@ -41,7 +41,7 @@ wifi:
 
 api:
   encryption:
-    key: !secret api_encryption_key
+    key: "z57E3mGa/SZalax8NYYbKxkOlGGwbPEEBLYPPsbl0yw="
   reboot_timeout: 0s
   port: 6053
 
@@ -52,7 +52,7 @@ captive_portal:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    password: "1d6991268c08924319dc9b67403c5415"
 
 logger:
   level: DEBUG
@@ -141,7 +141,7 @@ globals:
     initial_value: '0'  # 0=none, 1=setting empty, 2=setting full
 
 sensor:
-  # Ultrasonic distance sensor
+  # Ultrasonic distance sensor with HEAVY FILTERING
   - platform: sonic_i2c
     i2c_id: port_a_i2c
     address: 0x57
@@ -149,8 +149,28 @@ sensor:
     id: ultrasonic_distance
     unit_of_measurement: mm
     update_interval: 2s
+    filters:
+      # Filter out bad readings
+      - filter_out: nan
+      - filter_out: 0.0  # Remove zero readings (sensor errors)
+      # Remove impossible readings
+      - lambda: |-
+          if (x < 50 || x > 2000) {
+            return {};  // Reject reading
+          }
+          return x;
+      # Outlier detection - reject readings that jump too much
+      - delta: 100  # Reject changes > 100mm in one reading
+      # Sliding window average to smooth readings
+      - sliding_window_moving_average:
+          window_size: 8
+          send_every: 4
+      # Round to 1 decimal place
+      - multiply: 0.1
+      - round: 0
+      - multiply: 10
 
-  # Template sensor for tank level percentage
+  # Template sensor for tank level percentage with EXTRA PROTECTION
   - platform: template
     name: "Tank Level"
     id: tank_level_percent
@@ -158,26 +178,45 @@ sensor:
     icon: "mdi:waves"
     update_interval: 5s
     accuracy_decimals: 1
+    filters:
+      # Limit rate of change - max 5% change per update
+      - delta: 5.0
+      # Smooth the percentage output too
+      - sliding_window_moving_average:
+          window_size: 3
+          send_every: 1
     lambda: |-
+      // Only calculate if we have a valid distance reading
       if (!id(ultrasonic_distance).has_state()) {
-        return NAN;
+        return {};  // No reading available
       }
       
       float current_distance = id(ultrasonic_distance).state;
       float empty_distance = id(tank_empty_distance);
       float full_distance = id(tank_full_distance);
       
-      if (isnan(current_distance) || empty_distance <= full_distance) {
-        return NAN;
+      // Extra safety checks
+      if (isnan(current_distance) || current_distance <= 0) {
+        ESP_LOGW("tank", "Invalid distance reading: %.1f", current_distance);
+        return {};  // Don't update percentage
       }
       
-      // Clamp distance to valid range
+      if (empty_distance <= full_distance) {
+        ESP_LOGW("tank", "Invalid calibration: empty(%.0f) <= full(%.0f)", empty_distance, full_distance);
+        return {};
+      }
+      
+      // Clamp distance to reasonable range
       current_distance = clamp(current_distance, full_distance, empty_distance);
       
       // Calculate percentage (inverted because smaller distance = more water)
       float percentage = 100.0 - ((current_distance - full_distance) / (empty_distance - full_distance) * 100.0);
       
-      return clamp(percentage, 0.0f, 100.0f);
+      // Clamp percentage to 0-100%
+      percentage = clamp(percentage, 0.0f, 100.0f);
+      
+      ESP_LOGD("tank", "Distance: %.1fmm, Percentage: %.1f%%", current_distance, percentage);
+      return percentage;
 
   - platform: rotary_encoder
     id: encoder
@@ -273,7 +312,7 @@ display:
     reset_pin: GPIO8
     dc_pin: GPIO4
     spi_id: spi_bus
-    invert_colors: true        # CHANGED: Invert colors to get true black
+    invert_colors: true        # Invert colors to get true black background
     rotation: 0
     update_interval: 500ms
     pages:
@@ -314,7 +353,7 @@ display:
           
           // Tank percentage - COLORED
           it.printf(center_x, 80, id(large_font), level_color, TextAlign::CENTER,
-                    isnan(level_percent) ? "--.-%%" : "%.1f%%", level_percent);
+                    isnan(level_percent) ? "--.-%" : "%.1f%%", level_percent);
           
           // Distance - WHITE TEXT
           it.printf(center_x, 115, id(small_font), Color::WHITE, TextAlign::CENTER,

@@ -1,0 +1,632 @@
+substitutions:
+  name: m5stack-dial-tank-monitor
+  friendly_name: M5Stack Dial Tank Monitor
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: 100
+    then:
+      - output.turn_on: hold_power  # Maintain power
+      - pcf8563.read_time:
+      - logger.log: "Tank Monitor booting up"
+      - delay: 1s
+      - output.set_level:
+          id: backlight_output
+          level: 100%
+      - lambda: |-
+          id(display_on) = true;
+          id(last_activity_time) = millis() / 1000;
+      - display.page.show: home
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.73.158
+    gateway: 192.168.73.1
+    subnet: 255.255.255.0
+    dns1: 8.8.8.8
+    dns2: 1.1.1.1
+  
+  ap:
+    ssid: "Tank Monitor Fallback"
+    password: "FTi0dalz2qff"
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  reboot_timeout: 0s
+  port: 6053
+
+status_led:
+  pin: GPIO14
+
+captive_portal:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+logger:
+  level: DEBUG
+
+# External component for ultrasonic sensor
+external_components:
+  - source:
+      type: git
+      url: https://github.com/chill-Division/M5Stack-ESPHome/
+      ref: main
+    components: sonic_i2c
+
+# I2C configurations
+i2c:
+  - id: internal_i2c
+    sda: GPIO11
+    scl: GPIO12
+    scan: true
+    frequency: 100kHz
+  
+  # Port A I2C for ultrasonic sensor
+  - id: port_a_i2c
+    sda: GPIO13
+    scl: GPIO15
+    scan: true
+    frequency: 100kHz
+
+output:
+  - platform: ledc
+    pin: GPIO3
+    id: buzzer
+  - platform: ledc
+    pin: GPIO9
+    id: backlight_output
+    frequency: 1000 Hz
+    min_power: 0.0
+    max_power: 1.0
+    zero_means_zero: true
+  
+  # HOLD pin to maintain power - CRITICAL FOR M5DIAL
+  - platform: gpio
+    pin: GPIO46
+    id: hold_power
+
+rtttl:
+  output: buzzer
+
+globals:
+  - id: screen_always_on
+    type: bool
+    initial_value: 'false'
+    restore_value: yes
+  - id: last_activity_time
+    type: uint32_t
+    initial_value: '0'
+  - id: display_on
+    type: bool
+    initial_value: 'false'
+  - id: display_timeout_seconds
+    type: uint32_t
+    initial_value: '300'
+  - id: menu_sounds
+    type: bool
+    initial_value: 'true'
+    restore_value: yes
+  
+  # Tank calibration globals
+  - id: tank_empty_distance
+    type: float
+    initial_value: '1000.0'
+    restore_value: yes
+  - id: tank_full_distance
+    type: float
+    initial_value: '100.0'
+    restore_value: yes
+  
+  # Menu navigation globals
+  - id: current_page
+    type: int
+    initial_value: '0'  # 0=home, 1=settings
+  - id: menu_selection
+    type: int
+    initial_value: '0'  # 0=empty, 1=full, 2=timeout, 3=exit
+  - id: calibration_mode
+    type: int
+    initial_value: '0'  # 0=none, 1=setting empty, 2=setting full
+
+sensor:
+  # Ultrasonic distance sensor
+  - platform: sonic_i2c
+    i2c_id: port_a_i2c
+    address: 0x57
+    name: "Tank Distance"
+    id: ultrasonic_distance
+    unit_of_measurement: mm
+    update_interval: 2s
+
+  # Template sensor for tank level percentage
+  - platform: template
+    name: "Tank Level"
+    id: tank_level_percent
+    unit_of_measurement: "%"
+    icon: "mdi:waves"
+    update_interval: 5s
+    accuracy_decimals: 1
+    lambda: |-
+      if (!id(ultrasonic_distance).has_state()) {
+        return NAN;
+      }
+      
+      float current_distance = id(ultrasonic_distance).state;
+      float empty_distance = id(tank_empty_distance);
+      float full_distance = id(tank_full_distance);
+      
+      if (isnan(current_distance) || empty_distance <= full_distance) {
+        return NAN;
+      }
+      
+      // Clamp distance to valid range
+      current_distance = clamp(current_distance, full_distance, empty_distance);
+      
+      // Calculate percentage (inverted because smaller distance = more water)
+      float percentage = 100.0 - ((current_distance - full_distance) / (empty_distance - full_distance) * 100.0);
+      
+      return clamp(percentage, 0.0f, 100.0f);
+
+  - platform: rotary_encoder
+    id: encoder
+    pin_a: GPIO40
+    pin_b: GPIO41
+    resolution: 1
+    on_clockwise:
+      then:
+        - script.execute: handle_encoder_clockwise
+    on_anticlockwise:
+      then:
+        - script.execute: handle_encoder_anticlockwise
+
+  - platform: uptime
+    name: "Tank Monitor Uptime"
+    update_interval: 60s
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+time:
+  - platform: pcf8563
+    id: rtctime
+    i2c_id: internal_i2c
+    address: 0x51
+    update_interval: never
+  - platform: homeassistant
+    id: esptime
+    on_time_sync:
+      then:
+        - pcf8563.write_time:
+
+# Keep touchscreen component but don't use it for interaction
+touchscreen:
+  - platform: ft5x06
+    id: tank_touchscreen
+    i2c_id: internal_i2c
+    address: 0x38
+
+binary_sensor:
+  # CORRECT: GPIO42 is the dial button (center push of rotary encoder)
+  - platform: gpio
+    name: "Dial Button"
+    id: dial_button
+    pin:
+      number: GPIO42
+      mode: INPUT_PULLUP
+      inverted: true
+    internal: true
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - logger.log: "DIAL BUTTON PRESSED ON GPIO42!"
+        - if:
+            condition:
+              lambda: 'return id(menu_sounds);'
+            then:
+            - rtttl.play: "beep:d=64,o=5,b=255:c7"
+        - script.execute: handle_button_press
+        - lambda: |-
+            id(last_activity_time) = millis() / 1000;
+
+  - platform: status
+    name: "Device Status"
+
+spi:
+  id: spi_bus
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+font:
+  - file: "arial.ttf"
+    id: normal_font
+    size: 20
+  - file: "arial.ttf"
+    id: large_font
+    size: 32
+  - file: "arial.ttf"
+    id: small_font
+    size: 16
+  - file: "arial.ttf"
+    id: tiny_font
+    size: 12
+
+display:
+  - platform: ili9xxx
+    id: round_display
+    model: GC9A01A
+    cs_pin: GPIO7
+    reset_pin: GPIO8
+    dc_pin: GPIO4
+    spi_id: spi_bus
+    invert_colors: true        # CHANGED: Invert colors to get true black
+    rotation: 0
+    update_interval: 500ms
+    pages:
+      - id: home
+        lambda: |-
+          it.fill(Color::BLACK);  // This should now be TRUE BLACK
+          int center_x = it.get_width() / 2;
+          int center_y = it.get_height() / 2;
+          int width = it.get_width();
+          
+          // Main display - Tank Level
+          it.printf(center_x, 25, id(normal_font), Color::WHITE, TextAlign::CENTER, "TANK LEVEL");
+          
+          // Get current values
+          float distance = NAN;
+          float level_percent = NAN;
+          
+          if (id(ultrasonic_distance).has_state()) {
+            distance = id(ultrasonic_distance).state;
+          }
+          if (id(tank_level_percent).has_state()) {
+            level_percent = id(tank_level_percent).state;
+          }
+          
+          // Color scheme: Red = Empty, Yellow = Medium, Green = Full
+          Color level_color = Color::WHITE;
+          if (!isnan(level_percent)) {
+            if (level_percent >= 70) {
+              level_color = Color(0, 255, 0);      // Bright Green for full (70-100%)
+            } else if (level_percent >= 40) {
+              level_color = Color(255, 255, 0);    // Yellow for medium (40-69%)
+            } else if (level_percent >= 20) {
+              level_color = Color(255, 165, 0);    // Orange for low (20-39%)
+            } else {
+              level_color = Color(255, 0, 0);      // Red for empty (0-19%)
+            }
+          }
+          
+          // Tank percentage - COLORED
+          it.printf(center_x, 80, id(large_font), level_color, TextAlign::CENTER,
+                    isnan(level_percent) ? "--.-%%" : "%.1f%%", level_percent);
+          
+          // Distance - WHITE TEXT
+          it.printf(center_x, 115, id(small_font), Color::WHITE, TextAlign::CENTER,
+                    isnan(distance) ? "---mm" : "%.0fmm", distance);
+          
+          // Calibration values - WHITE TEXT
+          it.printf(center_x, 135, id(tiny_font), Color::WHITE, TextAlign::CENTER,
+                    "E:%.0f F:%.0f", id(tank_empty_distance), id(tank_full_distance));
+          
+          // Tank visual indicator
+          int tank_x = center_x - 30;
+          int tank_y = 150;
+          int tank_width = 60;
+          int tank_height = 25;
+          
+          // Draw tank outline - WHITE
+          it.rectangle(tank_x, tank_y, tank_width, tank_height, Color::WHITE);
+          
+          // Fill tank based on level
+          if (!isnan(level_percent)) {
+            int fill_height = (int)(tank_height * level_percent / 100.0);
+            if (fill_height > 0) {
+              it.filled_rectangle(tank_x + 1, tank_y + tank_height - fill_height - 1, 
+                                tank_width - 2, fill_height, level_color);
+            }
+          }
+          
+          // Instructions - WHITE TEXT
+          it.printf(center_x, 185, id(tiny_font), Color::WHITE, TextAlign::CENTER, "Press for menu");
+          
+          // Screen timeout indicator
+          if (id(screen_always_on)) {
+            Color green = Color(0, 255, 0);
+            it.filled_circle(width - 20, 20, 4, green);
+            it.printf(width - 35, 15, id(tiny_font), Color::WHITE, TextAlign::RIGHT, "ON");
+          } else {
+            uint32_t time_now = millis() / 1000;
+            uint32_t elapsed = time_now - id(last_activity_time);
+            if (elapsed <= id(display_timeout_seconds)) {
+              uint32_t time_left = id(display_timeout_seconds) - elapsed;
+              it.printf(width - 10, 15, id(tiny_font), Color::WHITE, TextAlign::RIGHT, "%ds", time_left);
+            }
+          }
+
+      - id: settings
+        lambda: |-
+          it.fill(Color::BLACK);  // Should now be TRUE BLACK
+          int center_x = it.get_width() / 2;
+          
+          // Title - WHITE TEXT
+          it.printf(center_x, 15, id(normal_font), Color::WHITE, TextAlign::CENTER, "SETTINGS");
+          
+          // Instructions - WHITE TEXT
+          it.printf(center_x, 35, id(tiny_font), Color::WHITE, TextAlign::CENTER, "Dial=navigate, Press=select");
+          
+          Color white = Color::WHITE;
+          Color yellow = Color(255, 255, 0);  // Selected item
+          Color green = Color(0, 255, 0);     // Active calibration
+          Color blue = Color(0, 150, 255);    // Status indicator
+          
+          // Menu items
+          const char* menu_items[4] = {"Empty Level", "Full Level", "Timeout", "Exit"};
+          
+          for (int i = 0; i < 4; i++) {
+            Color item_color = white;
+            
+            // Highlight selected item in YELLOW
+            if (i == id(menu_selection)) {
+              item_color = yellow;
+              // Draw selection indicator
+              it.filled_circle(25, 65 + i * 25, 3, yellow);
+            }
+            
+            // Override color for active calibration in GREEN
+            if ((i == 0 && id(calibration_mode) == 1) || (i == 1 && id(calibration_mode) == 2)) {
+              item_color = green;
+            }
+            
+            it.printf(center_x, 65 + i * 25, id(small_font), item_color, TextAlign::CENTER, menu_items[i]);
+          }
+          
+          // Show current settings status
+          if (id(menu_selection) == 2) {
+            it.printf(center_x, 165, id(tiny_font), blue, TextAlign::CENTER, 
+                     id(screen_always_on) ? "Always On" : "Auto Off");
+          }
+          
+          // Show calibration instructions
+          if (id(calibration_mode) == 1) {
+            it.printf(center_x, 180, id(tiny_font), green, TextAlign::CENTER, "Empty tank, press to save");
+            it.printf(center_x, 195, id(tiny_font), Color::WHITE, TextAlign::CENTER, 
+                     "%.0fmm", id(ultrasonic_distance).has_state() ? id(ultrasonic_distance).state : 0.0);
+          } else if (id(calibration_mode) == 2) {
+            it.printf(center_x, 180, id(tiny_font), green, TextAlign::CENTER, "Full tank, press to save");
+            it.printf(center_x, 195, id(tiny_font), Color::WHITE, TextAlign::CENTER, 
+                     "%.0fmm", id(ultrasonic_distance).has_state() ? id(ultrasonic_distance).state : 0.0);
+          }
+
+light:
+  - platform: monochromatic
+    name: "Backlight"
+    output: backlight_output
+    id: backlight
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    internal: True
+
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            and:
+              - lambda: 'return id(display_on);'
+              - lambda: 'return !id(screen_always_on);'
+          then:
+            - lambda: |-
+                uint32_t time_now = millis() / 1000;
+                uint32_t elapsed_time = time_now - id(last_activity_time);
+                if (elapsed_time > id(display_timeout_seconds)) {
+                  ESP_LOGI("display", "Screen timeout reached.");
+                  id(tank_display).turn_off();
+                  id(backlight).turn_off();
+                }
+
+script:
+  # Main button press handler
+  - id: handle_button_press
+    mode: queued
+    then:
+      - lambda: |-
+          ESP_LOGI("ui", "Button pressed. Page: %d, Menu: %d, Cal: %d", id(current_page), id(menu_selection), id(calibration_mode));
+          
+          if (id(current_page) == 0) {
+            // Home page - go to settings
+            id(current_page) = 1;
+            id(menu_selection) = 0;
+            id(calibration_mode) = 0;
+            id(round_display).show_page(id(settings));
+            ESP_LOGI("ui", "Entered settings menu");
+            
+          } else if (id(current_page) == 1) {
+            // Settings page - handle menu selection
+            
+            if (id(menu_selection) == 0) {
+              // Set Empty Level
+              if (id(calibration_mode) == 1) {
+                id(set_empty_level).execute();
+              } else {
+                id(calibration_mode) = 1;
+                ESP_LOGI("ui", "Started empty level calibration");
+              }
+              
+            } else if (id(menu_selection) == 1) {
+              // Set Full Level
+              if (id(calibration_mode) == 2) {
+                id(set_full_level).execute();
+              } else {
+                id(calibration_mode) = 2;
+                ESP_LOGI("ui", "Started full level calibration");
+              }
+              
+            } else if (id(menu_selection) == 2) {
+              // Toggle Screen Timeout
+              id(screen_always_on) = !id(screen_always_on);
+              id(screen_always_on_switch).publish_state(id(screen_always_on));
+              ESP_LOGI("ui", "Screen always on: %s", id(screen_always_on) ? "ON" : "OFF");
+              
+            } else if (id(menu_selection) == 3) {
+              // Exit Settings
+              id(current_page) = 0;
+              id(menu_selection) = 0;
+              id(calibration_mode) = 0;
+              id(round_display).show_page(id(home));
+              ESP_LOGI("ui", "Exited settings menu");
+            }
+          }
+
+  # Rotary encoder handlers
+  - id: handle_encoder_clockwise
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(menu_sounds);'
+          then:
+          - rtttl.play: "tick:d=32,o=4,b=400:c"
+      - lambda: |-
+          id(last_activity_time) = millis() / 1000;
+          
+          if (id(current_page) == 1) {
+            // In settings menu - navigate down
+            id(menu_selection)++;
+            if (id(menu_selection) > 3) {
+              id(menu_selection) = 0;  // Wrap around
+            }
+            id(calibration_mode) = 0;  // Exit calibration mode when navigating
+            ESP_LOGD("ui", "Menu selection: %d", id(menu_selection));
+          }
+
+  - id: handle_encoder_anticlockwise
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(menu_sounds);'
+          then:
+          - rtttl.play: "tick:d=32,o=4,b=400:c"
+      - lambda: |-
+          id(last_activity_time) = millis() / 1000;
+          
+          if (id(current_page) == 1) {
+            // In settings menu - navigate up
+            id(menu_selection)--;
+            if (id(menu_selection) < 0) {
+              id(menu_selection) = 3;  // Wrap around
+            }
+            id(calibration_mode) = 0;  // Exit calibration mode when navigating
+            ESP_LOGD("ui", "Menu selection: %d", id(menu_selection));
+          }
+
+  # Calibration scripts
+  - id: set_empty_level
+    mode: single
+    then:
+      - lambda: |-
+          if (id(ultrasonic_distance).has_state()) {
+            id(tank_empty_distance) = id(ultrasonic_distance).state;
+            ESP_LOGI("calibration", "Empty level set to: %.0f mm", id(tank_empty_distance));
+            id(calibration_mode) = 0;
+          } else {
+            ESP_LOGW("calibration", "No valid distance reading for empty level");
+          }
+      - rtttl.play: "success:d=4,o=6,b=100:16c,16g,16c7"
+
+  - id: set_full_level
+    mode: single
+    then:
+      - lambda: |-
+          if (id(ultrasonic_distance).has_state()) {
+            id(tank_full_distance) = id(ultrasonic_distance).state;
+            ESP_LOGI("calibration", "Full level set to: %.0f mm", id(tank_full_distance));
+            id(calibration_mode) = 0;
+          } else {
+            ESP_LOGW("calibration", "No valid distance reading for full level");
+          }
+      - rtttl.play: "success:d=4,o=6,b=100:16c,16g,16c7"
+
+switch:
+  - platform: restart
+    name: "Restart Tank Monitor"
+
+  - platform: template
+    name: "Screen Always On"
+    id: screen_always_on_switch
+    icon: "mdi:lightbulb-on-outline"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    name: "Menu Sounds"
+    id: menu_sounds_switch
+    icon: "mdi:playlist-music"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+  - platform: template
+    name: "Display"
+    id: tank_display
+    icon: "mdi:fit-to-screen"
+    optimistic: true
+    restore_mode: 'always_on'
+    on_turn_on:
+      - light.turn_on:
+          id: backlight
+          brightness: 100%
+      - lambda: |-
+          id(last_activity_time) = millis() / 1000;
+    on_turn_off:
+      - light.turn_off: backlight
+      - display.page.show: home
+
+number:
+  - platform: template
+    name: "Tank Empty Distance"
+    id: tank_empty_distance_number
+    min_value: 50
+    max_value: 2000
+    step: 10
+    unit_of_measurement: "mm"
+    icon: "mdi:ruler"
+    lambda: |-
+      return id(tank_empty_distance);
+    set_action:
+      - lambda: |-
+          id(tank_empty_distance) = x;
+          ESP_LOGI("config", "Empty distance set to: %.0f mm", x);
+
+  - platform: template
+    name: "Tank Full Distance"
+    id: tank_full_distance_number
+    min_value: 50
+    max_value: 2000
+    step: 10
+    unit_of_measurement: "mm"
+    icon: "mdi:ruler"
+    lambda: |-
+      return id(tank_full_distance);
+    set_action:
+      - lambda: |-
+          id(tank_full_distance) = x;
+          ESP_LOGI("config", "Full distance set to: %.0f mm", x);
+
+web_server:
+  port: 80

@@ -1,0 +1,973 @@
+esphome:
+  name: espoe-peristaltic-pumps
+  friendly_name: espoe-peristaltic-pumps
+  on_boot:
+    priority: 600  # Higher priority like dev version
+    then:
+      # Initialize direction text sensors
+      - lambda: |-
+          // Cleanse (Motor 1)
+          if (id(motor_cleanse_direction).state) {
+            id(cleanse_direction_text).publish_state("Forward");
+          } else {
+            id(cleanse_direction_text).publish_state("Reverse");
+          }
+          // Core (Motor 2)
+          if (id(motor_core_direction).state) {
+            id(core_direction_text).publish_state("Forward");
+          } else {
+            id(core_direction_text).publish_state("Reverse");
+          }
+          // Bloom (Motor 3)
+          if (id(motor_bloom_direction).state) {
+            id(bloom_direction_text).publish_state("Forward");
+          } else {
+            id(bloom_direction_text).publish_state("Reverse");
+          }
+          // Balance (Motor 4)
+          if (id(motor_balance_direction).state) {
+            id(balance_direction_text).publish_state("Forward");
+          } else {
+            id(balance_direction_text).publish_state("Reverse");
+          }
+      # Initialize flow rate sensors (lower priority)
+      - delay: 100ms
+      - sensor.template.publish:
+          id: sensor_cleanse_flow_rate
+          state: !lambda |-
+            return id(cleanse_flow_rate);
+      - sensor.template.publish:
+          id: sensor_core_flow_rate
+          state: !lambda |-
+            return id(core_flow_rate);
+      - sensor.template.publish:
+          id: sensor_bloom_flow_rate
+          state: !lambda |-
+            return id(bloom_flow_rate);
+      - sensor.template.publish:
+          id: sensor_balance_flow_rate
+          state: !lambda |-
+            return id(balance_flow_rate);
+      - text_sensor.template.publish:
+          id: status_cleanse
+          state: "Stopped"
+      - text_sensor.template.publish:
+          id: status_core
+          state: "Stopped"
+      - text_sensor.template.publish:
+          id: status_bloom
+          state: "Stopped"
+      - text_sensor.template.publish:
+          id: status_balance
+          state: "Stopped"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Your network, API, OTA, and other settings.
+# Make sure to put your actual keys/passwords back in.
+api:
+  encryption:
+    key: "v8hh3TFd5L+dtAW7YNG607QMbW9Rx6TWbjZ0QgU4/Ik="
+
+ota:
+  - platform: esphome
+    password: "2f0c69cb67b7ea81836727bceee211a0"
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO5
+
+logger:
+web_server:
+  port: 80
+uart:
+  id: uart_bus
+  tx_pin: GPIO16
+  rx_pin: GPIO17
+  baud_rate: 115200
+preferences:
+  flash_write_interval: 1min
+
+# ===================================================================
+# ==                         SUBSTITUTIONS                         ==
+# ===================================================================
+substitutions:
+  # --- PUMP 1 ---
+  pump1_name: "Cleanse"
+  pump1_id: "cleanse"
+  motor1_num: "1"
+  # --- PUMP 2 ---
+  pump2_name: "Core"
+  pump2_id: "core"
+  motor2_num: "2"
+  # --- PUMP 3 ---
+  pump3_name: "Bloom"
+  pump3_id: "bloom"
+  motor3_num: "3"
+  # --- PUMP 4 ---
+  pump4_name: "Balance"
+  pump4_id: "balance"
+  motor4_num: "4"
+
+# ===================================================================
+# ==                       GLOBAL VARIABLES                        ==
+# ===================================================================
+globals:
+  - id: cleanse_flow_rate
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: cleanse_cal_duration_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: core_flow_rate
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: core_cal_duration_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: bloom_flow_rate
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: bloom_cal_duration_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: balance_flow_rate
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: balance_cal_duration_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: cal_start_time
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: cal_pump_id
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+# ===================================================================
+# ==                            NUMBERS                            ==
+# ===================================================================
+number:
+  # Speed Controls (NEW)
+  - platform: template
+    name: "Cleanse Pump Speed"
+    id: cleanse_speed
+    optimistic: true
+    restore_value: true
+    min_value: 400
+    max_value: 2500
+    step: 10
+    unit_of_measurement: "RPM"
+    icon: "mdi:speedometer"
+  - platform: template
+    name: "Core Pump Speed"
+    id: core_speed
+    optimistic: true
+    restore_value: true
+    min_value: 400
+    max_value: 2500
+    step: 10
+    unit_of_measurement: "RPM"
+    icon: "mdi:speedometer"
+  - platform: template
+    name: "Bloom Pump Speed"
+    id: bloom_speed
+    optimistic: true
+    restore_value: true
+    min_value: 400
+    max_value: 2500
+    step: 10
+    unit_of_measurement: "RPM"
+    icon: "mdi:speedometer"
+  - platform: template
+    name: "Balance Pump Speed"
+    id: balance_speed
+    optimistic: true
+    restore_value: true
+    min_value: 400
+    max_value: 2500
+    step: 10
+    unit_of_measurement: "RPM"
+    icon: "mdi:speedometer"
+  
+  # Existing Volume Controls
+  - platform: template
+    name: "Cleanse Measured Volume"
+    id: number_cleanse_measured_volume
+    min_value: 0
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:cup-water"
+  - platform: template
+    name: "Cleanse Dose Amount"
+    id: number_cleanse_dose_amount
+    min_value: 1
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:beaker-plus"
+  - platform: template
+    name: "Core Measured Volume"
+    id: number_core_measured_volume
+    min_value: 0
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:cup-water"
+  - platform: template
+    name: "Core Dose Amount"
+    id: number_core_dose_amount
+    min_value: 1
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:beaker-plus"
+  - platform: template
+    name: "Bloom Measured Volume"
+    id: number_bloom_measured_volume
+    min_value: 0
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:cup-water"
+  - platform: template
+    name: "Bloom Dose Amount"
+    id: number_bloom_dose_amount
+    min_value: 1
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:beaker-plus"
+  - platform: template
+    name: "Balance Measured Volume"
+    id: number_balance_measured_volume
+    min_value: 0
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:cup-water"
+  - platform: template
+    name: "Balance Dose Amount"
+    id: number_balance_dose_amount
+    min_value: 1
+    max_value: 2000
+    step: 1
+    unit_of_measurement: "ml"
+    optimistic: true
+    restore_value: true
+    icon: "mdi:beaker-plus"
+
+# ===================================================================
+# ==                           SWITCHES                            ==
+# ===================================================================
+switch:
+  # Cleanse Power - UPDATED with speed control
+  - platform: template
+    name: "Cleanse Pump Power"
+    id: motor_cleanse_power
+    optimistic: true
+    turn_on_action:
+      - uart.write:
+          id: uart_bus
+          data: !lambda |-
+            std::string s = "Motor " + std::to_string(${motor1_num}) + " ON " + std::to_string((int)id(cleanse_speed).state) + "\n";
+            return std::vector<unsigned char>(s.begin(), s.end());
+      - text_sensor.template.publish:
+          id: status_cleanse
+          state: "Running (Manual)"
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor1_num}) + " OFF\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - text_sensor.template.publish:
+          id: status_cleanse
+          state: "Stopped"
+      - script.stop: cleanse_dose_script
+  
+  # Cleanse Direction - UPDATED with text sensor
+  - platform: template
+    name: "Cleanse Pump Direction"
+    id: motor_cleanse_direction
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor1_num}) + " FWD\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(cleanse_direction_text).publish_state("Forward");
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor1_num}) + " REV\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(cleanse_direction_text).publish_state("Reverse");
+
+  # Core Power - UPDATED with speed control
+  - platform: template
+    name: "Core Pump Power"
+    id: motor_core_power
+    optimistic: true
+    turn_on_action:
+      - uart.write:
+          id: uart_bus
+          data: !lambda |-
+            std::string s = "Motor " + std::to_string(${motor2_num}) + " ON " + std::to_string((int)id(core_speed).state) + "\n";
+            return std::vector<unsigned char>(s.begin(), s.end());
+      - text_sensor.template.publish:
+          id: status_core
+          state: "Running (Manual)"
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor2_num}) + " OFF\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - text_sensor.template.publish:
+          id: status_core
+          state: "Stopped"
+      - script.stop: core_dose_script
+  
+  # Core Direction - UPDATED with text sensor
+  - platform: template
+    name: "Core Pump Direction"
+    id: motor_core_direction
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor2_num}) + " FWD\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(core_direction_text).publish_state("Forward");
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor2_num}) + " REV\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(core_direction_text).publish_state("Reverse");
+
+  # Bloom Power - UPDATED with speed control
+  - platform: template
+    name: "Bloom Pump Power"
+    id: motor_bloom_power
+    optimistic: true
+    turn_on_action:
+      - uart.write:
+          id: uart_bus
+          data: !lambda |-
+            std::string s = "Motor " + std::to_string(${motor3_num}) + " ON " + std::to_string((int)id(bloom_speed).state) + "\n";
+            return std::vector<unsigned char>(s.begin(), s.end());
+      - text_sensor.template.publish:
+          id: status_bloom
+          state: "Running (Manual)"
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor3_num}) + " OFF\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - text_sensor.template.publish:
+          id: status_bloom
+          state: "Stopped"
+      - script.stop: bloom_dose_script
+  
+  # Bloom Direction - UPDATED with text sensor
+  - platform: template
+    name: "Bloom Pump Direction"
+    id: motor_bloom_direction
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor3_num}) + " FWD\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(bloom_direction_text).publish_state("Forward");
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor3_num}) + " REV\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(bloom_direction_text).publish_state("Reverse");
+
+  # Balance Power - UPDATED with speed control
+  - platform: template
+    name: "Balance Pump Power"
+    id: motor_balance_power
+    optimistic: true
+    turn_on_action:
+      - uart.write:
+          id: uart_bus
+          data: !lambda |-
+            std::string s = "Motor " + std::to_string(${motor4_num}) + " ON " + std::to_string((int)id(balance_speed).state) + "\n";
+            return std::vector<unsigned char>(s.begin(), s.end());
+      - text_sensor.template.publish:
+          id: status_balance
+          state: "Running (Manual)"
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor4_num}) + " OFF\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - text_sensor.template.publish:
+          id: status_balance
+          state: "Stopped"
+      - script.stop: balance_dose_script
+  
+  # Balance Direction - UPDATED with text sensor
+  - platform: template
+    name: "Balance Pump Direction"
+    id: motor_balance_direction
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor4_num}) + " FWD\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(balance_direction_text).publish_state("Forward");
+    turn_off_action:
+      - uart.write:
+          data: !lambda |-
+            auto msg = std::string("Motor ") + std::to_string(${motor4_num}) + " REV\n";
+            return std::vector<uint8_t>(msg.begin(), msg.end());
+      - lambda: |-
+          id(balance_direction_text).publish_state("Reverse");
+
+# ===================================================================
+# ==                         TEXT SENSORS                          ==
+# ===================================================================
+text_sensor:
+  # Existing Status Sensors
+  - platform: template
+    name: "Cleanse Pump Status"
+    id: status_cleanse
+  - platform: template
+    name: "Core Pump Status"
+    id: status_core
+  - platform: template
+    name: "Bloom Pump Status"
+    id: status_bloom
+  - platform: template
+    name: "Balance Pump Status"
+    id: status_balance
+  
+  # NEW - Direction Text Sensors
+  - platform: template
+    name: "Cleanse Pump Direction Text"
+    id: cleanse_direction_text
+    lambda: |-
+      if(id(motor_cleanse_direction).state){
+        return {"Forward"};
+      }else{
+        return {"Reverse"};
+      }
+    update_interval: 60s
+  - platform: template
+    name: "Core Pump Direction Text"
+    id: core_direction_text
+    lambda: |-
+      if(id(motor_core_direction).state){
+        return {"Forward"};
+      }else{
+        return {"Reverse"};
+      }
+    update_interval: 60s
+  - platform: template
+    name: "Bloom Pump Direction Text"
+    id: bloom_direction_text
+    lambda: |-
+      if(id(motor_bloom_direction).state){
+        return {"Forward"};
+      }else{
+        return {"Reverse"};
+      }
+    update_interval: 60s
+  - platform: template
+    name: "Balance Pump Direction Text"
+    id: balance_direction_text
+    lambda: |-
+      if(id(motor_balance_direction).state){
+        return {"Forward"};
+      }else{
+        return {"Reverse"};
+      }
+    update_interval: 60s
+  
+  # NEW - Firmware Version Sensor
+  - platform: template
+    name: "Pump Controller Firmware Version"
+    id: fw_version_sensor
+    update_interval: 1s
+    lambda: |-
+      static std::string buffer;
+      while (id(uart_bus).available()) {
+        uint8_t byte;
+        id(uart_bus).read_byte(&byte);
+        char c = static_cast<char>(byte);
+
+        if (c == '\n' || c == '\r') {
+          if (buffer.rfind("FW:", 0) == 0) {
+            std::string version = buffer.substr(3);
+            buffer.clear();
+            return version;
+          } else if (buffer.rfind("Calibration for Motor", 0) == 0) {
+            id(calibration_status).publish_state(buffer);
+          }
+          buffer.clear();
+        } else {
+          buffer += c;
+        }
+      }
+      return {};
+  
+  # NEW - Calibration Status Sensor
+  - platform: template
+    name: "Pump Controller Calibration Status"
+    id: calibration_status
+
+# ===================================================================
+# ==                           SENSORS                             ==
+# ===================================================================
+sensor:
+  - platform: template
+    name: "Cleanse Flow Rate"
+    id: sensor_cleanse_flow_rate
+    unit_of_measurement: "ml/s"
+    accuracy_decimals: 2
+    icon: "mdi:speedometer"
+    update_interval: never
+    lambda: |-
+      return id(cleanse_flow_rate);
+  - platform: template
+    name: "Core Flow Rate"
+    id: sensor_core_flow_rate
+    unit_of_measurement: "ml/s"
+    accuracy_decimals: 2
+    icon: "mdi:speedometer"
+    update_interval: never
+    lambda: |-
+      return id(core_flow_rate);
+  - platform: template
+    name: "Bloom Flow Rate"
+    id: sensor_bloom_flow_rate
+    unit_of_measurement: "ml/s"
+    accuracy_decimals: 2
+    icon: "mdi:speedometer"
+    update_interval: never
+    lambda: |-
+      return id(bloom_flow_rate);
+  - platform: template
+    name: "Balance Flow Rate"
+    id: sensor_balance_flow_rate
+    unit_of_measurement: "ml/s"
+    accuracy_decimals: 2
+    icon: "mdi:speedometer"
+    update_interval: never
+    lambda: |-
+      return id(balance_flow_rate);
+
+# ===================================================================
+# ==                            BUTTONS                            ==
+# ===================================================================
+button:
+  # NEW - Hardware Calibration Buttons
+  - platform: template
+    name: "Cleanse Hardware Calibrate"
+    icon: "mdi:tune"
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "Motor ${motor1_num} CALIBRATE\n"
+  - platform: template
+    name: "Core Hardware Calibrate"
+    icon: "mdi:tune"
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "Motor ${motor2_num} CALIBRATE\n"
+  - platform: template
+    name: "Bloom Hardware Calibrate"
+    icon: "mdi:tune"
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "Motor ${motor3_num} CALIBRATE\n"
+  - platform: template
+    name: "Balance Hardware Calibrate"
+    icon: "mdi:tune"
+    on_press:
+      - uart.write:
+          id: uart_bus
+          data: "Motor ${motor4_num} CALIBRATE\n"
+  
+  # Existing Flow Rate Calibration Buttons
+  - platform: template
+    name: "Cleanse Calibrate Start"
+    id: button_cleanse_cal_start
+    icon: "mdi:play-circle"
+    on_press:
+      - text_sensor.template.publish:
+          id: status_cleanse
+          state: "Calibrating..."
+      - switch.turn_on: motor_cleanse_power
+      - lambda: |-
+          id(cal_start_time) = millis();
+          id(cal_pump_id) = ${motor1_num};
+  - platform: template
+    name: "Cleanse Calibrate Stop"
+    id: button_cleanse_cal_stop
+    icon: "mdi:stop-circle"
+    on_press:
+      - switch.turn_off: motor_cleanse_power
+      - lambda: |-
+          if (id(cal_pump_id) != ${motor1_num}) {
+            ESP_LOGW("cleanse", "Calibration stop pressed for wrong pump!");
+            return;
+          }
+          uint32_t cal_duration_ms = millis() - id(cal_start_time);
+          if (cal_duration_ms < 500) {
+            ESP_LOGE("cleanse", "Calibration time too short!");
+            id(status_cleanse).publish_state("Cal Failed");
+            return;
+          }
+          id(cleanse_cal_duration_ms) = cal_duration_ms;
+          id(status_cleanse).publish_state("Enter Volume");
+          ESP_LOGI("cleanse", "Calibration timed: %u ms. Enter measured volume and update.", cal_duration_ms);
+          id(cal_pump_id) = 0;
+  - platform: template
+    name: "Cleanse Update Flow Rate"
+    id: button_cleanse_update_flow
+    icon: "mdi:calculator"
+    on_press:
+      - lambda: |-
+          if (id(cleanse_cal_duration_ms) == 0) {
+            ESP_LOGE("cleanse", "No calibration duration saved. Run calibration first.");
+            id(status_cleanse).publish_state("Calibrate First");
+            return;
+          }
+          float vol = id(number_cleanse_measured_volume).state;
+          float rate = vol / (id(cleanse_cal_duration_ms) / 1000.0f);
+          id(cleanse_flow_rate) = rate;
+          id(sensor_cleanse_flow_rate).publish_state(rate);
+          id(status_cleanse).publish_state("Stopped");
+          ESP_LOGI("cleanse", "Flow rate updated: %.2f ml/s", rate);
+  - platform: template
+    name: "Cleanse Dose Now"
+    id: button_cleanse_dose
+    icon: "mdi:eyedropper-variant"
+    on_press:
+      - script.execute: cleanse_dose_script
+  - platform: template
+    name: "Core Calibrate Start"
+    id: button_core_cal_start
+    icon: "mdi:play-circle"
+    on_press:
+      - text_sensor.template.publish:
+          id: status_core
+          state: "Calibrating..."
+      - switch.turn_on: motor_core_power
+      - lambda: |-
+          id(cal_start_time) = millis();
+          id(cal_pump_id) = ${motor2_num};
+  - platform: template
+    name: "Core Calibrate Stop"
+    id: button_core_cal_stop
+    icon: "mdi:stop-circle"
+    on_press:
+      - switch.turn_off: motor_core_power
+      - lambda: |-
+          if (id(cal_pump_id) != ${motor2_num}) {
+            ESP_LOGW("core", "Calibration stop pressed for wrong pump!");
+            return;
+          }
+          uint32_t cal_duration_ms = millis() - id(cal_start_time);
+          if (cal_duration_ms < 500) {
+            ESP_LOGE("core", "Calibration time too short!");
+            id(status_core).publish_state("Cal Failed");
+            return;
+          }
+          id(core_cal_duration_ms) = cal_duration_ms;
+          id(status_core).publish_state("Enter Volume");
+          ESP_LOGI("core", "Calibration timed: %u ms. Enter measured volume and update.", cal_duration_ms);
+          id(cal_pump_id) = 0;
+  - platform: template
+    name: "Core Update Flow Rate"
+    id: button_core_update_flow
+    icon: "mdi:calculator"
+    on_press:
+      - lambda: |-
+          if (id(core_cal_duration_ms) == 0) {
+            ESP_LOGE("core", "No calibration duration saved. Run calibration first.");
+            id(status_core).publish_state("Calibrate First");
+            return;
+          }
+          float vol = id(number_core_measured_volume).state;
+          float rate = vol / (id(core_cal_duration_ms) / 1000.0f);
+          id(core_flow_rate) = rate;
+          id(sensor_core_flow_rate).publish_state(rate);
+          id(status_core).publish_state("Stopped");
+          ESP_LOGI("core", "Flow rate updated: %.2f ml/s", rate);
+  - platform: template
+    name: "Core Dose Now"
+    id: button_core_dose
+    icon: "mdi:eyedropper-variant"
+    on_press:
+      - script.execute: core_dose_script
+  - platform: template
+    name: "Bloom Calibrate Start"
+    id: button_bloom_cal_start
+    icon: "mdi:play-circle"
+    on_press:
+      - text_sensor.template.publish:
+          id: status_bloom
+          state: "Calibrating..."
+      - switch.turn_on: motor_bloom_power
+      - lambda: |-
+          id(cal_start_time) = millis();
+          id(cal_pump_id) = ${motor3_num};
+  - platform: template
+    name: "Bloom Calibrate Stop"
+    id: button_bloom_cal_stop
+    icon: "mdi:stop-circle"
+    on_press:
+      - switch.turn_off: motor_bloom_power
+      - lambda: |-
+          if (id(cal_pump_id) != ${motor3_num}) {
+            ESP_LOGW("bloom", "Calibration stop pressed for wrong pump!");
+            return;
+          }
+          uint32_t cal_duration_ms = millis() - id(cal_start_time);
+          if (cal_duration_ms < 500) {
+            ESP_LOGE("bloom", "Calibration time too short!");
+            id(status_bloom).publish_state("Cal Failed");
+            return;
+          }
+          id(bloom_cal_duration_ms) = cal_duration_ms;
+          id(status_bloom).publish_state("Enter Volume");
+          ESP_LOGI("bloom", "Calibration timed: %u ms. Enter measured volume and update.", cal_duration_ms);
+          id(cal_pump_id) = 0;
+  - platform: template
+    name: "Bloom Update Flow Rate"
+    id: button_bloom_update_flow
+    icon: "mdi:calculator"
+    on_press:
+      - lambda: |-
+          if (id(bloom_cal_duration_ms) == 0) {
+            ESP_LOGE("bloom", "No calibration duration saved. Run calibration first.");
+            id(status_bloom).publish_state("Calibrate First");
+            return;
+          }
+          float vol = id(number_bloom_measured_volume).state;
+          float rate = vol / (id(bloom_cal_duration_ms) / 1000.0f);
+          id(bloom_flow_rate) = rate;
+          id(sensor_bloom_flow_rate).publish_state(rate);
+          id(status_bloom).publish_state("Stopped");
+          ESP_LOGI("bloom", "Flow rate updated: %.2f ml/s", rate);
+  - platform: template
+    name: "Bloom Dose Now"
+    id: button_bloom_dose
+    icon: "mdi:eyedropper-variant"
+    on_press:
+      - script.execute: bloom_dose_script
+  - platform: template
+    name: "Balance Calibrate Start"
+    id: button_balance_cal_start
+    icon: "mdi:play-circle"
+    on_press:
+      - text_sensor.template.publish:
+          id: status_balance
+          state: "Calibrating..."
+      - switch.turn_on: motor_balance_power
+      - lambda: |-
+          id(cal_start_time) = millis();
+          id(cal_pump_id) = ${motor4_num};
+  - platform: template
+    name: "Balance Calibrate Stop"
+    id: button_balance_cal_stop
+    icon: "mdi:stop-circle"
+    on_press:
+      - switch.turn_off: motor_balance_power
+      - lambda: |-
+          if (id(cal_pump_id) != ${motor4_num}) {
+            ESP_LOGW("balance", "Calibration stop pressed for wrong pump!");
+            return;
+          }
+          uint32_t cal_duration_ms = millis() - id(cal_start_time);
+          if (cal_duration_ms < 500) {
+            ESP_LOGE("balance", "Calibration time too short!");
+            id(status_balance).publish_state("Cal Failed");
+            return;
+          }
+          id(balance_cal_duration_ms) = cal_duration_ms;
+          id(status_balance).publish_state("Enter Volume");
+          ESP_LOGI("balance", "Calibration timed: %u ms. Enter measured volume and update.", cal_duration_ms);
+          id(cal_pump_id) = 0;
+  - platform: template
+    name: "Balance Update Flow Rate"
+    id: button_balance_update_flow
+    icon: "mdi:calculator"
+    on_press:
+      - lambda: |-
+          if (id(balance_cal_duration_ms) == 0) {
+            ESP_LOGE("balance", "No calibration duration saved. Run calibration first.");
+            id(status_balance).publish_state("Calibrate First");
+            return;
+          }
+          float vol = id(number_balance_measured_volume).state;
+          float rate = vol / (id(balance_cal_duration_ms) / 1000.0f);
+          id(balance_flow_rate) = rate;
+          id(sensor_balance_flow_rate).publish_state(rate);
+          id(status_balance).publish_state("Stopped");
+          ESP_LOGI("balance", "Flow rate updated: %.2f ml/s", rate);
+  - platform: template
+    name: "Balance Dose Now"
+    id: button_balance_dose
+    icon: "mdi:eyedropper-variant"
+    on_press:
+      - script.execute: balance_dose_script
+
+  - platform: template
+    name: "All Pumps Emergency Stop"
+    icon: "mdi:alert-octagon"
+    on_press:
+      - switch.turn_off: motor_cleanse_power
+      - switch.turn_off: motor_core_power
+      - switch.turn_off: motor_bloom_power
+      - switch.turn_off: motor_balance_power
+      - script.stop: cleanse_dose_script
+      - script.stop: core_dose_script
+      - script.stop: bloom_dose_script
+      - script.stop: balance_dose_script
+
+# ===================================================================
+# ==                            SCRIPTS                            ==
+# ===================================================================
+script:
+  - id: cleanse_dose_script
+    mode: single
+    then:
+      - lambda: |-
+          if (id(cleanse_flow_rate) <= 0) {
+            ESP_LOGE("cleanse", "Cannot dose, flow rate is 0. Calibrate first.");
+            id(status_cleanse).publish_state("Needs Calibration");
+            return;
+          }
+          float dose_ml = id(number_cleanse_dose_amount).state;
+          float delay_s = dose_ml / id(cleanse_flow_rate);
+          id(status_cleanse).publish_state("Dosing " + std::to_string((int)dose_ml) + "ml");
+          ESP_LOGI("cleanse", "Dosing %.1f ml. Calculated run time: %.2f seconds.", dose_ml, delay_s);
+      - switch.turn_on: motor_cleanse_power
+      - delay: !lambda |-
+          return static_cast<uint32_t>((id(number_cleanse_dose_amount).state / id(cleanse_flow_rate)) * 1000.0f);
+      - switch.turn_off: motor_cleanse_power
+      - text_sensor.template.publish:
+          id: status_cleanse
+          state: "Stopped"
+      - lambda: |-
+          ESP_LOGI("cleanse", "Dosing complete.");
+  - id: core_dose_script
+    mode: single
+    then:
+      - lambda: |-
+          if (id(core_flow_rate) <= 0) {
+            ESP_LOGE("core", "Cannot dose, flow rate is 0. Calibrate first.");
+            id(status_core).publish_state("Needs Calibration");
+            return;
+          }
+          float dose_ml = id(number_core_dose_amount).state;
+          float delay_s = dose_ml / id(core_flow_rate);
+          id(status_core).publish_state("Dosing " + std::to_string((int)dose_ml) + "ml");
+          ESP_LOGI("core", "Dosing %.1f ml. Calculated run time: %.2f seconds.", dose_ml, delay_s);
+      - switch.turn_on: motor_core_power
+      - delay: !lambda |-
+          return static_cast<uint32_t>((id(number_core_dose_amount).state / id(core_flow_rate)) * 1000.0f);
+      - switch.turn_off: motor_core_power
+      - text_sensor.template.publish:
+          id: status_core
+          state: "Stopped"
+      - lambda: |-
+          ESP_LOGI("core", "Dosing complete.");
+  - id: bloom_dose_script
+    mode: single
+    then:
+      - lambda: |-
+          if (id(bloom_flow_rate) <= 0) {
+            ESP_LOGE("bloom", "Cannot dose, flow rate is 0. Calibrate first.");
+            id(status_bloom).publish_state("Needs Calibration");
+            return;
+          }
+          float dose_ml = id(number_bloom_dose_amount).state;
+          float delay_s = dose_ml / id(bloom_flow_rate);
+          id(status_bloom).publish_state("Dosing " + std::to_string((int)dose_ml) + "ml");
+          ESP_LOGI("bloom", "Dosing %.1f ml. Calculated run time: %.2f seconds.", dose_ml, delay_s);
+      - switch.turn_on: motor_bloom_power
+      - delay: !lambda |-
+          return static_cast<uint32_t>((id(number_bloom_dose_amount).state / id(bloom_flow_rate)) * 1000.0f);
+      - switch.turn_off: motor_bloom_power
+      - text_sensor.template.publish:
+          id: status_bloom
+          state: "Stopped"
+      - lambda: |-
+          ESP_LOGI("bloom", "Dosing complete.");
+  - id: balance_dose_script
+    mode: single
+    then:
+      - lambda: |-
+          if (id(balance_flow_rate) <= 0) {
+            ESP_LOGE("balance", "Cannot dose, flow rate is 0. Calibrate first.");
+            id(status_balance).publish_state("Needs Calibration");
+            return;
+          }
+          float dose_ml = id(number_balance_dose_amount).state;
+          float delay_s = dose_ml / id(balance_flow_rate);
+          id(status_balance).publish_state("Dosing " + std::to_string((int)dose_ml) + "ml");
+          ESP_LOGI("balance", "Dosing %.1f ml. Calculated run time: %.2f seconds.", dose_ml, delay_s);
+      - switch.turn_on: motor_balance_power
+      - delay: !lambda |-
+          return static_cast<uint32_t>((id(number_balance_dose_amount).state / id(balance_flow_rate)) * 1000.0f);
+      - switch.turn_off: motor_balance_power
+      - text_sensor.template.publish:
+          id: status_balance
+          state: "Stopped"
+      - lambda: |-
+          ESP_LOGI("balance", "Dosing complete.");

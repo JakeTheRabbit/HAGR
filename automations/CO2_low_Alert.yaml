@@ -1,0 +1,225 @@
+alias: CO2 Level Low Alert F1 - Android
+description: >
+  Alert when either the CO2 sensor (sensor.f1_scd410_back_left_co2) reads 300ppm
+  below the target (input_number.f1_co2_target_input) for over 5 minutes or when
+  switch.f1_co2 remains on for more than 5 minutes (indicating the CO2 tank is
+  finished). Sends actionable, cancellable notifications to your Android device.
+triggers:
+  - entity_id: sensor.f1_scd410_back_left_co2
+    below: 1000
+    for:
+      minutes: 5
+    trigger: numeric_state
+  - entity_id:
+      - switch.f1_co2
+    to: "on"
+    for:
+      hours: 0
+      minutes: 6
+      seconds: 0
+    trigger: state
+conditions:
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: |
+          {{ (states('sensor.f1_scd410_back_left_co2') | float)
+             < ((states('input_number.f1_co2_target_input') | float) - 300) }}
+      - condition: state
+        entity_id: switch.f1_co2
+        state: "on"
+  - condition: time
+    after: "14:10:00"
+    before: "02:00:00"
+actions:
+  - target:
+      entity_id: input_number.co2_notification_count
+    data:
+      value: 0
+    action: input_number.set_value
+  - data:
+      level: error
+      message: >
+        ALERT: CO2 or tank indicator triggered in F1 at {{
+        now().strftime('%Y-%m-%d %H:%M:%S') }}. Sensor: {{
+        states('sensor.f1_scd410_back_left_co2') }}ppm, Target: {{
+        states('input_number.f1_co2_target_input') }}ppm; Switch: {{
+        states('switch.f1_co2') }}.
+    action: system_log.write
+  - data:
+      title: ⚠️ CO2 LEVEL LOW / TANK FINISHED
+      message: >
+        CO2 in F1 is critically low or the CO2 tank indicator has been active as
+        of {{ now().strftime('%H:%M:%S') }}. Sensor: {{
+        states('sensor.f1_scd410_back_left_co2') }}ppm vs Target: {{
+        states('input_number.f1_co2_target_input') }}ppm. Please inspect and
+        manually replace the tank if needed.
+      notification_id: f1_co2_alert
+    action: persistent_notification.create
+  - data:
+      message: TTS
+      data:
+        ttl: 0
+        priority: high
+        media_stream: alarm_stream_max
+        tts_text: >
+          "Warning! CO2 levels in Flower Room 1 are critically low, or the tank
+          indicator is active. Please check and replace the CO2 tank manually if
+          needed. Sensor reading is {{ states('sensor.f1_scd410_back_left_co2')
+          }} ppm."
+    action: notify.mobile_app_s23ultra
+  - repeat:
+      sequence:
+        - target:
+            entity_id: input_number.co2_notification_count
+          action: input_number.increment
+          data: {}
+        - variables:
+            current_count: "{{ states('input_number.co2_notification_count') | int }}"
+        - data:
+            title: ⚠️ CO2 CRITICAL - F1 (Alert {{ current_count }}/10)
+            message: >
+              CO2 in F1 is critically low or the tank indicator is on! Sensor:
+              {{ states('sensor.f1_scd410_back_left_co2') }}ppm, Target: {{
+              states('input_number.f1_co2_target_input') }}ppm. Please check and
+              replace the tank as necessary.
+            data:
+              priority: high
+              ttl: 0
+              sticky: true
+              importance: high
+              channel: critical_alerts
+              tag: f1_co2_alert
+              actions:
+                - action: silence
+                  title: 🔕 Silence Alert
+                - action: navigate
+                  title: 🎯 Go to CO2 Dashboard
+                - action: acknowledge
+                  title: ✅ Acknowledge
+          action: notify.mobile_app_s23ultra
+        - wait_for_trigger:
+            - event_type: mobile_app_notification_action
+              event_data:
+                action: silence
+              trigger: event
+            - event_type: mobile_app_notification_action
+              event_data:
+                action: navigate
+              trigger: event
+            - event_type: mobile_app_notification_action
+              event_data:
+                action: acknowledge
+              trigger: event
+          timeout:
+            seconds: 30
+          continue_on_timeout: true
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: >
+                    {{ wait.trigger and wait.trigger.event.data.action ==
+                    'silence' }}
+              sequence:
+                - data:
+                    notification_id: f1_co2_alert
+                  action: persistent_notification.dismiss
+                - data:
+                    message: ⚠️ CO2 alert silenced. Check the tank when convenient.
+                  action: notify.mobile_app_s23ultra
+                - stop: true
+            - conditions:
+                - condition: template
+                  value_template: >
+                    {{ wait.trigger and wait.trigger.event.data.action ==
+                    'navigate' }}
+              sequence:
+                - data:
+                    message: command_webview
+                    data:
+                      command: /flower-1/env
+                  action: notify.mobile_app_s23ultra
+            - conditions:
+                - condition: template
+                  value_template: >
+                    {{ wait.trigger and wait.trigger.event.data.action ==
+                    'acknowledge' }}
+              sequence:
+                - data:
+                    notification_id: f1_co2_alert
+                  action: persistent_notification.dismiss
+                - data:
+                    title: ✅ CO2 ALERT ACKNOWLEDGED
+                    message: >
+                      The low CO2 condition in F1 was acknowledged at {{
+                      now().strftime('%H:%M:%S') }}. Please manually replace the
+                      CO2 tank.
+                    notification_id: f1_co2_acknowledged
+                  action: persistent_notification.create
+                - data:
+                    message: ✅ CO2 alert acknowledged. Monitoring will continue.
+                  action: notify.mobile_app_s23ultra
+                - stop: true
+          default:
+            - data:
+                message: TTS
+                data:
+                  ttl: 0
+                  priority: high
+                  media_stream: alarm_stream_max
+                  tts_text: >
+                    "Warning! CO2 levels in Flower Room 1 remain critically low.
+                    This is alert number {{ current_count }} of 10. Please check
+                    the tank immediately."
+              action: notify.mobile_app_s23ultra
+            - data:
+                title: ⚠️ UNACKNOWLEDGED CO2 ALERT
+                message: >
+                  No response received after {{ current_count }} alerts. Last
+                  check: {{ now().strftime('%H:%M:%S') }}. Sensor: {{
+                  states('sensor.f1_scd410_back_left_co2') }}ppm, Target: {{
+                  states('input_number.f1_co2_target_input') }}ppm. Immediate
+                  action is required!
+                notification_id: f1_co2_alert
+              action: persistent_notification.create
+        - delay:
+            minutes: 1
+      until:
+        - condition: or
+          conditions:
+            - condition: template
+              value_template: |
+                {{ (states('sensor.f1_scd410_back_left_co2') | float)
+                   >= ((states('input_number.f1_co2_target_input') | float) - 300) }}
+            - condition: template
+              value_template: "{{ states('input_number.co2_notification_count') | int >= 10 }}"
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: template
+                value_template: |
+                  {{ (states('sensor.f1_scd410_back_left_co2') | float)
+                     < ((states('input_number.f1_co2_target_input') | float) - 300) }}
+              - condition: state
+                entity_id: switch.f1_co2
+                state: "on"
+          - condition: template
+            value_template: "{{ states('input_number.co2_notification_count') | int >= 10 }}"
+        sequence:
+          - data:
+              title: ⚠️ CO2 ALERT ESCALATION NEEDED
+              message: >
+                Maximum alert attempts (10) reached for F1 CO2 low level as of
+                {{ now().strftime('%H:%M:%S') }}. Sensor: {{
+                states('sensor.f1_scd410_back_left_co2') }}ppm, Target: {{
+                states('input_number.f1_co2_target_input') }}ppm. MANUAL
+                intervention required!
+              notification_id: f1_co2_alert
+            action: persistent_notification.create
+          - data:
+              message: >-
+                Maximum CO2 alert attempts reached. Please replace the CO2 tank
+                manually!
+            action: notify.mobile_app_s23ultra
+mode: single

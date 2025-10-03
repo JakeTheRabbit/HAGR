@@ -349,22 +349,7 @@ flowchart TD
     CheckFinalpH -->|No| FailpH[FAIL: pH Out of Range<br/>Close All, LOCK]
     CheckFinalpH -->|Yes| Success[SUCCESS ✓<br/>All Parameters Good<br/>Close All, UNLOCK]
 
-    style Start fill:#90EE90
-    style Success fill:#90EE90
-    style ExitPerfect fill:#90EE90
-    style AbortLevel fill:#FFB6C1
-    style AbortEC fill:#FFB6C1
-    style AbortNoRise fill:#FFB6C1
-    style AbortPump fill:#FFB6C1
-    style AbortBalance fill:#FFB6C1
-    style AbortBloom fill:#FFB6C1
-    style AbortCore fill:#FFB6C1
-    style FailEC fill:#FFB6C1
-    style FailpH fill:#FFB6C1
-    style DoseBalance fill:#87CEEB
-    style DoseBloom fill:#87CEEB
-    style DoseCore fill:#87CEEB
-    style DoseCleanse fill:#87CEEB
+  
 ```
 
 ### Decision Points Explained

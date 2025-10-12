@@ -1,0 +1,169 @@
+#This is the yaml to setup the growlink terralink to an esp-atom lite. 
+#Grove blacK - Ground
+#Grove yellow - Terralink white
+#Grove red - Terralink red
+
+esphome:
+  name: terralink-1
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+
+ota:
+  - platform: esphome
+    password: "REPLACE_ME"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Terralink-Fallback"
+    password: "12345678"
+
+web_server:
+  port: 80
+  local: true
+  version: 2
+  include_internal: true
+
+# External components needed for single-wire SDI-12
+external_components:
+  - source: github://ssieb/esphome@uarthalf
+    components: [ uart ]
+    refresh: 1min
+  - source: github://ssieb/esphome_components@sdi12
+    components: [ sdi12 ]
+    refresh: 1min
+
+# Single-pin, half-duplex UART on GPIO26 (WHITE wire)
+uart:
+  - id: sdi12uart
+    tx_pin:
+      number: GPIO26
+      inverted: true        # SDI-12 uses inverted logic
+    baud_rate: 1200
+    data_bits: 7
+    parity: EVEN
+    stop_bits: 1
+    half_duplex: true       # single-wire bus
+    debug:
+      direction: BOTH
+      after:
+        timeout: 20ms
+      sequence:
+        - lambda: UARTDebug::log_string(direction, bytes);
+
+sdi12:
+  - id: sdibus
+    uart_id: sdi12uart
+
+# Optional: physical button & restart
+binary_sensor:
+  - platform: gpio
+    pin: GPIO39
+    name: "Physical Button"
+    id: physical_button
+    on_click:
+      min_length: 3s
+      max_length: 10s
+      then:
+        - switch.toggle: restart_switch
+
+switch:
+  - platform: restart
+    name: "Restart Device"
+    id: restart_switch
+
+# On-device selector for soil type
+select:
+  - platform: template
+    name: "Soil Type"
+    id: soil_type
+    options: ["Soilless", "Soil"]
+    initial_option: "Soilless"
+    optimistic: true
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+
+  # Terralink reply order: Address, SP, EC, Temp
+  - platform: sdi12
+    address: 1               # If no data, try 0, then 2..9
+    update_interval: 30s
+    sensors:
+      - index: 1
+        name: "Soil Permittivity (SP)"
+        id: soil_permittivity
+        accuracy_decimals: 2
+      - index: 2
+        name: "Bulk EC (raw)"
+        id: raw_ec
+        unit_of_measurement: "dS/m"
+        accuracy_decimals: 2
+      - index: 3
+        name: "Soil Temperature"
+        id: temperature
+        unit_of_measurement: "°C"
+        accuracy_decimals: 1
+
+  # VWC from SP (polynomials for Soilless vs Soil)
+  - platform: template
+    name: "VWC"
+    id: vwc
+    unit_of_measurement: "%"
+    icon: "mdi:water-percent"
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      float SP = id(soil_permittivity).state;
+      if (isnan(SP) || SP <= 0) return NAN;
+
+      float Slope3, Slope2, Slope1, Intercept;
+      if (id(soil_type).state == "Soil") {
+        Slope3 = 0.0000043f;
+        Slope2 = -0.00055f;
+        Slope1 = 0.0292f;
+        Intercept = -0.053f;
+      } else {  // Soilless (Rockwool, Coco)
+        Slope3 = 0.0000055728f;
+        Slope2 = -0.000640228f;
+        Slope1 = 0.0298804f;
+        Intercept = 0.0214996f;
+      }
+
+      float vwc = (Slope3*SP*SP*SP + Slope2*SP*SP + Slope1*SP + Intercept) * 100.0f;
+      if (vwc < 0) vwc = 0;
+      if (vwc > 100) vwc = 100;
+      return vwc;
+
+  # Pore EC (EC normalized to 25°C, multiplier clamped)
+  - platform: template
+    name: "Pore EC"
+    id: pore_ec
+    unit_of_measurement: "dS/m"
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      float EC = id(raw_ec).state;
+      float T  = id(temperature).state;
+      float SP = id(soil_permittivity).state;
+      if (isnan(EC) || isnan(T) || isnan(SP)) return NAN;
+
+      const float hilhorstOffset = 6.0f;
+      // Normalize EC to 25°C
+      float bulk_25 = EC / (1.0f + 0.019f * (T - 25.0f));
+      // Dielectric of pore water
+      float eps_p = 80.3f - 0.37f * (T - 20.0f);
+      float mult = eps_p / (SP - hilhorstOffset);
+
+      if (mult > 20.0f) mult = 20.0f;
+      if (mult < 0.0f)  mult = 20.0f;
+
+      return bulk_25 * mult;

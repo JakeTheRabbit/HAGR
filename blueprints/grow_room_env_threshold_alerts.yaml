@@ -1,0 +1,701 @@
+blueprint:
+  name: Grow Room - Day/Night Environmental Threshold Alerts (with selectable notify targets)
+  description: >
+    Checks a grow room's environmental sensors against separate Day/Night threshold helpers and sends
+    consolidated alerts when values are out of range.
+    Includes:
+      - Pause switch
+      - Day/Night schedule (input_datetime)
+      - Optional persistence confirmation delay
+      - Cooldown between notifications
+      - Notification targets selected via an Action input (supports multiple phones/devices)
+  domain: automation
+  input:
+    room_name:
+      name: Room name (for notifications)
+      default: "F1"
+      selector:
+        text: {}
+
+    alerts_paused:
+      name: Alerts Paused toggle
+      default: input_boolean.f1_environmental_alerts_paused
+      selector:
+        entity:
+          domain: input_boolean
+
+    day_start_time:
+      name: Day start time (lights on / day mode)
+      default: input_datetime.f1_co2_on_time
+      selector:
+        entity:
+          domain: input_datetime
+
+    night_start_time:
+      name: Night start time (lights off / night mode)
+      default: input_datetime.f1_co2_off_time
+      selector:
+        entity:
+          domain: input_datetime
+
+    check_interval_minutes:
+      name: Check interval (minutes)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          mode: slider
+          unit_of_measurement: minutes
+
+    confirm_persistence_minutes:
+      name: Confirm issue persists before notifying (minutes)
+      description: "If >0, waits this long and re-checks before sending an alert."
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          mode: slider
+          unit_of_measurement: minutes
+
+    cooldown_minutes:
+      name: Cooldown between notifications (minutes)
+      description: "Minimum time between notifications from this automation."
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 240
+          step: 1
+          mode: slider
+          unit_of_measurement: minutes
+
+    # -------------------- SENSORS --------------------
+    temperature_sensor:
+      name: Temperature sensor
+      default: sensor.growsensor_temperature
+      selector:
+        entity:
+          domain: sensor
+
+    humidity_sensor:
+      name: Humidity sensor
+      default: sensor.growsensor_humidity
+      selector:
+        entity:
+          domain: sensor
+
+    co2_sensor:
+      name: CO₂ sensor
+      default: sensor.f1_scd410_back_left_co2
+      selector:
+        entity:
+          domain: sensor
+
+    vpd_sensor:
+      name: VPD sensor
+      default: sensor.growsensor_vpd
+      selector:
+        entity:
+          domain: sensor
+
+    leaf_vpd_sensor:
+      name: Leaf VPD sensor
+      default: sensor.front_left_leaf_vpd
+      selector:
+        entity:
+          domain: sensor
+
+    vwc_sensor:
+      name: Substrate VWC sensor
+      default: sensor.f1_average_rockwool_vwc
+      selector:
+        entity:
+          domain: sensor
+
+    substrate_ec_sensor:
+      name: Substrate EC sensor
+      default: sensor.f1_average_rockwool_ec
+      selector:
+        entity:
+          domain: sensor
+
+    # -------------------- THRESHOLDS (TEMP) --------------------
+    day_temp_high:
+      name: Day Temp High threshold
+      default: input_number.f1_day_temp_high_alert
+      selector:
+        entity:
+          domain: input_number
+    day_temp_low:
+      name: Day Temp Low threshold
+      default: input_number.f1_day_temp_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_temp_high:
+      name: Night Temp High threshold
+      default: input_number.f1_night_temp_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_temp_low:
+      name: Night Temp Low threshold
+      default: input_number.f1_night_temp_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- THRESHOLDS (HUMIDITY) --------------------
+    day_humidity_high:
+      name: Day Humidity High threshold
+      default: input_number.f1_day_humidity_high_alert
+      selector:
+        entity:
+          domain: input_number
+    day_humidity_low:
+      name: Day Humidity Low threshold
+      default: input_number.f1_day_humidity_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_humidity_high:
+      name: Night Humidity High threshold
+      default: input_number.f1_night_humidity_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_humidity_low:
+      name: Night Humidity Low threshold
+      default: input_number.f1_night_humidity_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- THRESHOLDS (CO2) --------------------
+    day_co2_high:
+      name: Day CO₂ High threshold
+      default: input_number.f1_day_co2_high_alert
+      selector:
+        entity:
+          domain: input_number
+    day_co2_low:
+      name: Day CO₂ Low threshold
+      default: input_number.f1_day_co2_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_co2_high:
+      name: Night CO₂ High threshold
+      default: input_number.f1_night_co2_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_co2_low:
+      name: Night CO₂ Low threshold
+      default: input_number.f1_night_co2_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- THRESHOLDS (VPD) --------------------
+    day_vpd_high:
+      name: Day VPD High threshold
+      default: input_number.f1_day_vpd_high_alert
+      selector:
+        entity:
+          domain: input_number
+    day_vpd_low:
+      name: Day VPD Low threshold
+      default: input_number.f1_day_vpd_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_vpd_high:
+      name: Night VPD High threshold
+      default: input_number.f1_night_vpd_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_vpd_low:
+      name: Night VPD Low threshold
+      default: input_number.f1_night_vpd_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- THRESHOLDS (LEAF VPD) --------------------
+    day_leaf_vpd_high:
+      name: Day Leaf VPD High threshold
+      default: input_number.f1_day_leaf_vpd_high_alert
+      selector:
+        entity:
+          domain: input_number
+    day_leaf_vpd_low:
+      name: Day Leaf VPD Low threshold
+      default: input_number.f1_day_leaf_vpd_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_leaf_vpd_high:
+      name: Night Leaf VPD High threshold
+      default: input_number.f1_night_leaf_vpd_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_leaf_vpd_low:
+      name: Night Leaf VPD Low threshold
+      default: input_number.f1_night_leaf_vpd_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- THRESHOLDS (SOIL / SUBSTRATE) --------------------
+    day_vwc_low:
+      name: Day VWC Low threshold
+      description: "Set to 0 to effectively disable."
+      default: input_number.f1_day_vwc_low_alert
+      selector:
+        entity:
+          domain: input_number
+    night_vwc_low:
+      name: Night VWC Low threshold
+      description: "Set to 0 to effectively disable."
+      default: input_number.f1_night_vwc_low_alert
+      selector:
+        entity:
+          domain: input_number
+
+    day_substrate_ec_high:
+      name: Day Substrate EC High threshold
+      description: "Set to 0 to effectively disable."
+      default: input_number.f1_day_pwec_high_alert
+      selector:
+        entity:
+          domain: input_number
+    night_substrate_ec_high:
+      name: Night Substrate EC High threshold
+      description: "Set to 0 to effectively disable."
+      default: input_number.f1_night_pwec_high_alert
+      selector:
+        entity:
+          domain: input_number
+
+    # -------------------- NOTIFICATION TARGETS --------------------
+    notify_action:
+      name: Notification action(s)
+      description: >
+        Choose the notification(s) you want. You can add multiple "Send a notification" actions
+        (one per phone/device), or use a notify group service.
+        Use templates:
+          Title: {{ notification_title }}
+          Message: {{ notification_message }}
+      selector:
+        action: {}
+      default:
+        - service: notify.notify
+          data:
+            title: "{{ notification_title }}"
+            message: "{{ notification_message }}"
+
+    also_logbook:
+      name: Write a logbook entry too
+      default: true
+      selector:
+        boolean: {}
+
+mode: single
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+variables:
+  room_name: !input room_name
+  check_interval: !input check_interval_minutes
+  confirm_minutes: !input confirm_persistence_minutes
+  cooldown_minutes: !input cooldown_minutes
+
+  alerts_paused_entity: !input alerts_paused
+  day_start_entity: !input day_start_time
+  night_start_entity: !input night_start_time
+
+  t_sensor: !input temperature_sensor
+  rh_sensor: !input humidity_sensor
+  co2_sensor: !input co2_sensor
+  vpd_sensor: !input vpd_sensor
+  leaf_vpd_sensor: !input leaf_vpd_sensor
+  vwc_sensor: !input vwc_sensor
+  sub_ec_sensor: !input substrate_ec_sensor
+
+  # Threshold entity ids
+  day_temp_high_e: !input day_temp_high
+  day_temp_low_e: !input day_temp_low
+  night_temp_high_e: !input night_temp_high
+  night_temp_low_e: !input night_temp_low
+
+  day_rh_high_e: !input day_humidity_high
+  day_rh_low_e: !input day_humidity_low
+  night_rh_high_e: !input night_humidity_high
+  night_rh_low_e: !input night_humidity_low
+
+  day_co2_high_e: !input day_co2_high
+  day_co2_low_e: !input day_co2_low
+  night_co2_high_e: !input night_co2_high
+  night_co2_low_e: !input night_co2_low
+
+  day_vpd_high_e: !input day_vpd_high
+  day_vpd_low_e: !input day_vpd_low
+  night_vpd_high_e: !input night_vpd_high
+  night_vpd_low_e: !input night_vpd_low
+
+  day_leaf_vpd_high_e: !input day_leaf_vpd_high
+  day_leaf_vpd_low_e: !input day_leaf_vpd_low
+  night_leaf_vpd_high_e: !input night_leaf_vpd_high
+  night_leaf_vpd_low_e: !input night_leaf_vpd_low
+
+  day_vwc_low_e: !input day_vwc_low
+  night_vwc_low_e: !input night_vwc_low
+  day_sub_ec_high_e: !input day_substrate_ec_high
+  night_sub_ec_high_e: !input night_substrate_ec_high
+
+condition:
+  - condition: state
+    entity_id: !input alerts_paused
+    state: "off"
+
+  # Dynamic check interval without hardcoding time_pattern
+  - condition: template
+    value_template: "{{ (now().minute % (check_interval | int)) == 0 }}"
+
+action:
+  # --------- First evaluation ----------
+  - variables:
+      now_dt: "{{ now() }}"
+
+      day_start: >
+        {% set s = states(day_start_entity) %}
+        {% if ' ' in s %}
+          {{ as_datetime(s) }}
+        {% else %}
+          {{ today_at(s) }}
+        {% endif %}
+
+      night_start: >
+        {% set s = states(night_start_entity) %}
+        {% if ' ' in s %}
+          {{ as_datetime(s) }}
+        {% else %}
+          {{ today_at(s) }}
+        {% endif %}
+
+      is_day: >
+        {% if day_start < night_start %}
+          {{ day_start <= now_dt < night_start }}
+        {% else %}
+          {{ (now_dt >= day_start) or (now_dt < night_start) }}
+        {% endif %}
+
+      phase_label: "{{ 'Day' if is_day else 'Night' }}"
+
+      # Sensor values (None if unknown/unavailable)
+      t: "{{ states(t_sensor) | float(default=none) }}"
+      rh: "{{ states(rh_sensor) | float(default=none) }}"
+      co2: "{{ states(co2_sensor) | float(default=none) }}"
+      vpd: "{{ states(vpd_sensor) | float(default=none) }}"
+      leaf_vpd: "{{ states(leaf_vpd_sensor) | float(default=none) }}"
+      vwc: "{{ states(vwc_sensor) | float(default=none) }}"
+      sub_ec: "{{ states(sub_ec_sensor) | float(default=none) }}"
+
+      # Thresholds (Day/Night switch)
+      t_high: "{{ (states(day_temp_high_e) if is_day else states(night_temp_high_e)) | float(0) }}"
+      t_low:  "{{ (states(day_temp_low_e)  if is_day else states(night_temp_low_e))  | float(0) }}"
+
+      rh_high: "{{ (states(day_rh_high_e) if is_day else states(night_rh_high_e)) | float(0) }}"
+      rh_low:  "{{ (states(day_rh_low_e)  if is_day else states(night_rh_low_e))  | float(0) }}"
+
+      co2_high: "{{ (states(day_co2_high_e) if is_day else states(night_co2_high_e)) | float(0) }}"
+      co2_low:  "{{ (states(day_co2_low_e)  if is_day else states(night_co2_low_e))  | float(0) }}"
+
+      vpd_high: "{{ (states(day_vpd_high_e) if is_day else states(night_vpd_high_e)) | float(0) }}"
+      vpd_low:  "{{ (states(day_vpd_low_e)  if is_day else states(night_vpd_low_e))  | float(0) }}"
+
+      leaf_vpd_high: "{{ (states(day_leaf_vpd_high_e) if is_day else states(night_leaf_vpd_high_e)) | float(0) }}"
+      leaf_vpd_low:  "{{ (states(day_leaf_vpd_low_e)  if is_day else states(night_leaf_vpd_low_e))  | float(0) }}"
+
+      vwc_low_thresh: "{{ (states(day_vwc_low_e) if is_day else states(night_vwc_low_e)) | float(0) }}"
+      sub_ec_high_thresh: "{{ (states(day_sub_ec_high_e) if is_day else states(night_sub_ec_high_e)) | float(0) }}"
+
+      issues_text: >
+        {% set issues = [] %}
+
+        {# Temperature #}
+        {% if t is none %}
+          {% set _ = issues.append('Temperature sensor unavailable: ' ~ t_sensor) %}
+        {% else %}
+          {% if t < t_low %}
+            {% set _ = issues.append('Temperature LOW: ' ~ (t|round(1)) ~ '°C (min ' ~ (t_low|round(1)) ~ '°C)') %}
+          {% elif t > t_high %}
+            {% set _ = issues.append('Temperature HIGH: ' ~ (t|round(1)) ~ '°C (max ' ~ (t_high|round(1)) ~ '°C)') %}
+          {% endif %}
+        {% endif %}
+
+        {# Humidity #}
+        {% if rh is none %}
+          {% set _ = issues.append('Humidity sensor unavailable: ' ~ rh_sensor) %}
+        {% else %}
+          {% if rh < rh_low %}
+            {% set _ = issues.append('Humidity LOW: ' ~ (rh|round(1)) ~ '% (min ' ~ (rh_low|round(1)) ~ '%)') %}
+          {% elif rh > rh_high %}
+            {% set _ = issues.append('Humidity HIGH: ' ~ (rh|round(1)) ~ '% (max ' ~ (rh_high|round(1)) ~ '%)') %}
+          {% endif %}
+        {% endif %}
+
+        {# CO2 #}
+        {% if co2 is none %}
+          {% set _ = issues.append('CO₂ sensor unavailable: ' ~ co2_sensor) %}
+        {% else %}
+          {% if co2 < co2_low %}
+            {% set _ = issues.append('CO₂ LOW: ' ~ (co2|round(0)) ~ ' ppm (min ' ~ (co2_low|round(0)) ~ ' ppm)') %}
+          {% elif co2 > co2_high %}
+            {% set _ = issues.append('CO₂ HIGH: ' ~ (co2|round(0)) ~ ' ppm (max ' ~ (co2_high|round(0)) ~ ' ppm)') %}
+          {% endif %}
+        {% endif %}
+
+        {# VPD #}
+        {% if vpd is none %}
+          {% set _ = issues.append('VPD sensor unavailable: ' ~ vpd_sensor) %}
+        {% else %}
+          {% if vpd < vpd_low %}
+            {% set _ = issues.append('VPD LOW: ' ~ (vpd|round(2)) ~ ' kPa (min ' ~ (vpd_low|round(2)) ~ ' kPa)') %}
+          {% elif vpd > vpd_high %}
+            {% set _ = issues.append('VPD HIGH: ' ~ (vpd|round(2)) ~ ' kPa (max ' ~ (vpd_high|round(2)) ~ ' kPa)') %}
+          {% endif %}
+        {% endif %}
+
+        {# Leaf VPD #}
+        {% if leaf_vpd is none %}
+          {% set _ = issues.append('Leaf VPD sensor unavailable: ' ~ leaf_vpd_sensor) %}
+        {% else %}
+          {% if leaf_vpd < leaf_vpd_low %}
+            {% set _ = issues.append('Leaf VPD LOW: ' ~ (leaf_vpd|round(2)) ~ ' kPa (min ' ~ (leaf_vpd_low|round(2)) ~ ' kPa)') %}
+          {% elif leaf_vpd > leaf_vpd_high %}
+            {% set _ = issues.append('Leaf VPD HIGH: ' ~ (leaf_vpd|round(2)) ~ ' kPa (max ' ~ (leaf_vpd_high|round(2)) ~ ' kPa)') %}
+          {% endif %}
+        {% endif %}
+
+        {# VWC low (optional) #}
+        {% if vwc is none %}
+          {% set _ = issues.append('VWC sensor unavailable: ' ~ vwc_sensor) %}
+        {% else %}
+          {% if vwc_low_thresh > 0 and vwc < vwc_low_thresh %}
+            {% set _ = issues.append('Substrate VWC LOW: ' ~ (vwc|round(1)) ~ '% (min ' ~ (vwc_low_thresh|round(1)) ~ '%)') %}
+          {% endif %}
+        {% endif %}
+
+        {# Substrate EC high (optional) #}
+        {% if sub_ec is none %}
+          {% set _ = issues.append('Substrate EC sensor unavailable: ' ~ sub_ec_sensor) %}
+        {% else %}
+          {% if sub_ec_high_thresh > 0 and sub_ec > sub_ec_high_thresh %}
+            {% set _ = issues.append('Substrate EC HIGH: ' ~ (sub_ec|round(2)) ~ ' (max ' ~ (sub_ec_high_thresh|round(2)) ~ ')') %}
+          {% endif %}
+        {% endif %}
+
+        {{ issues | join('\n') }}
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ issues_text | trim != '' }}"
+        sequence:
+          # --------- Optional persistence confirmation ----------
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ (confirm_minutes | int) > 0 }}"
+                sequence:
+                  - delay:
+                      minutes: "{{ confirm_minutes | int }}"
+                  # Re-evaluate after delay (overwrite issues_text etc.)
+                  - variables:
+                      now_dt: "{{ now() }}"
+
+                      day_start: >
+                        {% set s = states(day_start_entity) %}
+                        {% if ' ' in s %}
+                          {{ as_datetime(s) }}
+                        {% else %}
+                          {{ today_at(s) }}
+                        {% endif %}
+
+                      night_start: >
+                        {% set s = states(night_start_entity) %}
+                        {% if ' ' in s %}
+                          {{ as_datetime(s) }}
+                        {% else %}
+                          {{ today_at(s) }}
+                        {% endif %}
+
+                      is_day: >
+                        {% if day_start < night_start %}
+                          {{ day_start <= now_dt < night_start }}
+                        {% else %}
+                          {{ (now_dt >= day_start) or (now_dt < night_start) }}
+                        {% endif %}
+
+                      phase_label: "{{ 'Day' if is_day else 'Night' }}"
+
+                      t: "{{ states(t_sensor) | float(default=none) }}"
+                      rh: "{{ states(rh_sensor) | float(default=none) }}"
+                      co2: "{{ states(co2_sensor) | float(default=none) }}"
+                      vpd: "{{ states(vpd_sensor) | float(default=none) }}"
+                      leaf_vpd: "{{ states(leaf_vpd_sensor) | float(default=none) }}"
+                      vwc: "{{ states(vwc_sensor) | float(default=none) }}"
+                      sub_ec: "{{ states(sub_ec_sensor) | float(default=none) }}"
+
+                      t_high: "{{ (states(day_temp_high_e) if is_day else states(night_temp_high_e)) | float(0) }}"
+                      t_low:  "{{ (states(day_temp_low_e)  if is_day else states(night_temp_low_e))  | float(0) }}"
+                      rh_high: "{{ (states(day_rh_high_e) if is_day else states(night_rh_high_e)) | float(0) }}"
+                      rh_low:  "{{ (states(day_rh_low_e)  if is_day else states(night_rh_low_e))  | float(0) }}"
+                      co2_high: "{{ (states(day_co2_high_e) if is_day else states(night_co2_high_e)) | float(0) }}"
+                      co2_low:  "{{ (states(day_co2_low_e)  if is_day else states(night_co2_low_e))  | float(0) }}"
+                      vpd_high: "{{ (states(day_vpd_high_e) if is_day else states(night_vpd_high_e)) | float(0) }}"
+                      vpd_low:  "{{ (states(day_vpd_low_e)  if is_day else states(night_vpd_low_e))  | float(0) }}"
+                      leaf_vpd_high: "{{ (states(day_leaf_vpd_high_e) if is_day else states(night_leaf_vpd_high_e)) | float(0) }}"
+                      leaf_vpd_low:  "{{ (states(day_leaf_vpd_low_e)  if is_day else states(night_leaf_vpd_low_e))  | float(0) }}"
+                      vwc_low_thresh: "{{ (states(day_vwc_low_e) if is_day else states(night_vwc_low_e)) | float(0) }}"
+                      sub_ec_high_thresh: "{{ (states(day_sub_ec_high_e) if is_day else states(night_sub_ec_high_e)) | float(0) }}"
+
+                      issues_text: >
+                        {% set issues = [] %}
+
+                        {% if t is none %}
+                          {% set _ = issues.append('Temperature sensor unavailable: ' ~ t_sensor) %}
+                        {% else %}
+                          {% if t < t_low %}
+                            {% set _ = issues.append('Temperature LOW: ' ~ (t|round(1)) ~ '°C (min ' ~ (t_low|round(1)) ~ '°C)') %}
+                          {% elif t > t_high %}
+                            {% set _ = issues.append('Temperature HIGH: ' ~ (t|round(1)) ~ '°C (max ' ~ (t_high|round(1)) ~ '°C)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if rh is none %}
+                          {% set _ = issues.append('Humidity sensor unavailable: ' ~ rh_sensor) %}
+                        {% else %}
+                          {% if rh < rh_low %}
+                            {% set _ = issues.append('Humidity LOW: ' ~ (rh|round(1)) ~ '% (min ' ~ (rh_low|round(1)) ~ '%)') %}
+                          {% elif rh > rh_high %}
+                            {% set _ = issues.append('Humidity HIGH: ' ~ (rh|round(1)) ~ '% (max ' ~ (rh_high|round(1)) ~ '%)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if co2 is none %}
+                          {% set _ = issues.append('CO₂ sensor unavailable: ' ~ co2_sensor) %}
+                        {% else %}
+                          {% if co2 < co2_low %}
+                            {% set _ = issues.append('CO₂ LOW: ' ~ (co2|round(0)) ~ ' ppm (min ' ~ (co2_low|round(0)) ~ ' ppm)') %}
+                          {% elif co2 > co2_high %}
+                            {% set _ = issues.append('CO₂ HIGH: ' ~ (co2|round(0)) ~ ' ppm (max ' ~ (co2_high|round(0)) ~ ' ppm)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if vpd is none %}
+                          {% set _ = issues.append('VPD sensor unavailable: ' ~ vpd_sensor) %}
+                        {% else %}
+                          {% if vpd < vpd_low %}
+                            {% set _ = issues.append('VPD LOW: ' ~ (vpd|round(2)) ~ ' kPa (min ' ~ (vpd_low|round(2)) ~ ' kPa)') %}
+                          {% elif vpd > vpd_high %}
+                            {% set _ = issues.append('VPD HIGH: ' ~ (vpd|round(2)) ~ ' kPa (max ' ~ (vpd_high|round(2)) ~ ' kPa)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if leaf_vpd is none %}
+                          {% set _ = issues.append('Leaf VPD sensor unavailable: ' ~ leaf_vpd_sensor) %}
+                        {% else %}
+                          {% if leaf_vpd < leaf_vpd_low %}
+                            {% set _ = issues.append('Leaf VPD LOW: ' ~ (leaf_vpd|round(2)) ~ ' kPa (min ' ~ (leaf_vpd_low|round(2)) ~ ' kPa)') %}
+                          {% elif leaf_vpd > leaf_vpd_high %}
+                            {% set _ = issues.append('Leaf VPD HIGH: ' ~ (leaf_vpd|round(2)) ~ ' kPa (max ' ~ (leaf_vpd_high|round(2)) ~ ' kPa)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if vwc is none %}
+                          {% set _ = issues.append('VWC sensor unavailable: ' ~ vwc_sensor) %}
+                        {% else %}
+                          {% if vwc_low_thresh > 0 and vwc < vwc_low_thresh %}
+                            {% set _ = issues.append('Substrate VWC LOW: ' ~ (vwc|round(1)) ~ '% (min ' ~ (vwc_low_thresh|round(1)) ~ '%)') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {% if sub_ec is none %}
+                          {% set _ = issues.append('Substrate EC sensor unavailable: ' ~ sub_ec_sensor) %}
+                        {% else %}
+                          {% if sub_ec_high_thresh > 0 and sub_ec > sub_ec_high_thresh %}
+                            {% set _ = issues.append('Substrate EC HIGH: ' ~ (sub_ec|round(2)) ~ ' (max ' ~ (sub_ec_high_thresh|round(2)) ~ ')') %}
+                          {% endif %}
+                        {% endif %}
+
+                        {{ issues | join('\n') }}
+
+          # If issues cleared during confirmation window, stop.
+          - condition: template
+            value_template: "{{ issues_text | trim != '' }}"
+
+          # --------- Cooldown + message composition ----------
+          - variables:
+              last_trig: "{{ this.attributes.last_triggered }}"
+              cooldown_ok: >
+                {% if (cooldown_minutes | int) == 0 %}
+                  true
+                {% elif last_trig is none %}
+                  true
+                {% else %}
+                  {{ (as_timestamp(now()) - as_timestamp(last_trig)) > ((cooldown_minutes|int) * 60) }}
+                {% endif %}
+
+              issue_count: >
+                {% if issues_text | trim == '' %}
+                  0
+                {% else %}
+                  {{ issues_text.split('\n') | length }}
+                {% endif %}
+
+              notification_title: >
+                {{ room_name }} Env Alert ({{ phase_label }}) - {{ issue_count }} issue(s)
+
+              notification_message: >-
+                Time: {{ now().strftime('%Y-%m-%d %H:%M') }}
+                Mode: {{ phase_label }}
+
+                Issues:
+                {{ issues_text }}
+
+                Current:
+                Temp={{ (t|round(1)) if t is not none else 'NA' }}°C ({{ t_low|round(1) }}–{{ t_high|round(1) }})
+                RH={{ (rh|round(1)) if rh is not none else 'NA' }}% ({{ rh_low|round(1) }}–{{ rh_high|round(1) }})
+                CO₂={{ (co2|round(0)) if co2 is not none else 'NA' }} ppm ({{ co2_low|round(0) }}–{{ co2_high|round(0) }})
+                VPD={{ (vpd|round(2)) if vpd is not none else 'NA' }} kPa ({{ vpd_low|round(2) }}–{{ vpd_high|round(2) }})
+                LeafVPD={{ (leaf_vpd|round(2)) if leaf_vpd is not none else 'NA' }} kPa ({{ leaf_vpd_low|round(2) }}–{{ leaf_vpd_high|round(2) }})
+                VWC={{ (vwc|round(1)) if vwc is not none else 'NA' }}% (min {{ vwc_low_thresh|round(1) }})
+                SubEC={{ (sub_ec|round(2)) if sub_ec is not none else 'NA' }} (max {{ sub_ec_high_thresh|round(2) }})
+
+          - condition: template
+            value_template: "{{ cooldown_ok }}"
+
+          # --------- Notify (user-selected phones/devices) ----------
+          - !input notify_action
+
+          # --------- Optional logbook ----------
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ !input also_logbook }}"
+                sequence:
+                  - service: logbook.log
+                    data:
+                      name: "{{ room_name }} Environment Alert"
+                      message: "{{ issues_text }}"

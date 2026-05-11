@@ -54,7 +54,7 @@ substitutions:
   # Set "false" to disable Automatic Self-Calibration (then re-flash).
   # ASC assumes the sensor sees fresh outdoor air (~420 ppm) at least
   # once a week — disable for sealed grow rooms or CO2-enriched spaces.
-  automatic_self_calibration: "true"
+  automatic_self_calibration: "false"
   # Reference ppm value used by the "Perform Forced Calibration" button.
   # Standard outdoor reference is 420. To calibrate against a different
   # value (e.g. a known reference gas), change this and reflash.

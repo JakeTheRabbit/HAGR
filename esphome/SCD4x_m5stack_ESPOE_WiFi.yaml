@@ -119,8 +119,17 @@ i2c:
 #   scl: GPIO32
 #   scan: true
 
-# ── Logging / API / OTA ──────────────────────────────────────────────
+# ── Logging / Web / API / OTA ────────────────────────────────────────
 logger:
+
+# Built-in web UI (ESPHome web_server v3 — Vue-based dashboard, log
+# viewer, OTA upload). Reachable at http://<device-ip>/
+# Loads assets from CDN by default; uncomment `local: true` to embed
+# the assets in firmware for offline networks (costs extra flash).
+web_server:
+  port: 80
+  version: 3
+  # local: true
 
 api:
   encryption:

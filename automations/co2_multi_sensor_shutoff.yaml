@@ -1,0 +1,58 @@
+# ==============================================================================
+# Automation: CO2 Multi-Sensor Emergency Shutoff
+# ------------------------------------------------------------------------------
+# Closes the CO2 solenoid as soon as any of the listed CO2 sensors reads above
+# the danger threshold. Safety-net automation that runs even if the bang-bang
+# or pulsed CO2 control loop has gone wrong.
+#
+# Why multi-sensor:
+#   In a sealed room with active circulation, CO2 stratifies. Single-sensor
+#   shutoff misses a pocket of high CO2 near the canopy if the sensor is on
+#   the floor (and vice versa). Triggering on the max across N sensors catches
+#   the worst-case reading.
+#
+# Threshold rationale:
+#   - 1500 ppm is the common upper limit for cannabis enrichment.
+#   - 1800-2000 ppm is the typical "emergency cut" — diminishing benefit for
+#     plants and starting to be a real concern for humans in the room.
+#   - OSHA TWA is 5000 ppm, STEL 30,000 ppm. The 1800 ppm cut here is a
+#     generous plant safety margin and a hard ceiling for people.
+#
+# SITE: replace sensor.YOUR_CO2_SENSOR_* and switch.YOUR_CO2_SOLENOID.
+# ==============================================================================
+alias: CO2 Multi-Sensor Emergency Shutoff
+description: >
+  Close the CO2 solenoid when any room CO2 sensor reads above 1800 ppm. Sends
+  a critical notification with the sensor name and reading.
+mode: single
+max_exceeded: silent
+
+trigger:
+  - trigger: numeric_state
+    entity_id:
+      - sensor.YOUR_CO2_SENSOR_1
+      - sensor.YOUR_CO2_SENSOR_2
+      - sensor.YOUR_CO2_SENSOR_3
+      - sensor.YOUR_CO2_SENSOR_4
+    above: 1800
+
+action:
+  - alias: Close CO2 solenoid
+    action: switch.turn_off
+    target:
+      entity_id: switch.YOUR_CO2_SOLENOID
+
+  - alias: Critical notification
+    action: notify.notify                  # SITE: replace with your notify target
+    data:
+      title: "CO2 critical — solenoid closed"
+      message: >
+        {{ trigger.to_state.attributes.friendly_name }} read
+        {{ trigger.to_state.state }} ppm. CO2 solenoid closed.
+        Check regulator and tank.
+      data:
+        push:
+          sound:
+            name: default
+            critical: 1
+            volume: 1.0

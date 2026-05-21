@@ -1,0 +1,67 @@
+# ==============================================================================
+# Automation: Light Leak Detection (critical)
+# ------------------------------------------------------------------------------
+# When any ambient-light sensor reads above the threshold while the grow lights
+# are supposed to be OFF, this automation:
+#   1. Turns off the grow-light group (in case the lights themselves got left
+#      on by a stuck schedule, manual override, or relay fault).
+#   2. Fires a critical notification with the sensor name and reading.
+#
+# Why this is the single highest-stakes automation in a flowering room:
+#   Photoperiod plants (cannabis included) flower in response to uninterrupted
+#   dark periods. One hour of light leak in week 8 of flower can re-veg or
+#   hermie a crop. Nothing else here is more important than this firing.
+#
+# Conditions:
+#   Gated by a lights-on binary_sensor that's ON while your grow lights are
+#   meant to be on. The simplest pattern is a template binary_sensor wrapping
+#   your light group's state, e.g.:
+#       template:
+#         - binary_sensor:
+#             - name: "Grow Lights On"
+#               state: "{{ is_state('light.YOUR_GROW_LIGHTS', 'on') }}"
+#
+# Tuning:
+#   1 lux is sensitive. If equipment LEDs cause false positives, raise to
+#   5-10 lux or add `for: minutes: 1` persistence to the trigger.
+#
+# SITE: replace sensor.YOUR_AMBIENT_LIGHT_SENSOR_* and light.YOUR_GROW_LIGHTS.
+# ==============================================================================
+alias: Light Leak Detection
+description: >
+  Critical alert if an ambient-light sensor reads above the threshold during
+  the dark period. Forces the grow lights off and notifies operators.
+mode: single
+
+trigger:
+  - trigger: numeric_state
+    entity_id:
+      - sensor.YOUR_AMBIENT_LIGHT_SENSOR_1
+      - sensor.YOUR_AMBIENT_LIGHT_SENSOR_2     # add more as needed; remove if you only have one
+    above: 1
+
+condition:
+  - condition: state
+    entity_id: binary_sensor.YOUR_LIGHTS_ON_SENSOR     # SITE: replace
+    state: "off"
+
+action:
+  - alias: "Turn off grow lights — they should not be on right now"
+    action: light.turn_off
+    target:
+      entity_id: light.YOUR_GROW_LIGHTS
+
+  - alias: "Critical notification"
+    action: notify.notify                       # SITE: replace with your notify target
+    data:
+      title: "Light leak detected"
+      message: >
+        Light detected at {{ now().strftime('%I:%M %p') }}:
+        {{ trigger.to_state.attributes.friendly_name }} reads
+        {{ trigger.to_state.state }} lux. Grow lights forced off.
+      data:
+        push:
+          sound:
+            name: default
+            critical: 1
+            volume: 1.0

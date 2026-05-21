@@ -237,16 +237,16 @@ actions:
           - condition: or
             conditions:
               - condition: numeric_state
-                entity_id: sensor.atlas_legacy_1_ph_res1
+                entity_id: sensor.atlas_hydro_1_ph_res1
                 below: 5.8
               - condition: numeric_state
-                entity_id: sensor.atlas_legacy_1_ph_res1
+                entity_id: sensor.atlas_hydro_1_ph_res1
                 above: 6.2
         sequence:
           - data:
               message: >-
                 CRITICAL ALERT: pH out of range! Current pH: {{
-                states('sensor.atlas_legacy_1_ph_res1') }}. Should be between
+                states('sensor.atlas_hydro_1_ph_res1') }}. Should be between
                 5.80-6.20.
               title: pH Value Out of Range
               data:
@@ -261,16 +261,16 @@ actions:
           - condition: or
             conditions:
               - condition: numeric_state
-                entity_id: sensor.atlas_legacy_1_ec_res1
+                entity_id: sensor.atlas_hydro_1_ec_res1
                 below: 2.8
               - condition: numeric_state
-                entity_id: sensor.atlas_legacy_1_ec_res1
+                entity_id: sensor.atlas_hydro_1_ec_res1
                 above: 3.2
         sequence:
           - data:
               message: >-
                 CRITICAL ALERT: EC out of range! Current EC: {{
-                states('sensor.atlas_legacy_1_ec_res1') }}. Should be between
+                states('sensor.atlas_hydro_1_ec_res1') }}. Should be between
                 2.80-3.20.
               title: EC Value Out of Range
               data:
@@ -283,8 +283,8 @@ actions:
             action: notify.mobile_app_s23ultra
   - data:
       message: >-
-        Process complete - pH: {{ states('sensor.atlas_legacy_1_ph_res1') }},
-        EC: {{ states('sensor.atlas_legacy_1_ec_res1') }}
+        Process complete - pH: {{ states('sensor.atlas_hydro_1_ph_res1') }},
+        EC: {{ states('sensor.atlas_hydro_1_ec_res1') }}
       data:
         tag: tank_fill_process
     action: notify.mobile_app_s23ultra

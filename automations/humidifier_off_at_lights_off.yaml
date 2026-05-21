@@ -1,0 +1,41 @@
+# ==============================================================================
+# Automation: Humidifier Off at Lights Off
+# ------------------------------------------------------------------------------
+# Forces the humidifier plug(s) off the moment lights go off. Small change,
+# big effect.
+#
+# Why it matters:
+#   Dark-period RH should usually sit 5-10% lower than lights-on RH (typical
+#   cannabis dark target 55-60%, lights-on 60-65% mid-veg, lower in flower).
+#   A humidifier on a static setpoint will fight the natural RH rise that
+#   happens as the room cools at lights-off, oversaturating the canopy and
+#   inviting mildew.
+#
+#   Hard-pinning the humidifier OFF at lights-off lets the dehumidifiers run
+#   the dark period uncontested.
+#
+# Pair with:
+#   - blueprints/grow_room_env_threshold_alerts.yaml — separate day/night RH
+#     thresholds for alerting.
+#
+# SITE: replace switch.YOUR_HUMIDIFIER_* and binary_sensor.YOUR_LIGHTS_ON_SENSOR.
+# (For the lights-on sensor, the simplest pattern is a template binary_sensor
+#  wrapping your grow-light group's state.)
+# ==============================================================================
+alias: Humidifier Off at Lights Off
+description: >
+  Force humidifier plug(s) off when the lights-on binary sensor goes to off.
+  Stops the humidifier fighting the natural dark-period RH rise.
+mode: single
+
+trigger:
+  - trigger: state
+    entity_id: binary_sensor.YOUR_LIGHTS_ON_SENSOR     # SITE: replace
+    to: "off"
+
+action:
+  - action: switch.turn_off
+    target:
+      entity_id:
+        - switch.YOUR_HUMIDIFIER_1
+        - switch.YOUR_HUMIDIFIER_2          # remove or add more as needed

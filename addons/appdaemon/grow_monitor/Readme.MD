@@ -1,20 +1,20 @@
-# 🤖 Grow Room AI Monitor v3.1 for Home Assistant
+#  Grow Room AI Monitor v3.1 for Home Assistant
 
 An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI-powered **situation summaries**, smart error detection, configurable alert muting, and spam-free notifications.
 
-## 🚀 Feature Summary
+##  Feature Summary
 
-### 🌱 Advanced Environmental Monitoring
+###  Advanced Environmental Monitoring
 - **7 Sensor Types**: Temperature, Humidity, CO₂, VPD, Leaf VPD, VWC (Volumetric Water Content), pwEC (Pore Water Electrical Conductivity).
 - **Day/Night Awareness**: Different thresholds for lights-on / lights-off periods.
 - **Trend Analysis**: Calculates sensor trends (RAPID_RISE, STABLE, etc.) to inform alert severity.
 - **Centralized Entity Configuration**: All Home Assistant entities easily defined in `grow_monitor.py`.
 
-### 🧠 AI-Powered Intelligence
+###  AI-Powered Intelligence
 - **OpenAI Integration**: Provides concise AI-generated summaries of current environmental issues in notifications (describes *what* is wrong, not how to fix it).
 - **Periodic AI Trend Analysis**: A framework for future enhancements to analyze overall trends (currently logs a placeholder).
 
-### 🚨 Intelligent Alert System
+###  Intelligent Alert System
 - **Smart Summary Notifications**: Consolidates multiple active alerts into a single notification. Notifications use a consistent tag to replace previous ones.
 - **Configurable Severity Levels**: IGNORE, NORMAL, URGENT, CRITICAL, based on violation duration and trend.
 - **Intelligent Rate Limiting**:
@@ -27,12 +27,12 @@ An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI
 - **Per-Sensor Muting:** Temporarily silence alerts for specific sensors if an issue is known or non-critical.
 - **Persistent State**: Remembers user-muted sensors and notification cooldown states across AppDaemon restarts (via a `.pkl` data file).
 
-### 💾 Architecture
+###  Architecture
 - **Python State Management**: Core logic and alert states managed within the Python script.
 - **Rolling Data Buffers**: Maintains recent sensor history for trend calculation.
 - **Event-Driven & Scheduled Tasks**: Responds to sensor updates and performs periodic checks.
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Home Assistant with the AppDaemon add-on.
 - Environmental sensor entities configured in Home Assistant for all monitored parameters.
@@ -43,7 +43,7 @@ An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI
 - (Optional) OpenAI API Key for AI-generated notification summaries.
 - A Home Assistant Script (`script.grow_monitor_mute_sensor`) for handling notification mute actions.
 
-## 🛠️ Installation & Configuration
+## ️ Installation & Configuration
 
 ### 1. File Placement
    - **`grow_monitor.py` (v3.1 script):** Place in your active AppDaemon apps directory. Based on current logs for many HAOS/Supervised setups, this is likely:
@@ -297,7 +297,7 @@ At the top, find the ENTITIES dictionary.
 Update all entity IDs here to match your specific Home Assistant entities (sensors, and the helpers you just created with YOUR_PREFIX_).
 6. Restart AppDaemon
 After all files and entities are configured, restart the AppDaemon addon from the Home Assistant UI.
-🔧 Using the Monitor
+ Using the Monitor
 Automatic Operation: The script runs in the background.
 Notifications:
 
@@ -307,7 +307,7 @@ Actions: "Mute [Sensor] (1h)", "Mute [Sensor] (6h)", "Pause ALL Alerts".
 
 Muting: Clicking a mute action silences that specific sensor for the chosen duration. The overall notification system will also enter a 6-hour quiet period (new critical alerts still come through).
 Global Pause: Toggle the alerts_paused input_boolean in HA or use the notification action.
-📈 Alert Severity & Cooldowns
+ Alert Severity & Cooldowns
 Severity Levels: IGNORE, NORMAL, URGENT, CRITICAL (determined by violation duration and trend).
 
 A violation must typically last >= 60 seconds to become "NORMAL" severity.
@@ -320,9 +320,9 @@ After Acknowledgment (Mute): 6 hours quiet period.
 New Critical Alerts: Bypass cooldowns.
 
 
-💾 Data Persistence
+ Data Persistence
 The script saves its state (muted sensors, last notification times) to grow_monitor_data.pkl in its app_dir (e.g., /config/apps/grow_monitor_data.pkl). This allows state to survive AppDaemon restarts.
-🐛 Troubleshooting
+ Troubleshooting
 No Notifications:
 
 Check AppDaemon logs for errors.
@@ -350,6 +350,6 @@ Log Timestamps Incorrect:
 Ensure time_zone in the appdaemon.yaml that AppDaemon is actually reading is set to your local timezone.
 
 
-🌿 Monitor your grow environment effectively with intelligent, summarized, and actionable alerts!Version: 3.1
+ Monitor your grow environment effectively with intelligent, summarized, and actionable alerts!Version: 3.1
 Last Updated: May 24, 2025
 Compatibility: Home Assistant 2023.x+, AppDaemon 4.x+

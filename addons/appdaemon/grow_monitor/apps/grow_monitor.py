@@ -110,28 +110,28 @@ class GrowRoomAIMonitor(hass.Hass):
         self.run_every(self.save_persistent_data, "now+60", 60) 
         self.run_every(self.system_health_check, "now+3600", 3600) 
         
-        self.log(f"🌿 Grow Room Monitor v3.1 initialized. Smart notifications active. Monitoring {len(self.sensors_config)} sensors. Data file: {self.data_file}")
+        self.log(f" Grow Room Monitor v3.1 initialized. Smart notifications active. Monitoring {len(self.sensors_config)} sensors. Data file: {self.data_file}")
 
     def startup_diagnostics(self):
-        self.log("🔍 Running startup diagnostics...")
+        self.log(" Running startup diagnostics...")
         pause_state = self.get_state(self.ENTITIES['alerts_paused'])
-        self.log(f"🔔 Global alerts paused: {pause_state}")
+        self.log(f" Global alerts paused: {pause_state}")
         
-        if self.ai_enabled: self.log("🤖 AI analysis enabled")
-        else: self.log("⚠️ AI analysis disabled - no OpenAI API key")
+        if self.ai_enabled: self.log(" AI analysis enabled")
+        else: self.log("️ AI analysis disabled - no OpenAI API key")
         
         sensors_ok = sum(1 for cfg in self.sensors_config.values() if self.get_state(cfg['entity']) not in [None, 'unavailable', 'unknown'])
-        self.log(f"📡 Sensors reporting: {sensors_ok}/{len(self.sensors_config)}")
+        self.log(f" Sensors reporting: {sensors_ok}/{len(self.sensors_config)}")
         
-        if self.user_muted_sensors: self.log(f"🔇 Loaded user-muted sensors: {list(self.user_muted_sensors.keys())}")
-        else: self.log("✅ No user-muted sensors loaded.")
+        if self.user_muted_sensors: self.log(f" Loaded user-muted sensors: {list(self.user_muted_sensors.keys())}")
+        else: self.log(" No user-muted sensors loaded.")
 
     def sensor_updated(self, entity, attribute, old, new, kwargs):
         sensor_name = kwargs['sensor_name']
         try:
             current_value = float(new)
         except (ValueError, TypeError):
-            self.log(f"⚠️ Invalid sensor value for {sensor_name}: {new}")
+            self.log(f"️ Invalid sensor value for {sensor_name}: {new}")
             return
         
         now_utc = datetime.now(timezone.utc)
@@ -149,7 +149,7 @@ class GrowRoomAIMonitor(hass.Hass):
         # Check if sensor is user-muted
         if sensor_name in self.user_muted_sensors and now_utc < self.user_muted_sensors[sensor_name]:
             if sensor_data['is_alerting']: 
-                self.log(f"🔇 Sensor {sensor_name} is user-muted. Clearing active alert.")
+                self.log(f" Sensor {sensor_name} is user-muted. Clearing active alert.")
                 sensor_data['is_alerting'] = False
                 sensor_data['alert_start_time'] = None
                 if sensor_name in self.active_alerts_summary:
@@ -169,7 +169,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 if not sensor_data['is_alerting']: 
                     sensor_data['is_alerting'] = True
                     sensor_data['alert_start_time'] = now_utc
-                    self.log(f"❗ New alert for {sensor_name}: {severity}, Value: {current_value:.2f}, Trend: {trend}")
+                    self.log(f" New alert for {sensor_name}: {severity}, Value: {current_value:.2f}, Trend: {trend}")
                     if severity == "CRITICAL":
                         self.new_critical_alert_pending = True # Flag for immediate notification
                 
@@ -182,7 +182,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 )
             else: # Severity is IGNORE
                 if sensor_data['is_alerting']: # If it was alerting, clear it
-                    self.log(f"✅ Sensor {sensor_name} violation now IGNORE severity. Clearing alert.")
+                    self.log(f" Sensor {sensor_name} violation now IGNORE severity. Clearing alert.")
                     sensor_data['is_alerting'] = False
                     sensor_data['alert_start_time'] = None
                     if sensor_name in self.active_alerts_summary:
@@ -190,7 +190,7 @@ class GrowRoomAIMonitor(hass.Hass):
                 sensor_data['violation_count'] = 0 # Reset count if ignored
         else: # No violation
             if sensor_data['is_alerting']: # If it was alerting, clear it
-                self.log(f"✅ Sensor {sensor_name} returned to normal. Clearing alert.")
+                self.log(f" Sensor {sensor_name} returned to normal. Clearing alert.")
                 sensor_data['is_alerting'] = False
                 sensor_data['alert_start_time'] = None
                 if sensor_name in self.active_alerts_summary:
@@ -202,7 +202,7 @@ class GrowRoomAIMonitor(hass.Hass):
         
         # Check global AppDaemon pause switch
         if self.get_state(self.ENTITIES['alerts_paused']) == 'on':
-            # self.log("⏸️ Global alerts paused via input_boolean. No summary notification.") # Can be noisy
+            # self.log("️ Global alerts paused via input_boolean. No summary notification.") # Can be noisy
             return
 
         if not self.active_alerts_summary:
@@ -216,13 +216,13 @@ class GrowRoomAIMonitor(hass.Hass):
         
         # Send if cooldown passed OR a new critical alert is pending
         if not self.new_critical_alert_pending and time_since_last_notification < cooldown_period:
-            # self.log(f"💨 Notification cooldown. Wait: {cooldown_period - time_since_last_notification}") # Can be noisy
+            # self.log(f" Notification cooldown. Wait: {cooldown_period - time_since_last_notification}") # Can be noisy
             return
             
         # Generate AI summary of the situation (not recommendations)
         ai_summary_text = self.get_ai_situation_summary() if self.ai_enabled else ""
         
-        title = "🚨 Grow Room Alert"
+        title = " Grow Room Alert"
         # Use AI summary if available and not empty, otherwise a generic message
         message = ai_summary_text if ai_summary_text else "Environmental issues detected. Check logs for details."
         
@@ -246,7 +246,7 @@ class GrowRoomAIMonitor(hass.Hass):
 
         try:
             service_target = self.ENTITIES['mobile_notify'].replace("notify.", "") # Get the service name part
-            self.log(f"📨 Sending smart alert: {len(self.active_alerts_summary)} issues. AI Summary: {bool(ai_summary_text)}. Actions: {len(actions)}")
+            self.log(f" Sending smart alert: {len(self.active_alerts_summary)} issues. AI Summary: {bool(ai_summary_text)}. Actions: {len(actions)}")
             self.call_service(
                 f"notify/{service_target}", # Use correct service call format
                 title=title,
@@ -261,9 +261,9 @@ class GrowRoomAIMonitor(hass.Hass):
             )
             self.last_summary_notification_time = now_utc
             self.new_critical_alert_pending = False # Reset flag after sending
-            self.log("✅ Smart notification sent successfully.")
+            self.log(" Smart notification sent successfully.")
         except Exception as e:
-            self.log(f"❌ Error sending smart notification: {e}")
+            self.log(f" Error sending smart notification: {e}")
 
     def get_ai_situation_summary(self) -> str:
         """Generate AI summary of current grow room problems (not recommendations)"""
@@ -288,7 +288,7 @@ Current issues:
 Provide only a brief summary of the problems. No recommendations or conversational fluff."""
 
         try:
-            self.log("🤖 Generating AI situation summary...")
+            self.log(" Generating AI situation summary...")
             headers = {
                 'Authorization': f'Bearer {self.openai_api_key}',
                 'Content-Type': 'application/json',
@@ -307,17 +307,17 @@ Provide only a brief summary of the problems. No recommendations or conversation
             if response.status_code == 200:
                 ai_response = response.json()
                 summary = ai_response['choices'][0]['message']['content'].strip()
-                self.log(f"🤖 AI summary generated: {summary[:60]}...") # Log first 60 chars
+                self.log(f" AI summary generated: {summary[:60]}...") # Log first 60 chars
                 return summary
             else:
-                self.log(f"❌ AI API error: {response.status_code} - {response.text}")
+                self.log(f" AI API error: {response.status_code} - {response.text}")
                 return "" # Return empty if AI fails, fallback will be used
                 
         except requests.RequestException as e: # Catch network errors
-            self.log(f"❌ Network error calling AI API: {e}")
+            self.log(f" Network error calling AI API: {e}")
             return ""
         except Exception as e: # Catch other potential errors
-            self.log(f"❌ Unexpected error generating AI summary: {e}")
+            self.log(f" Unexpected error generating AI summary: {e}")
             return ""
 
     def format_duration(self, duration_td: timedelta) -> str:
@@ -336,22 +336,22 @@ Provide only a brief summary of the problems. No recommendations or conversation
         return " ".join(parts) if parts else "0s" # Default to 0s if duration is zero
 
     def handle_mute_action(self, event_name: str, data: Dict[str, Any], kwargs: Dict[str, Any]):
-        self.log(f"🔔 Notification action received: Event: {event_name}, Data: {data}")
+        self.log(f" Notification action received: Event: {event_name}, Data: {data}")
         sensor_to_mute = data.get("sensor_to_mute") # Changed from sensor_key for consistency
         duration_hours_str = data.get("mute_duration_hours") # Changed from duration_hours
 
         if not sensor_to_mute or duration_hours_str is None:
-            self.log("⚠️ Invalid mute action data received.")
+            self.log("️ Invalid mute action data received.")
             return
 
         try:
             duration_hours = int(duration_hours_str)
         except ValueError:
-            self.log(f"⚠️ Invalid duration_hours: {duration_hours_str}")
+            self.log(f"️ Invalid duration_hours: {duration_hours_str}")
             return
             
         if sensor_to_mute not in self.sensors_config: # Check against sensors_config
-            self.log(f"⚠️ Unknown sensor_key for mute: {sensor_to_mute}")
+            self.log(f"️ Unknown sensor_key for mute: {sensor_to_mute}")
             return
 
         now_utc = datetime.now(timezone.utc)
@@ -369,7 +369,7 @@ Provide only a brief summary of the problems. No recommendations or conversation
             self.sensor_data[sensor_to_mute]['alert_start_time'] = None
 
 
-        self.log(f"🔇 Sensor '{sensor_to_mute}' muted by user until {unpause_time_utc.isoformat()}. 6hr quiet period active.")
+        self.log(f" Sensor '{sensor_to_mute}' muted by user until {unpause_time_utc.isoformat()}. 6hr quiet period active.")
         self.save_persistent_data() # Save the new mute state
 
         # Trigger an immediate update of the notification (if any alerts remain, or to clear it)
@@ -381,7 +381,7 @@ Provide only a brief summary of the problems. No recommendations or conversation
             lights_on_str = self.get_state(self.ENTITIES['lights_on'])
             lights_off_str = self.get_state(self.ENTITIES['lights_off'])
             if not lights_on_str or not lights_off_str: 
-                self.log("⚠️ Lights on/off times not set. Defaulting to day period."); return True
+                self.log("️ Lights on/off times not set. Defaulting to day period."); return True
             
             on_time = datetime.strptime(lights_on_str, "%H:%M:%S").time()
             off_time = datetime.strptime(lights_off_str, "%H:%M:%S").time()
@@ -392,7 +392,7 @@ Provide only a brief summary of the problems. No recommendations or conversation
             if on_time < off_time: return on_time <= current_time <= off_time
             else: return current_time >= on_time or current_time <= off_time # Overnight
         except Exception as e:
-            self.log(f"❌ Error in is_day_period: {e}. Defaulting to day."); return True
+            self.log(f" Error in is_day_period: {e}. Defaulting to day."); return True
 
     def get_thresholds(self, sensor_name: str, is_day: bool) -> Dict[str, float]:
         config = self.sensors_config[sensor_name] # Use self.sensors_config
@@ -406,7 +406,7 @@ Provide only a brief summary of the problems. No recommendations or conversation
                     threshold_value = float(self.get_state(entity_id_for_threshold))
                     thresholds[th_type] = threshold_value
                 except (ValueError, TypeError): 
-                    self.log(f"⚠️ Invalid threshold value for {entity_id_for_threshold} ({sensor_name} {key})")
+                    self.log(f"️ Invalid threshold value for {entity_id_for_threshold} ({sensor_name} {key})")
         return thresholds
 
     def detect_violation(self, current_value: float, thresholds: Dict[str, float]) -> Optional[str]:
@@ -449,7 +449,7 @@ Provide only a brief summary of the problems. No recommendations or conversation
         # This is a placeholder for more complex, periodic AI trend analysis.
         # For now, it just logs that it ran. Future enhancements could go here.
         if not self.ai_enabled: return
-        self.log("🤖 AI Trend Analysis (periodic check) - currently no specific action beyond per-alert summary.")
+        self.log(" AI Trend Analysis (periodic check) - currently no specific action beyond per-alert summary.")
 
 
     def save_persistent_data(self, kwargs=None):
@@ -479,9 +479,9 @@ Provide only a brief summary of the problems. No recommendations or conversation
             }
             with open(self.data_file, 'wb') as f:
                 pickle.dump(save_data, f)
-            # self.log("💾 Persistent data saved.") # Can be noisy
+            # self.log(" Persistent data saved.") # Can be noisy
         except Exception as e:
-            self.log(f"❌ Error saving persistent data to {self.data_file}: {e}")
+            self.log(f" Error saving persistent data to {self.data_file}: {e}")
 
     def load_persistent_data(self):
         try:
@@ -523,9 +523,9 @@ Provide only a brief summary of the problems. No recommendations or conversation
             uaa_iso = saved_data.get('user_acknowledged_at')
             self.user_acknowledged_at = datetime.fromisoformat(uaa_iso).replace(tzinfo=timezone.utc) if uaa_iso else datetime.min.replace(tzinfo=timezone.utc)
 
-            self.log(f"📊 Persistent data loaded successfully from {self.data_file}.")
+            self.log(f" Persistent data loaded successfully from {self.data_file}.")
         except Exception as e:
-            self.log(f"❌ Error loading persistent data from {self.data_file}: {e}. Starting with fresh data.")
+            self.log(f" Error loading persistent data from {self.data_file}: {e}. Starting with fresh data.")
             # Reset to defaults if loading fails to prevent inconsistent state
             self.user_muted_sensors = {}
             self.last_summary_notification_time = datetime.min.replace(tzinfo=timezone.utc)
@@ -541,5 +541,5 @@ Provide only a brief summary of the problems. No recommendations or conversation
             'muted_sensors_now': len(self.user_muted_sensors),
             'sensors_reporting': sum(1 for sd in self.sensor_data.values() if len(sd['history']) > 0)
         }
-        self.log(f"🏥 System Health: {health_report}")
-        if self.user_muted_sensors: self.log(f"🔇 Currently muted sensors: {list(self.user_muted_sensors.keys())}")
+        self.log(f" System Health: {health_report}")
+        if self.user_muted_sensors: self.log(f" Currently muted sensors: {list(self.user_muted_sensors.keys())}")

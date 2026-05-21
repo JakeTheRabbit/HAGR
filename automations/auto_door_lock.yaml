@@ -1,0 +1,41 @@
+# ==============================================================================
+# Automation: Auto Door Lock
+# ------------------------------------------------------------------------------
+# Locks a door N seconds after it transitions from open to closed. Kills the
+# "I forgot to lock the door" failure mode entirely.
+#
+# Why a delay:
+#   - 10-20s gives the person who just walked out time to swipe a card or use
+#     the keypad for an immediate re-entry without retriggering the full
+#     unlock flow.
+#   - It also smooths over double-tap close cases (door bouncing open on a
+#     slam) where you don't want the lock motor cycling repeatedly.
+#
+# Mode: single — if the door reopens during the delay, the automation cancels
+# and starts fresh from the next close.
+#
+# Pair with:
+#   - automations/door_open_siren.yaml — for "door left open" alerting.
+#
+# SITE: replace binary_sensor.YOUR_DOOR_SENSOR and lock.YOUR_DOOR_LOCK.
+# Duplicate this file per door (auto_door_lock_grow.yaml,
+# auto_door_lock_nursery.yaml, etc.) if you have several lockable doors.
+# ==============================================================================
+alias: Auto Door Lock
+description: >
+  Lock the door 20 seconds after it closes. Cancels if the door reopens
+  during the delay.
+mode: single
+
+trigger:
+  - trigger: state
+    entity_id: binary_sensor.YOUR_DOOR_SENSOR
+    from: "on"
+    to: "off"
+    for:
+      seconds: 20
+
+action:
+  - action: lock.lock
+    target:
+      entity_id: lock.YOUR_DOOR_LOCK

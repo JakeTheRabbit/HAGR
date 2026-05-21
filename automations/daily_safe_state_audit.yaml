@@ -1,0 +1,60 @@
+# ==============================================================================
+# Automation: Daily Safe-State Audit (03:00)
+# ------------------------------------------------------------------------------
+# Closes every actuator that should never be left on overnight, every night.
+# Belt-and-braces defensive sweep that catches:
+#   - a failed automation that left a valve open
+#   - a manual UI action someone forgot to reverse
+#   - a scheduled automation that didn't fire correctly
+#   - a pump or relay that latched on
+#
+# It is intentionally not conditional on lights_on or anything else — the
+# 03:00 sweep ALWAYS runs and ALWAYS closes things. If a downstream automation
+# legitimately wanted something on at 03:00, it'll undo that, and the
+# downstream will re-trigger on its next condition.
+#
+# Why 03:00:
+#   - Middle of the typical 20:00-08:00 dark period (lights off, no
+#     transpiration demand, no irrigation should be scheduled).
+#   - Well outside any "lights changeover" window where you might be
+#     intentionally running tank fills or dosing.
+#   - You're asleep — if the sweep triggers an audible relay click, you
+#     won't notice.
+#
+# SITE: replace switch.YOUR_* entities. Drop anything that legitimately
+# should stay on overnight (dehumidifiers, exhaust fans, AC).
+# ==============================================================================
+alias: Daily Safe-State Audit
+description: >
+  At 03:00 every day, force-close every actuator that should never be left
+  on overnight. Defensive sweep against stuck valves, latched relays, and
+  forgotten manual overrides.
+mode: single
+
+trigger:
+  - trigger: time
+    at: "03:00:00"
+
+action:
+  - alias: Close every grow-room actuator that should be off overnight
+    action: switch.turn_off
+    target:
+      entity_id:
+        # Irrigation
+        - switch.YOUR_TABLE_1_VALVE
+        - switch.YOUR_TABLE_2_VALVE
+        - switch.YOUR_TABLE_3_VALVE
+        - switch.YOUR_TABLE_4_VALVE
+        - switch.YOUR_MAINS_WATER
+        - switch.YOUR_MAINLINE
+        - switch.YOUR_MANIFOLD
+        # CO2
+        - switch.YOUR_CO2_SOLENOID
+        # Humidifier — dark period should run dry, not wet
+        - switch.YOUR_HUMIDIFIER
+
+  - alias: Log the sweep
+    action: system_log.write
+    data:
+      message: "Daily safe-state audit completed at 03:00 — actuators forced closed"
+      level: info

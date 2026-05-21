@@ -1,0 +1,107 @@
+# ==============================================================================
+# Automation: Sensor Unavailability Watchdog
+# ------------------------------------------------------------------------------
+# Notifies when a critical environmental sensor has been unavailable or unknown
+# for more than ten minutes. For the CO2 sensor specifically, also closes the
+# CO2 solenoid — running CO2 enrichment blind is unsafe.
+#
+# Why this matters:
+#   In an unattended grow room, a sensor dropping offline is usually the first
+#   sign of:
+#     - a device losing WiFi or PoE
+#     - an ESPHome OTA gone wrong (boot loop, bad config)
+#     - a power supply or cable failure
+#     - a dead sensor (it happens)
+#
+#   Catching these in ten minutes gives you time to intervene before the
+#   automations that depend on the dead sensor start making bad decisions.
+#
+# Why fail-safe on CO2:
+#   The CO2 control loop reads the CO2 sensor and toggles the solenoid. If the
+#   sensor reads "unavailable", the loop's last decision sticks — if that
+#   decision was "on", the solenoid stays open. Closing on sensor failure is
+#   the safe default.
+#
+# Tuning:
+#   Ten minutes is a balance between catching real failures and ignoring brief
+#   network blips. Drop to five minutes for commercial use.
+#
+# SITE: replace sensor.YOUR_* entities.
+# ==============================================================================
+alias: Sensor Unavailability Watchdog
+description: >
+  Alert when a temp / RH / CO2 sensor has been unavailable or unknown for
+  ten minutes. Closes the CO2 solenoid if the CO2 sensor itself goes offline.
+mode: parallel
+max: 10
+
+trigger:
+  - id: temp_offline
+    trigger: state
+    entity_id: sensor.YOUR_TEMP_SENSOR
+    to:
+      - unavailable
+      - unknown
+    for:
+      minutes: 10
+
+  - id: rh_offline
+    trigger: state
+    entity_id: sensor.YOUR_RH_SENSOR
+    to:
+      - unavailable
+      - unknown
+    for:
+      minutes: 10
+
+  - id: co2_offline
+    trigger: state
+    entity_id: sensor.YOUR_CO2_SENSOR
+    to:
+      - unavailable
+      - unknown
+    for:
+      minutes: 10
+
+action:
+  - choose:
+      - alias: Temp sensor offline
+        conditions:
+          - condition: trigger
+            id: temp_offline
+        sequence:
+          - action: notify.notify              # SITE: replace
+            data:
+              title: "Temp sensor offline"
+              message: >
+                {{ trigger.entity_id }} has been unavailable for 10 min.
+                Check power, WiFi/PoE, and the device's HA integration.
+
+      - alias: RH sensor offline
+        conditions:
+          - condition: trigger
+            id: rh_offline
+        sequence:
+          - action: notify.notify              # SITE: replace
+            data:
+              title: "RH sensor offline"
+              message: >
+                {{ trigger.entity_id }} has been unavailable for 10 min.
+                Check power, WiFi/PoE, and the device's HA integration.
+
+      - alias: CO2 sensor offline — close solenoid as a precaution
+        conditions:
+          - condition: trigger
+            id: co2_offline
+        sequence:
+          - alias: Close CO2 solenoid — safety
+            action: switch.turn_off
+            target:
+              entity_id: switch.YOUR_CO2_SOLENOID
+          - action: notify.notify              # SITE: replace
+            data:
+              title: "CO2 sensor offline — solenoid closed"
+              message: >
+                {{ trigger.entity_id }} unavailable for 10 min. CO2 solenoid
+                closed as a precaution. Restore the sensor before re-enabling
+                enrichment.

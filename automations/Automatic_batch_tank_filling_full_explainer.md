@@ -86,7 +86,7 @@ This automation handles the complete lifecycle of preparing nutrient solution fo
 
 **Sensors:**
 - `sensor.m5stack_dial_tank_monitor_tank_level` - Tank level (0-100%)
-- `sensor.atlas_legacy_1_ec` - EC sensor (microS/cm)
+- `sensor.atlas_hydro_1_ec` - EC sensor (microS/cm)
 - `sensor.aquaponics_kit_f4f618_ph` - pH sensor (0-14)
 - `sensor.veg_main_pump_power` - Pump power consumption (watts)
 - `sensor.balance_pump_dose_duration` - Balance pump runtime
@@ -234,7 +234,7 @@ Add to your Lovelace dashboard:
       name: Float Sensor
     - entity: sensor.m5stack_dial_tank_monitor_tank_level
       name: Tank Level
-    - entity: sensor.atlas_legacy_1_ec
+    - entity: sensor.atlas_hydro_1_ec
       name: EC Level
     - entity: sensor.aquaponics_kit_f4f618_ph
       name: pH Level
@@ -296,7 +296,7 @@ flowchart TD
     CheckECSensor -->|No| AbortEC[ABORT: EC Sensor Required<br/>Unlock & Exit]
     CheckECSensor -->|Yes| CheckPerfect{Level ≥ 95%<br/>AND<br/>EC 2.8-3.2?}
 
-    CheckPerfect -->|Yes| ExitPerfect[Already Perfect!<br/>Unlock & Exit ✓]
+    CheckPerfect -->|Yes| ExitPerfect[Already Perfect!<br/>Unlock & Exit ]
     CheckPerfect -->|No| DetermineNeeds[Determine Needs:<br/>needs_fill = Level < 100%<br/>should_dose = EC < 0.5]
 
     DetermineNeeds --> CheckFillNeeded{Needs Fill?}
@@ -347,7 +347,7 @@ flowchart TD
     CheckFinalEC -->|Yes| CheckFinalpH{pH<br/>5.8-6.2?}
 
     CheckFinalpH -->|No| FailpH[FAIL: pH Out of Range<br/>Close All, LOCK]
-    CheckFinalpH -->|Yes| Success[SUCCESS ✓<br/>All Parameters Good<br/>Close All, UNLOCK]
+    CheckFinalpH -->|Yes| Success[SUCCESS <br/>All Parameters Good<br/>Close All, UNLOCK]
 
   
 ```
@@ -490,7 +490,7 @@ action:
       postmix_min: 5
       sensor_stabilization_delay: 30
       start_level: "{{ states('sensor.m5stack_dial_tank_monitor_tank_level')|int(0) }}"
-      start_ec: "{{ states('sensor.atlas_legacy_1_ec')|float(0) }}"
+      start_ec: "{{ states('sensor.atlas_hydro_1_ec')|float(0) }}"
       start_ph: "{{ states('sensor.aquaponics_kit_f4f618_ph')|float(0) }}"
 
   - if:
@@ -508,7 +508,7 @@ action:
 
   - if:
       - condition: template
-        value_template: "{{ states('sensor.atlas_legacy_1_ec') in ['unknown', 'unavailable', 'none'] }}"
+        value_template: "{{ states('sensor.atlas_hydro_1_ec') in ['unknown', 'unavailable', 'none'] }}"
     then:
       - action: persistent_notification.create
         data:
@@ -678,7 +678,7 @@ action:
       - delay:
           seconds: "{{ sensor_stabilization_delay }}"
       - variables:
-          ec_after_bloom: "{{ states('sensor.atlas_legacy_1_ec')|float(0) }}"
+          ec_after_bloom: "{{ states('sensor.atlas_hydro_1_ec')|float(0) }}"
       - if:
           - condition: template
             value_template: "{{ ec_after_bloom < ec_after_bloom_threshold }}"
@@ -712,7 +712,7 @@ action:
       - delay:
           seconds: "{{ sensor_stabilization_delay }}"
       - variables:
-          ec_after_core: "{{ states('sensor.atlas_legacy_1_ec')|float(0) }}"
+          ec_after_core: "{{ states('sensor.atlas_hydro_1_ec')|float(0) }}"
       - if:
           - condition: template
             value_template: "{{ ec_after_core < ec_after_core_threshold }}"
@@ -772,7 +772,7 @@ action:
 
   - variables:
       final_level: "{{ states('sensor.m5stack_dial_tank_monitor_tank_level')|int(0) }}"
-      final_ec: "{{ states('sensor.atlas_legacy_1_ec')|float(0) }}"
+      final_ec: "{{ states('sensor.atlas_hydro_1_ec')|float(0) }}"
       final_ph: "{{ states('sensor.aquaponics_kit_f4f618_ph')|float(0) }}"
 
   - choose:

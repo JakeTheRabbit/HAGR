@@ -1,0 +1,83 @@
+blueprint:
+  name: Grow Room - Light Leak Detection (Critical)
+  description: >
+    Fires when an ambient-light sensor reads above a threshold during the dark
+    period. Forces the grow-light group off and runs your notification action.
+
+
+    Why this matters - photoperiod plants (cannabis, hops, chrysanthemums)
+    flower in response to uninterrupted dark periods. One hour of light leak
+    in late flower can re-veg or hermie a crop.
+
+
+    Conditions - the automation only fires when your lights-on binary sensor
+    is off. During normal lights-on operation it stays quiet.
+
+
+    Tuning - start with a 1-2 lux trigger. If equipment LEDs cause false
+    positives, raise the threshold or add persistence in the trigger.
+  domain: automation
+  source_url: https://github.com/JakeTheRabbit/HAGR/blob/main/blueprints/light_leak_detection.yaml
+  input:
+    ambient_light_sensors:
+      name: Ambient light sensor(s)
+      description: One or more illuminance sensors inside the grow room.
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+          multiple: true
+
+    light_threshold:
+      name: Lux threshold
+      description: Above this reading the alarm fires. 1-2 lux is typical for a sealed room.
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 0.5
+          unit_of_measurement: lux
+
+    lights_on_sensor:
+      name: Lights-on binary sensor
+      description: A binary sensor that's ON while your grow lights are supposed to be on.
+      selector:
+        entity:
+          domain: binary_sensor
+
+    grow_light_group:
+      name: Grow light group
+      description: The light entity or group that should be forced off when a leak is detected.
+      selector:
+        entity:
+          domain: light
+
+    notify_action:
+      name: Notification action
+      description: One or more notify actions to run on detection (e.g. notify.mobile_app_yourphone).
+      default: []
+      selector:
+        action: {}
+
+mode: single
+
+trigger:
+  - trigger: numeric_state
+    entity_id: !input ambient_light_sensors
+    above: !input light_threshold
+
+condition:
+  - condition: state
+    entity_id: !input lights_on_sensor
+    state: "off"
+
+action:
+  - alias: Turn off grow lights
+    action: light.turn_off
+    target:
+      entity_id: !input grow_light_group
+
+  - alias: Run the notification action
+    choose: []
+    default: !input notify_action

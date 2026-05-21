@@ -47,7 +47,7 @@ actions:
         states('switch.f1_co2') }}.
     action: system_log.write
   - data:
-      title: ⚠️ CO2 LEVEL LOW / TANK FINISHED
+      title: ️ CO2 LEVEL LOW / TANK FINISHED
       message: >
         CO2 in F1 is critically low or the CO2 tank indicator has been active as
         of {{ now().strftime('%H:%M:%S') }}. Sensor: {{
@@ -77,7 +77,7 @@ actions:
         - variables:
             current_count: "{{ states('input_number.co2_notification_count') | int }}"
         - data:
-            title: ⚠️ CO2 CRITICAL - F1 (Alert {{ current_count }}/10)
+            title: ️ CO2 CRITICAL - F1 (Alert {{ current_count }}/10)
             message: >
               CO2 in F1 is critically low or the tank indicator is on! Sensor:
               {{ states('sensor.f1_scd410_back_left_co2') }}ppm, Target: {{
@@ -92,11 +92,11 @@ actions:
               tag: f1_co2_alert
               actions:
                 - action: silence
-                  title: 🔕 Silence Alert
+                  title:  Silence Alert
                 - action: navigate
-                  title: 🎯 Go to CO2 Dashboard
+                  title:  Go to CO2 Dashboard
                 - action: acknowledge
-                  title: ✅ Acknowledge
+                  title:  Acknowledge
           action: notify.mobile_app_s23ultra
         - wait_for_trigger:
             - event_type: mobile_app_notification_action
@@ -125,7 +125,7 @@ actions:
                     notification_id: f1_co2_alert
                   action: persistent_notification.dismiss
                 - data:
-                    message: ⚠️ CO2 alert silenced. Check the tank when convenient.
+                    message: ️ CO2 alert silenced. Check the tank when convenient.
                   action: notify.mobile_app_s23ultra
                 - stop: true
             - conditions:
@@ -149,7 +149,7 @@ actions:
                     notification_id: f1_co2_alert
                   action: persistent_notification.dismiss
                 - data:
-                    title: ✅ CO2 ALERT ACKNOWLEDGED
+                    title:  CO2 ALERT ACKNOWLEDGED
                     message: >
                       The low CO2 condition in F1 was acknowledged at {{
                       now().strftime('%H:%M:%S') }}. Please manually replace the
@@ -157,7 +157,7 @@ actions:
                     notification_id: f1_co2_acknowledged
                   action: persistent_notification.create
                 - data:
-                    message: ✅ CO2 alert acknowledged. Monitoring will continue.
+                    message:  CO2 alert acknowledged. Monitoring will continue.
                   action: notify.mobile_app_s23ultra
                 - stop: true
           default:
@@ -173,7 +173,7 @@ actions:
                     the tank immediately."
               action: notify.mobile_app_s23ultra
             - data:
-                title: ⚠️ UNACKNOWLEDGED CO2 ALERT
+                title: ️ UNACKNOWLEDGED CO2 ALERT
                 message: >
                   No response received after {{ current_count }} alerts. Last
                   check: {{ now().strftime('%H:%M:%S') }}. Sensor: {{
@@ -208,7 +208,7 @@ actions:
             value_template: "{{ states('input_number.co2_notification_count') | int >= 10 }}"
         sequence:
           - data:
-              title: ⚠️ CO2 ALERT ESCALATION NEEDED
+              title: ️ CO2 ALERT ESCALATION NEEDED
               message: >
                 Maximum alert attempts (10) reached for F1 CO2 low level as of
                 {{ now().strftime('%H:%M:%S') }}. Sensor: {{

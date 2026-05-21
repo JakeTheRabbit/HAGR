@@ -38,7 +38,7 @@ action:
         sequence:
           - service: notify.mobile_app_s23ultra
             data:
-              message: "✅ F1 Light Acclimation complete: reached 90% brightness."
+              message: " F1 Light Acclimation complete: reached 90% brightness."
           - service: automation.turn_off
             target:
               entity_id: automation.f1_light_acclimation

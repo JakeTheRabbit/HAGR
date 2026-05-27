@@ -6,6 +6,7 @@ Standard operating procedures and reference material for indoor cannabis cultiva
 |---|---|
 | [`cloning.md`](cloning.md) | Cloning / propagation — substrate prep, cut handling, rooting conditions, transplant timing. |
 | [`Environment reference guide.md`](Environment%20reference%20guide.md) | Setpoint cheat sheet by stage — temperature, RH, VPD, CO2, PPFD, DLI. |
+| [`Derived crop signals.md`](Derived%20crop%20signals.md) | Sensor-derived crop signals for leaf/air VPD, canopy cooling, dryback, EC trends, and Home Assistant templates. |
 | [`Indoor air flow.md`](Indoor%20air%20flow.md) | Airflow design and requirements for an indoor grow room. Fan sizing, layout, canopy-level velocity. |
 | [`Indoor Pathogens.md`](Indoor%20Pathogens.md) | Common indoor cultivation pathogens — recognition, prevention, response. |
 | [`Cleaning.md`](Cleaning.md) | Cleaning and sanitation SOP — room turnover, equipment, surfaces, drains. |

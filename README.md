@@ -167,6 +167,7 @@ Path: [`growingSOPs/`](growingSOPs/)
 |---|---|
 | [`cloning.md`](growingSOPs/cloning.md) | Cloning and propagation. |
 | [`Environment reference guide.md`](growingSOPs/Environment%20reference%20guide.md) | Stage-by-stage setpoint cheat sheet — temperature, RH, VPD, CO₂, PPFD, DLI. |
+| [`Derived crop signals.md`](growingSOPs/Derived%20crop%20signals.md) | Sensor-derived crop signals for leaf/air VPD, canopy cooling, dryback, EC trends, and Home Assistant templates. |
 | [`Indoor air flow.md`](growingSOPs/Indoor%20air%20flow.md) | Airflow requirements and room layout for indoor grows. |
 | [`Indoor Pathogens.md`](growingSOPs/Indoor%20Pathogens.md) | Common indoor cultivation pathogens — recognition, prevention, response. |
 | [`Cleaning.md`](growingSOPs/Cleaning.md) | Cleaning and sanitation procedures. |

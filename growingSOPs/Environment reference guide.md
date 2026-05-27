@@ -1,8 +1,6 @@
 # Humidity and Temperature Cheat Sheet for Indoor Cannabis Cultivation
 
-
-
-
+> **Environmental targets in this guide follow the [Athena Handbook](https://jaketherabbit.github.io/cannabis-grow-room-levers/) setpoints.**
 
 ## Relative Humidity (RH)
 The amount of water vapor in the air compared to the maximum amount it can hold at a given temperature, expressed as a percentage.
@@ -13,15 +11,16 @@ graph TD
     A -->|Decreases| C[RH Increases]
 ```
 
-**Relevance:** In your grow room, RH directly affects transpiration rate. High RH in veg promotes growth, while low RH in flower prevents mold.
+**Relevance:** In your grow room, RH directly affects transpiration rate. Athena keeps RH higher throughout the cycle than traditional guides — including into flowering — to support strong transpiration and canopy development.
 
-**Example:** A hot summer day might drop your grow room's RH to 30%, potentially stressing plants. Conversely, a cold night could spike RH to 70%, risking mold in flowering plants.
-
-**Ideal Range:** 
-- Clones/Seedlings: 70-80%
-- Vegetative: 50-70%
-- Early Flowering: 40-50%
-- Late Flowering: 30-40%
+**Athena Ideal Range:**
+- Tissue Culture: 50–60%
+- Clones: 65–75% room (dome: 80–95%)
+- Vegetative: 58–75%
+- Flower — Stretch (wks 1–3): 60–72%
+- Flower — Bulk (wks 4–7): 60–70%
+- Flower — Finish (wks 8–9): 50–60%
+- Dry & Cure: 55–60%
 
 ## Absolute Humidity
 The actual amount of water vapor in a given volume of air, regardless of temperature.
@@ -47,10 +46,10 @@ graph TD
 
 **Relevance:** Critical for preventing condensation on leaves and buds, which can lead to mold and mildew.
 
-**Example:** If your grow room is 25°C with 60% RH, the dew point is about 16°C. If any part of a plant (like dense buds) drops below 16°C, condensation will form.
+**Example:** If your grow room is 25°C with 65% RH, the dew point is about 18°C. If any part of a plant (like dense buds) drops below 18°C, condensation will form.
 
 ## Evaporation and Condensation
-Evaporation: The process of liquid water turning into water vapor. 
+Evaporation: The process of liquid water turning into water vapor.
 Condensation: The process of water vapor turning into liquid water.
 
 ```mermaid
@@ -72,9 +71,9 @@ graph TD
     R[Low Humidity + High Temperature] -->|Results in| S[Evaporative Cooling More Effective]
 ```
 
-**Relevance:** High heat index can stress plants and reduce photosynthesis efficiency. Low humidity allows for more effective cooling through transpiration.
+**Relevance:** High heat index can stress plants and reduce photosynthesis efficiency.
 
-**Example:** A grow room at 28°C and 70% RH feels like 32°C to your plants, potentially causing heat stress.
+**Example:** A grow room at 28°C and 72% RH feels like 34°C to your plants, potentially causing heat stress. Athena's flower stretch targets (25–28°C, 60–72% RH) are designed to stay just below this threshold with good air movement.
 
 ## Vapor Pressure Deficit (VPD)
 The difference between the amount of moisture in the air and how much moisture the air can hold when saturated.
@@ -89,9 +88,13 @@ graph TD
 
 **Relevance:** VPD drives transpiration. Too low, and plants struggle to uptake nutrients. Too high, and plants lose water faster than they can absorb it.
 
-**Example:** In veg, a VPD of 0.8 kPa (e.g., 25°C and 70% RH) promotes strong growth. In late flower, a higher VPD of 1.2 kPa (e.g., 26°C and 50% RH) helps prevent mold while maintaining growth.
-
-**Ideal Range:** 0.8-1.2 kPa, adjusted throughout growth cycle
+**Athena Ideal Range by Stage:**
+- Tissue Culture: 0.8–1.0 kPa
+- Clones: ~0.8 kPa
+- Vegetative: 0.8–1.0 kPa
+- Flower — Stretch (wks 1–3): 1.0–1.2 kPa
+- Flower — Bulk (wks 4–7): 1.0–1.2 kPa
+- Flower — Finish (wks 8–9): 1.2–1.4 kPa
 
 ### Leaf VPD
 
@@ -104,61 +107,78 @@ graph TD
 
 **Relevance:** Leaf VPD more accurately represents what the plant experiences. It's affected by factors like light intensity and air movement.
 
-**Example:** Under intense lights, leaf temperature might be 2-3°C above air temperature, increasing the actual VPD the plant experiences.
+**Example:** Under intense lights, leaf temperature might be 2–3°C above air temperature, increasing the actual VPD the plant experiences.
 
-**Ideal Range:** Similar to Air VPD, but often slightly higher due to leaf temperature differences
-
-## VPD and Plant Growth Stages
+## VPD and Plant Growth Stages (Athena)
 
 ```mermaid
 graph TD
-    AC[Clones/Early Veg] -->|Low VPD 0.4-0.8 kPa| AD[High RH 70-80%]
-    AE[Vegetative Growth] -->|Medium VPD 0.8-1.2 kPa| AF[Moderate RH 60-70%]
-    AG[Flowering] -->|Higher VPD 1.0-1.5 kPa| AH[Lower RH 40-50%]
+    AC[Tissue Culture / Clones] -->|Low VPD 0.8 kPa| AD[RH 50-75%]
+    AE[Vegetative] -->|VPD 0.8-1.0 kPa| AF[RH 58-75%]
+    AG[Flower Stretch wks 1-3] -->|VPD 1.0-1.2 kPa| AH[RH 60-72%]
+    AI[Flower Bulk wks 4-7] -->|VPD 1.0-1.2 kPa| AJ[RH 60-70%]
+    AK[Flower Finish wks 8-9] -->|VPD 1.2-1.4 kPa| AL[RH 50-60%]
 ```
 
-**Relevance:** VPD requirements change as plants mature. Young plants prefer lower VPD (higher humidity), while flowering plants benefit from higher VPD (lower humidity) to prevent mold and promote resin production.
+**Relevance:** Athena maintains higher RH through much of flowering compared to traditional guides. The VPD rise in late flower is achieved primarily through temperature reduction, not humidity reduction, which limits botrytis risk while still finishing the plant.
 
-**Example:** Clones might thrive at 24°C and 75% RH (VPD ~0.6 kPa), while the same plants in late flower might prefer 26°C and 45% RH (VPD ~1.4 kPa).
+---
 
+# Cannabis Grow Environment Matrix — Athena Handbook
 
-# Cannabis Grow Environment Matrix
+| Growth Stage | Temp (°C) | RH (%) | VPD (kPa) | PPFD (µmol/m²/s) | CO₂ (ppm) | Feed EC (mS/cm) | Feed pH | Photoperiod |
+|---|---|---|---|---|---|---|---|---|
+| **Tissue Culture** | 20–23 | 50–60 | 0.8–1.0 | 75–125 | ambient | — | — | 18/6 |
+| **Clones** | 23–26 | 65–75 (dome 80–95) | ~0.8 | 100–150 | ambient | 2.0–3.0 | 5.6–6.0 | 24/0 |
+| **Vegetative** | 22–28 | 58–75 | 0.8–1.0 | 300–600 | ambient | 3.0 | 5.6–6.0 | 18/6 |
+| **Flower — Stretch** (wks 1–3) | 25–28 | 60–72 | 1.0–1.2 | 600–1000 | 1200–1500 | 3.0 | 5.8–6.2 | 12/12 |
+| **Flower — Bulk** (wks 4–7) | 24–26 | 60–70 | 1.0–1.2 | 850–1200 | 1200–1500 | 3.0 | 6.0–6.2 | 12/12 |
+| **Flower — Finish** (wks 8–9) | 18–24 | 50–60 | 1.2–1.4 | 600–900 | 500–800 | 2.0–3.0 | 6.0–6.2 | 12/12 |
+| **Dry & Cure** (14 days) | 15–18 | 55–60 | — | — | — | — | — | 0/24 |
 
-| Growth Stage | Temperature (°C) | Relative Humidity (%) | VPD (kPa) | Notes |
-|--------------|------------------|----------------------|-----------|-------|
-| **Clones / Seedlings** | 20-25 | 70-80 | 0.4-0.8 | High humidity promotes root development. Use domes or misters. |
-| **Early Vegetative** | 22-28 | 60-70 | 0.8-1.0 | Gradually decrease humidity. Increase air circulation. |
-| **Late Vegetative** | 22-28 | 50-60 | 1.0-1.2 | Prepare plants for flowering conditions. |
-| **Early Flowering** | 20-26 | 40-50 | 1.0-1.3 | Lower humidity to prevent mold. Increase light intensity. |
-| **Late Flowering** | 18-24 | 30-40 | 1.2-1.5 | Further reduce humidity. Watch for bud rot in dense colas. |
+> EC and pH are input feed targets. During clone propagation, dome RH runs 80–95% while room-level RH stays lower (65–75%).
+
+---
 
 ## Environmental Factors Impact
 
-| Factor | Low | High | Optimal Range | Impact on Plants |
-|--------|-----|------|---------------|------------------|
-| **Temperature** | < 18°C | > 30°C | 20-28°C | Affects metabolic rates, nutrient uptake, and overall growth speed. |
-| **Relative Humidity** | < 30% | > 70% | Stage-dependent | Influences transpiration, nutrient uptake, and susceptibility to mold. |
-| **VPD** | < 0.4 kPa | > 1.5 kPa | 0.8-1.2 kPa | Drives transpiration. Too low: slow growth. Too high: water stress. |
-| **CO₂ Levels** | < 350 ppm | > 1500 ppm | 800-1200 ppm | Enhances photosynthesis rate and overall plant growth. |
-| **Light Intensity** | Varies by stage | Varies by stage | 400-750 μmol/m²/s (veg) 600-1000 μmol/m²/s (flower) | Drives photosynthesis. Too low: stretching. Too high: light stress. |
+| Factor | Too Low | Too High | Athena Target | Impact on Plants |
+|--------|---------|----------|---------------|------------------|
+| **Temperature** | < 18°C | > 30°C | Stage-dependent (see matrix) | Affects metabolic rates, nutrient uptake, and overall growth speed. |
+| **Relative Humidity** | < 50% (veg) | > 75% (veg) | Stage-dependent (see matrix) | Influences transpiration, nutrient uptake, and susceptibility to mold. |
+| **VPD** | < 0.8 kPa | > 1.4 kPa | 0.8–1.4 kPa stage-stepped | Drives transpiration. Too low: slow growth/nutrient lockout. Too high: water stress. |
+| **CO₂ Levels** | < 400 ppm | > 1500 ppm | 1200–1500 ppm (flower) | Enhances photosynthesis rate and overall plant growth when paired with adequate PPFD. |
+| **PPFD** | < 100 µmol (clones) | > 1200 µmol | Stage-dependent (see matrix) | Drives photosynthesis. Too low: stretch. Too high: photoinhibition/bleaching. |
+| **Feed EC** | < 2.0 mS/cm | > 4.0 mS/cm | 3.0 mS/cm (peak) | Salt load determines nutrient availability; excess causes lockout. |
+| **Feed pH** | < 5.5 | > 6.5 | 5.6–6.2 stage-stepped | Controls nutrient availability at the root zone. |
+
+---
 
 ## Troubleshooting Common Issues
 
 | Symptom | Possible Cause | Solution |
 |---------|----------------|----------|
-| Leaf Curling Up | Heat stress, Low humidity | Lower temperature, increase humidity, improve air circulation |
-| Powdery Mildew | High humidity, Poor air circulation | Reduce humidity, increase air movement, consider fungicides |
-| Nutrient Burn | Over-fertilization, Low humidity | Flush medium, adjust nutrient levels, slightly increase humidity |
-| Slow Growth | Low temperature, High humidity | Increase temperature, decrease humidity, check for root issues |
-| Bud Rot | High humidity in flowering, Poor air circulation | Drastically reduce humidity, improve air circulation, remove affected buds |
+| Leaf Curling Up | Heat stress, VPD too high | Lower temperature, raise RH to bring VPD into range, improve air circulation |
+| Powdery Mildew | Stagnant air, RH spikes (not high RH per se) | Improve air movement and circulation, avoid dead spots — Athena does not require low RH to avoid PM |
+| Nutrient Burn | Over-fertilization, VPD too high concentrating salts | Flush medium, lower EC, check VPD |
+| Slow Growth / Drooping | VPD too low, waterlogged root zone | Slightly lower RH or raise temp to increase VPD, check dryback |
+| Bud Rot (Botrytis) | Dense canopy + poor airflow + cool spots | Improve canopy airflow, prevent cold spots on buds — not solved by blanketing humidity reduction |
+| Stretchy Internodes | Low PPFD or CO₂ | Increase light intensity (target 600+ µmol in stretch), raise CO₂ to 1200–1500 ppm |
+
+---
 
 ## VPD Quick Reference
 
-| Temperature (°C) | 40% RH | 50% RH | 60% RH | 70% RH |
-|------------------|--------|--------|--------|--------|
-| 20 | 1.4 kPa | 1.2 kPa | 0.9 kPa | 0.7 kPa |
-| 22 | 1.6 kPa | 1.3 kPa | 1.1 kPa | 0.8 kPa |
-| 24 | 1.8 kPa | 1.5 kPa | 1.2 kPa | 0.9 kPa |
-| 26 | 2.0 kPa | 1.6 kPa | 1.3 kPa | 1.0 kPa |
-| 28 | 2.2 kPa | 1.8 kPa | 1.5 kPa | 1.1 kPa |
+| Temp (°C) | 50% RH | 60% RH | 65% RH | 70% RH | 75% RH |
+|-----------|--------|--------|--------|--------|--------|
+| 20 | 1.17 kPa | 0.94 kPa | 0.82 kPa | 0.70 kPa | 0.59 kPa |
+| 22 | 1.32 kPa | 1.06 kPa | 0.92 kPa | 0.79 kPa | 0.66 kPa |
+| 24 | 1.49 kPa | 1.19 kPa | 1.04 kPa | 0.89 kPa | 0.74 kPa |
+| 26 | 1.67 kPa | 1.34 kPa | 1.17 kPa | 1.00 kPa | 0.84 kPa |
+| 28 | 1.87 kPa | 1.50 kPa | 1.31 kPa | 1.12 kPa | 0.94 kPa |
 
+> **Athena flower targets highlighted:** Stretch/Bulk sits in the 1.0–1.2 kPa band (e.g. 26°C / 65–70% RH). Finish moves to 1.2–1.4 kPa via temperature drop, not humidity reduction.
+
+---
+
+*Sources: [Athena Handbook via cannabis-grow-room-levers](https://jaketherabbit.github.io/cannabis-grow-room-levers/)*

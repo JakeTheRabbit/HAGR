@@ -1,5 +1,8 @@
 blueprint:
   name: Grow Room - Light Leak Detection (Critical)
+  author: JakeTheRabbit (HAGR)
+  homeassistant:
+    min_version: "2024.10.0"
   description: >
     Fires when an ambient-light sensor reads above a threshold during the dark
     period. Forces the grow-light group off and runs your notification action.
@@ -14,8 +17,14 @@ blueprint:
     is off. During normal lights-on operation it stays quiet.
 
 
+    Robustness - as well as reacting to a sensor crossing the threshold, it
+    re-checks on Home Assistant start and every minute, so a leak that is
+    already present after a restart or power blip is still caught (a plain
+    numeric_state trigger only fires on the crossing).
+
+
     Tuning - start with a 1-2 lux trigger. If equipment LEDs cause false
-    positives, raise the threshold or add persistence in the trigger.
+    positives, raise the threshold.
   domain: automation
   source_url: https://github.com/JakeTheRabbit/HAGR/blob/main/blueprints/light_leak_detection.yaml
   input:
@@ -61,18 +70,39 @@ blueprint:
         action: {}
 
 mode: single
+max_exceeded: silent
 
-trigger:
+triggers:
   - trigger: numeric_state
     entity_id: !input ambient_light_sensors
     above: !input light_threshold
+    id: leak
+  - trigger: homeassistant
+    event: start
+    id: ha_start
+  - trigger: time_pattern
+    minutes: "/1"
+    id: tick
 
-condition:
+variables:
+  ambient_light_sensors: !input ambient_light_sensors
+  light_threshold: !input light_threshold
+  # True if ANY selected sensor is currently above the threshold.
+  leak_now: >
+    {% set t = light_threshold | float %}
+    {% set vals = ambient_light_sensors | map('states') | map('float', -1) | list %}
+    {{ (vals | max) > t if vals | length > 0 else false }}
+
+conditions:
+  # Only during the dark period.
   - condition: state
     entity_id: !input lights_on_sensor
     state: "off"
+  # And only if a leak is genuinely present (gates the start/periodic re-checks).
+  - condition: template
+    value_template: "{{ leak_now }}"
 
-action:
+actions:
   - alias: Turn off grow lights
     action: light.turn_off
     target:

@@ -1,7 +1,7 @@
 # HAGR — Home Assistant Grow Room
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.3+-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.10+-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io)
 [![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-black?logo=esphome&logoColor=white)](https://esphome.io)
 [![AppDaemon](https://img.shields.io/badge/AppDaemon-Required%20(monitor)-orange)](https://appdaemon.readthedocs.io)
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5)](https://hacs.xyz)
@@ -89,10 +89,10 @@ The same patterns as above, wrapped as Home Assistant blueprints. Import once, t
 
 | Blueprint | What it does |
 |---|---|
-| [`co2_control_and_alerts.yaml`](blueprints/co2_control_and_alerts.yaml) | Day/night CO₂ setpoints with hysteresis switching, relay-stuck safety auto-off, low and high alerts with cooldowns, optional light auto-dim on sustained low CO₂. |
-| [`grow_room_env_threshold_alerts.yaml`](blueprints/grow_room_env_threshold_alerts.yaml) | One blueprint, all your environmental alerts. Separate day/night thresholds, pause switch, persistence delay, cooldown between notifications, multi-device notify targets. |
-| [`auto_temp_triggered_light_dimming.yaml`](blueprints/auto_temp_triggered_light_dimming.yaml) | When the room overheats, dim the lights and keep dimming until temp comes back. Plant-safe heat protection. |
-| [`light_leak_detection.yaml`](blueprints/light_leak_detection.yaml) | Critical light-leak alarm. Any illuminance sensor above the threshold while your lights-on binary sensor is off forces the grow lights off and runs your notify action. |
+| [`co2_control_and_alerts.yaml`](blueprints/co2_control_and_alerts.yaml) | Day/night CO₂ setpoints with hysteresis switching, high-CO₂ auto-off (primary + optional backup sensor, with control lockout), relay-stuck/empty-tank auto-off, sustained-low alerts with cooldown, and optional light auto-dim with automatic restore on recovery. |
+| [`grow_room_env_threshold_alerts.yaml`](blueprints/grow_room_env_threshold_alerts.yaml) | One blueprint, all your environmental alerts. Separate day/night thresholds, pause switch, persistence delay, helper-backed cooldown between notifications, multi-device notify targets. |
+| [`auto_temp_triggered_light_dimming.yaml`](blueprints/auto_temp_triggered_light_dimming.yaml) | When the room overheats, step-dim the lights until temp comes back, then restore them to their pre-dim brightness. Won't switch lights on during the dark period. Plant-safe heat protection. |
+| [`light_leak_detection.yaml`](blueprints/light_leak_detection.yaml) | Critical light-leak alarm. Any illuminance sensor above the threshold while your lights-on binary sensor is off forces the grow lights off and runs your notify action — re-checked on restart and every minute, so a leak already present after a power blip is still caught. |
 
 ### Packages
 

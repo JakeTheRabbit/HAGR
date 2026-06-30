@@ -296,7 +296,7 @@ blueprint:
       selector:
         action: {}
       default:
-        - service: notify.notify
+        - action: notify.notify
           data:
             title: "{{ notification_title }}"
             message: "{{ notification_message }}"
@@ -307,10 +307,20 @@ blueprint:
       selector:
         boolean: {}
 
+    last_notified:
+      name: Last-notified helper (for cooldown)
+      description: >
+        An input_datetime (date + time) used to enforce the cooldown between
+        notifications. Required for the cooldown to work. Create one via
+        Settings → Helpers, e.g. input_datetime.f1_env_last_alert.
+      selector:
+        entity:
+          domain: input_datetime
+
 mode: single
 
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     minutes: "/1"
 
 variables:
@@ -322,6 +332,8 @@ variables:
   alerts_paused_entity: !input alerts_paused
   day_start_entity: !input day_start_time
   night_start_entity: !input night_start_time
+  last_notified_entity: !input last_notified
+  also_logbook: !input also_logbook
 
   t_sensor: !input temperature_sensor
   rh_sensor: !input humidity_sensor
@@ -362,7 +374,7 @@ variables:
   day_sub_ec_high_e: !input day_substrate_ec_high
   night_sub_ec_high_e: !input night_substrate_ec_high
 
-condition:
+conditions:
   - condition: state
     entity_id: !input alerts_paused
     state: "off"
@@ -371,7 +383,7 @@ condition:
   - condition: template
     value_template: "{{ (now().minute % (check_interval | int)) == 0 }}"
 
-action:
+actions:
   # --------- First evaluation ----------
   - variables:
       now_dt: "{{ now() }}"
@@ -647,14 +659,14 @@ action:
 
           # --------- Cooldown + message composition ----------
           - variables:
-              last_trig: "{{ this.attributes.last_triggered }}"
+              last_notified: "{{ states(last_notified_entity) }}"
               cooldown_ok: >
                 {% if (cooldown_minutes | int) == 0 %}
                   true
-                {% elif last_trig is none %}
+                {% elif last_notified in [none, '', 'unknown', 'unavailable'] %}
                   true
                 {% else %}
-                  {{ (as_timestamp(now()) - as_timestamp(last_trig)) > ((cooldown_minutes|int) * 60) }}
+                  {{ (now().timestamp() - as_timestamp(last_notified)) > ((cooldown_minutes|int) * 60) }}
                 {% endif %}
 
               issue_count: >
@@ -689,13 +701,20 @@ action:
           # --------- Notify (user-selected phones/devices) ----------
           - !input notify_action
 
+          # --------- Record notification time for the cooldown ----------
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: !input last_notified
+            data:
+              timestamp: "{{ now().timestamp() }}"
+
           # --------- Optional logbook ----------
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ !input also_logbook }}"
+                    value_template: "{{ also_logbook }}"
                 sequence:
-                  - service: logbook.log
+                  - action: logbook.log
                     data:
                       name: "{{ room_name }} Environment Alert"
                       message: "{{ issues_text }}"

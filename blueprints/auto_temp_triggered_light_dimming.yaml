@@ -1,136 +1,194 @@
 blueprint:
   name: Temperature-Based Light Dimming for Grow Rooms
-  description: Automatically dims lights when temperature exceeds threshold and gradually continues dimming until temperature normalizes, helping maintain optimal growing conditions.
+  author: JakeTheRabbit (HAGR)
+  homeassistant:
+    min_version: "2024.10.0"
+  description: >
+    Dims a grow light while the room is over a temperature threshold and keeps
+    dimming step-by-step until it recovers, then restores the lights to their
+    pre-dim brightness. Plant-safe heat protection.
+
+    **What changed vs. the old version**
+
+    - Lights are now actually restored when the temperature recovers (the old
+      version dimmed indefinitely and never undid it).
+    - Removed a broken trigger (`entity_id: this.entity_id`) and a broken
+      interval check that referenced a hardcoded, non-existent input_select and
+      could divide by zero.
+    - The check interval is now a real, used setting.
+    - Will not switch lights ON during a dark period — it only dims lights that
+      are already on.
+    - A minimum-brightness floor stops it dimming the lights to black.
+    - Modern HA syntax (`triggers:`/`actions:`, `today_at`, scene snapshot).
   domain: automation
   input:
-    temperature_sensor:
-      name: Temperature Sensor
-      description: Temperature sensor used to trigger the automation
-      selector:
-        entity:
-          domain: sensor
-          multiple: false
-    temperature_threshold:
-      name: Temperature Threshold
-      description: The temperature threshold above which the lights should be dimmed (can be an input_number entity or a fixed value)
-      selector:
-        entity:
-          domain: input_number
-          multiple: false
-    light_group:
-      name: Light Group
-      description: The light or light group to control
-      selector:
-        entity:
-          domain: light
-          multiple: false
-    dimming_percentage:
-      name: Dimming Percentage
-      description: How much to dim the lights each time (in percent)
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 20
-          unit_of_measurement: "%"
-          mode: slider
-          step: 1
-    check_interval:
-      name: Check Interval
-      description: How often to check if temperature is still high (in minutes)
-      default: 5
-      selector:
-        select:
-          options:
-            - "5"
-            - "10"
-            - "15"
-            - "30"
-    temperature_recover_time:
-      name: Temperature Recovery Time
-      description: Time required below threshold before stopping dimming (in minutes)
-      default: 2
-      selector:
-        number:
-          min: 1
-          max: 10
-          unit_of_measurement: min
-          mode: slider
-          step: 1
-    enable_notifications:
-      name: Enable Notifications
-      description: Create notifications when lights are dimmed
-      default: true
-      selector:
-        boolean: {}
+    section_inputs:
+      name: Sensors & Lights
+      icon: mdi:thermometer
+      input:
+        temperature_sensor:
+          name: Temperature Sensor
+          description: Temperature sensor used to trigger dimming.
+          selector:
+            entity:
+              domain: sensor
+        temperature_threshold:
+          name: Temperature Threshold
+          description: input_number whose value is the temperature above which lights dim.
+          selector:
+            entity:
+              domain: input_number
+        light_group:
+          name: Light / Light Group
+          description: The light entity (or light group) to dim and restore.
+          selector:
+            entity:
+              domain: light
+
+    section_behaviour:
+      name: Behaviour
+      icon: mdi:tune
+      input:
+        dimming_percentage:
+          name: Dimming Step (%)
+          description: How much to dim each interval while over threshold.
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 20
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        min_brightness_pct:
+          name: Minimum Brightness (%)
+          description: The lights will not be dimmed below this.
+          default: 10
+          selector:
+            number:
+              min: 1
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        check_interval_minutes:
+          name: Check Interval (Minutes)
+          description: How often to step the dim while the room stays hot.
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 60
+              step: 1
+              unit_of_measurement: minutes
+              mode: slider
+        temperature_recover_time:
+          name: Temperature Recovery Time (Minutes)
+          description: How long below threshold before restoring the lights.
+          default: 2
+          selector:
+            number:
+              min: 1
+              max: 30
+              step: 1
+              unit_of_measurement: minutes
+              mode: slider
+        enable_notifications:
+          name: Enable Notifications
+          description: Post a persistent notification when dimming / restoring.
+          default: true
+          selector:
+            boolean: {}
 
 mode: restart
 max_exceeded: silent
 
-trigger:
-  - platform: numeric_state
+triggers:
+  - trigger: homeassistant
+    event: start
+    id: ha_start
+  - trigger: numeric_state
     entity_id: !input temperature_sensor
     above: !input temperature_threshold
-  - platform: numeric_state
+    id: heat
+  - trigger: numeric_state
     entity_id: !input temperature_sensor
     below: !input temperature_threshold
     for:
       minutes: !input temperature_recover_time
-  - platform: state
-    entity_id: this.entity_id
-    to: "on"
-  - platform: time_pattern
-    minutes: "/5"
+    id: recovered
+  - trigger: time_pattern
+    minutes: "/1"
+    id: tick
 
-condition: 
-  - condition: or
-    conditions:
-      - condition: template
-        value_template: "{{ is_state('input_select.check_interval', '5') or now().minute % (states('input_select.check_interval') | int) == 0 }}"
+variables:
+  temp_sensor: !input temperature_sensor
+  temp_threshold: !input temperature_threshold
+  light_group: !input light_group
+  dim_percent: !input dimming_percentage
+  min_pct: !input min_brightness_pct
+  check_interval: !input check_interval_minutes
+  notifications: !input enable_notifications
+  restore_scene_id: "temp_light_restore_{{ this.entity_id.split('.')[1] if this is defined else 'temp' }}"
+  threshold_val: "{{ states(temp_threshold) | float(none) }}"
+  temp_val: "{{ states(temp_sensor) | float(none) }}"
+  is_hot: "{{ temp_val is not none and threshold_val is not none and temp_val > threshold_val }}"
+  light_on: "{{ states(light_group) == 'on' }}"
+  scene_exists: "{{ states('scene.' ~ restore_scene_id) not in [none, '', 'unknown', 'unavailable'] }}"
 
-action:
-  - variables:
-      temp_sensor: !input temperature_sensor
-      temp_threshold: !input temperature_threshold
-      dim_percent: !input dimming_percentage
-      notifications: !input enable_notifications
-      
-  - service: homeassistant.update_entity
-    target:
-      entity_id: !input temperature_sensor
-    
+actions:
   - choose:
+      # ── Hot: snapshot once, then step the dim (only on lights that are on) ──
       - conditions:
-          - condition: numeric_state
-            entity_id: !input temperature_sensor
-            above: !input temperature_threshold
+          - condition: template
+            value_template: "{{ is_hot and light_on }}"
+          - condition: template
+            value_template: "{{ trigger.id != 'tick' or (now().minute % (check_interval | int)) == 0 }}"
         sequence:
-          - service: light.turn_on
+          # Snapshot pre-dim state once per heat episode so we can restore it.
+          - if:
+              - condition: template
+                value_template: "{{ not scene_exists }}"
+            then:
+              - action: scene.create
+                data:
+                  scene_id: "{{ restore_scene_id }}"
+                  snapshot_entities:
+                    - "{{ light_group }}"
+          - action: light.turn_on
             target:
               entity_id: !input light_group
             data:
-              brightness_step_pct: "-{{ dim_percent }}"
+              brightness_pct: >
+                {% set cur = state_attr(light_group, 'brightness') %}
+                {% set cur_pct = (cur | float(255)) / 255 * 100 if cur is not none else 100 %}
+                {{ [cur_pct - (dim_percent | float), min_pct | float] | max | round(0) | int }}
           - if:
               - condition: template
                 value_template: "{{ notifications }}"
             then:
-              - service: persistent_notification.create
+              - action: persistent_notification.create
                 data:
+                  notification_id: "temp_dim_{{ this.entity_id }}"
                   title: "Temperature Alert"
                   message: >
-                    Lights dimmed by {{ dim_percent }}% because temperature 
-                    ({{ states(temp_sensor) | float(0) }}°C) exceeds threshold 
-                    ({{ states(temp_threshold) | float(0) }}°C)
-                  notification_id: "temp_dim_alert"
+                    Lights dimming — {{ states(temp_sensor) }}°C is over the
+                    {{ states(temp_threshold) }}°C threshold.
+
+      # ── Recovered: restore the snapshotted brightness (once, on the edge) ──
       - conditions:
-          - condition: numeric_state
-            entity_id: !input temperature_sensor
-            below: !input temperature_threshold
+          - condition: trigger
+            id: recovered
+          - condition: template
+            value_template: "{{ scene_exists }}"
         sequence:
+          - action: scene.turn_on
+            target:
+              entity_id: "scene.{{ restore_scene_id }}"
           - if:
               - condition: template
                 value_template: "{{ notifications }}"
             then:
-              - service: persistent_notification.dismiss
+              - action: persistent_notification.dismiss
                 data:
-                  notification_id: "temp_dim_alert"
+                  notification_id: "temp_dim_{{ this.entity_id }}"

@@ -13,12 +13,23 @@ For local development you can also drop the file into `<config>/blueprints/autom
 
 ## Files
 
+All four target **Home Assistant 2024.10+** (they use the `triggers:`/`actions:` syntax, `tts.speak`, `notify.send_message`, and scene snapshots). Two of them need an extra helper — see **Required helpers** below.
+
 | Blueprint | What it does | Key inputs |
 |---|---|---|
-| [`co2_control_and_alerts.yaml`](co2_control_and_alerts.yaml) | Day/night CO2 setpoints, hysteresis switching, relay-stuck safety auto-off, low and high alerts with cooldowns, optional light auto-dim on sustained low CO2. | CO2 sensors (primary + optional secondary), target inputs, CO2 switch, light group, day/night times, alert toggles. |
-| [`grow_room_env_threshold_alerts.yaml`](grow_room_env_threshold_alerts.yaml) | Consolidated environmental threshold alerts. Separate day/night helpers per sensor, optional persistence delay, cooldown between notifications, pause switch, multi-device notification targets via an action input. | Room name, alerts-paused boolean, day/night schedule, per-sensor day/night thresholds, notify-target action. |
-| [`auto_temp_triggered_light_dimming.yaml`](auto_temp_triggered_light_dimming.yaml) | When the room overheats, dim the lights and keep dimming until temp normalises. Plant-safe heat protection. | Temperature sensor, threshold (input_number), light group. |
-| [`light_leak_detection.yaml`](light_leak_detection.yaml) | Critical light-leak alarm. Any illuminance sensor above the threshold while your lights-on binary sensor is off forces the grow lights off and runs your notification action. The single highest-stakes automation in a flowering room. | Ambient light sensors (multi), lux threshold, lights-on binary sensor, grow-light group, notification action. |
+| [`co2_control_and_alerts.yaml`](co2_control_and_alerts.yaml) | Day/night CO2 setpoints, hysteresis switching, high-CO2 auto-off (primary + optional backup sensor, with a control lockout so it won't re-open while high), relay-stuck/empty-tank auto-off, sustained-low alerts with cooldown, optional light auto-dim that restores on recovery. | CO2 sensors (primary + optional secondary), target inputs, CO2 switch, light group, day/night times, max valve runtime, alert toggles, last-alert helpers. |
+| [`grow_room_env_threshold_alerts.yaml`](grow_room_env_threshold_alerts.yaml) | Consolidated environmental threshold alerts. Separate day/night helpers per sensor, optional persistence delay, helper-backed cooldown between notifications, pause switch, multi-device notification targets via an action input. | Room name, alerts-paused boolean, day/night schedule, per-sensor day/night thresholds, notify-target action, last-notified helper. |
+| [`auto_temp_triggered_light_dimming.yaml`](auto_temp_triggered_light_dimming.yaml) | When the room overheats, step-dim the lights until temp normalises, then restore them to their pre-dim brightness. Only dims lights that are already on, with a minimum-brightness floor. Plant-safe heat protection. | Temperature sensor, threshold (input_number), light group, dim step, min brightness, check interval, recovery time. |
+| [`light_leak_detection.yaml`](light_leak_detection.yaml) | Critical light-leak alarm. Any illuminance sensor above the threshold while your lights-on binary sensor is off forces the grow lights off and runs your notification action — re-checked on restart and every minute. The single highest-stakes automation in a flowering room. | Ambient light sensors (multi), lux threshold, lights-on binary sensor, grow-light group, notification action. |
+
+## Required helpers
+
+A couple of these store timestamps in `input_datetime` helpers so cooldowns survive restarts. Create them under **Settings → Devices & Services → Helpers** (or in YAML) before importing:
+
+- **`co2_control_and_alerts.yaml`** — the `input_number` and `input_datetime` helpers listed in the blueprint's own description (targets, tolerances, on/off times, alert windows, and `last_low_co2_alert` / `last_high_co2_alert`).
+- **`grow_room_env_threshold_alerts.yaml`** — one `input_datetime` (date + time) for the notification cooldown, e.g. `input_datetime.f1_env_last_alert`, plus the per-sensor day/night threshold `input_number`s.
+
+The other two need no extra helpers.
 
 ## See also
 

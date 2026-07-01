@@ -69,7 +69,13 @@ An intelligent AppDaemon-based monitoring system for cannabis grow rooms with AI
      class: GrowRoomAIMonitor
      openai_api_key: "sk-YOUR_OPENAI_API_KEY_HERE"
 ```
-3. Create Home Assistant Helper Entities (YAML)Copy and paste the following block into your Home Assistant configuration.yaml file (or a separate YAML file that you !include, like input_helpers.yaml). Then, restart Home Assistant (or Reload Input Helpers from Developer Tools).Replace YOUR_PREFIX_ with your desired prefix (e.g., f1_, grow_room_) and update the ENTITIES dictionary in grow_monitor.py accordingly.# In your configuration.yaml or a dedicated !include file for inputs
+
+### 3. Create Home Assistant Helper Entities (YAML)
+
+Copy and paste the following block into your Home Assistant `configuration.yaml` (or a separate YAML file that you `!include`, like `input_helpers.yaml`). Then restart Home Assistant (or **Reload Input Helpers** from Developer Tools).
+
+Replace `YOUR_PREFIX_` with your desired prefix (e.g. `f1_`, `grow_room_`) and update the `ENTITIES` dictionary in `grow_monitor.py` accordingly.
+
 ```yaml
 input_datetime:
   YOUR_PREFIX_lights_on_time:
@@ -269,9 +275,12 @@ input_number:
     unit_of_measurement: "mS/cm"
     icon: mdi:flash-outline
 ```
-4. Create Home Assistant Mute Script
-In your Home Assistant scripts.yaml file (or a separate file if you include a scripts directory), add the following script:
-```
+
+### 4. Create the Home Assistant Mute Script
+
+In your Home Assistant `scripts.yaml` (or a separate file if you use a scripts directory), add the following script:
+
+```yaml
 grow_monitor_mute_sensor:
   alias: "Grow Monitor Mute Sensor Action"
   description: "Fires an event to mute a specific grow monitor sensor."
@@ -290,66 +299,71 @@ grow_monitor_mute_sensor:
   mode: single
 ```
 
-Reload Home Assistant scripts (Developer Tools > YAML Configuration > Reload Scripts).
-5. Configure Entities in grow_monitor.py
-Open grow_monitor.py.
-At the top, find the ENTITIES dictionary.
-Update all entity IDs here to match your specific Home Assistant entities (sensors, and the helpers you just created with YOUR_PREFIX_).
-6. Restart AppDaemon
-After all files and entities are configured, restart the AppDaemon addon from the Home Assistant UI.
- Using the Monitor
-Automatic Operation: The script runs in the background.
-Notifications:
+Reload Home Assistant scripts (**Developer Tools → YAML → Reload Scripts**).
 
-When issues are detected and not suppressed by cooldowns or mutes, an AI-summarized notification is sent.
-Actions: "Mute [Sensor] (1h)", "Mute [Sensor] (6h)", "Pause ALL Alerts".
+### 5. Configure Entities in `grow_monitor.py`
 
+Open `grow_monitor.py`, find the `ENTITIES` dictionary near the top, and update all
+entity IDs to match your Home Assistant entities (sensors, plus the `YOUR_PREFIX_`
+helpers you just created).
 
-Muting: Clicking a mute action silences that specific sensor for the chosen duration. The overall notification system will also enter a 6-hour quiet period (new critical alerts still come through).
-Global Pause: Toggle the alerts_paused input_boolean in HA or use the notification action.
- Alert Severity & Cooldowns
-Severity Levels: IGNORE, NORMAL, URGENT, CRITICAL (determined by violation duration and trend).
+### 6. Restart AppDaemon
 
-A violation must typically last >= 60 seconds to become "NORMAL" severity.
+Once all files and entities are configured, restart the AppDaemon add-on from the
+Home Assistant UI.
 
+## Using the Monitor
 
-Cooldowns:
+- **Automatic operation:** the script runs in the background.
+- **Notifications:** when issues are detected and not suppressed by cooldowns or mutes,
+  an AI-summarised notification is sent. Actions: *Mute [Sensor] (1h)*,
+  *Mute [Sensor] (6h)*, *Pause ALL Alerts*.
+- **Muting:** clicking a mute action silences that sensor for the chosen duration; the
+  whole notification system also enters a 6-hour quiet period (new critical alerts still
+  come through).
+- **Global pause:** toggle the `alerts_paused` `input_boolean` in HA, or use the
+  notification action.
 
-Base: 1 hour between notifications.
-After Acknowledgment (Mute): 6 hours quiet period.
-New Critical Alerts: Bypass cooldowns.
+## Alert Severity & Cooldowns
 
+- **Severity levels:** IGNORE, NORMAL, URGENT, CRITICAL — determined by violation
+  duration and trend. A violation must typically last ≥ 60 seconds to reach NORMAL.
+- **Cooldowns:**
+  - Base 1 hour between notifications.
+  - 6-hour quiet period after acknowledgment (mute).
+  - New critical alerts bypass cooldowns.
 
- Data Persistence
-The script saves its state (muted sensors, last notification times) to grow_monitor_data.pkl in its app_dir (e.g., /config/apps/grow_monitor_data.pkl). This allows state to survive AppDaemon restarts.
- Troubleshooting
-No Notifications:
+## Data Persistence
 
-Check AppDaemon logs for errors.
-Verify YOUR_PREFIX_environmental_alerts_paused is off.
-Confirm time_zone in appdaemon.yaml is correct.
-Ensure sensor values violate thresholds for sufficient duration (default >60s for "NORMAL").
-Delete grow_monitor_data.pkl and restart AppDaemon to clear stuck mutes.
-Test your notify service from HA Developer Tools.
+The script saves its state (muted sensors, last notification times) to
+`grow_monitor_data.pkl` in its `app_dir` (e.g. `/config/apps/grow_monitor_data.pkl`),
+so state survives AppDaemon restarts.
 
+## Troubleshooting
 
-Mute Actions Not Working:
+**No notifications**
+- Check AppDaemon logs for errors.
+- Verify `YOUR_PREFIX_environmental_alerts_paused` is off.
+- Confirm `time_zone` in `appdaemon.yaml` is correct.
+- Ensure sensor values violate thresholds for long enough (default > 60 s for NORMAL).
+- Delete `grow_monitor_data.pkl` and restart AppDaemon to clear stuck mutes.
+- Test your notify service from HA Developer Tools.
 
-Ensure script.grow_monitor_mute_sensor exists and is correctly configured in HA.
-Verify EVENT_GROW_MONITOR_MUTE in grow_monitor.py matches the event: in the HA script.
+**Mute actions not working**
+- Ensure `script.grow_monitor_mute_sensor` exists and is configured correctly.
+- Verify `EVENT_GROW_MONITOR_MUTE` in `grow_monitor.py` matches the `event:` in the HA script.
 
+**AI summary issues**
+- Check `openai_api_key` in `apps.yaml`.
+- Look for API errors in the AppDaemon logs.
 
-AI Summary Issues:
+**Log timestamps incorrect**
+- Ensure `time_zone` in the `appdaemon.yaml` that AppDaemon actually reads is set to your local timezone.
 
-Check openai_api_key in apps.yaml.
-Look for API errors in AppDaemon logs.
+---
 
+Monitor your grow environment effectively with intelligent, summarised, actionable alerts.
 
-Log Timestamps Incorrect:
-
-Ensure time_zone in the appdaemon.yaml that AppDaemon is actually reading is set to your local timezone.
-
-
- Monitor your grow environment effectively with intelligent, summarized, and actionable alerts!Version: 3.1
-Last Updated: May 24, 2025
-Compatibility: Home Assistant 2023.x+, AppDaemon 4.x+
+- **Version:** 3.1
+- **Last updated:** 2025-05-24
+- **Compatibility:** Home Assistant 2023.x+, AppDaemon 4.x+

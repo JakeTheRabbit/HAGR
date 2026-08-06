@@ -1,0 +1,295 @@
+blueprint:
+  name: Tank Warmup Circulation
+  description: >-
+    Warms a reservoir/batch tank by circulating water through a return valve
+    until the tank temperature reaches a target minimum, then stops with a
+    staged shutdown (pump first, valve after — never deadheads).
+
+
+    **Circulation loop:** opens the return valve, waits 3 s, then starts the
+    pump(s). Water cycles tank → pump → valve → back to tank and picks up
+    heat until the temperature sensor reaches the target.
+
+
+    **Irrigation interlock:** the moment any "interruptor" entity (irrigation
+    script, dosing flag, fertigation master…) turns on, warmup yields — it
+    closes the return valve and clears its flag WITHOUT touching the pumps,
+    so the irrigation system owns them. Warmup refuses to start while any
+    interruptor is on, and resumes automatically once they all clear if the
+    tank is still cold.
+
+
+    **Safety:** optional tank-level sensor blocks dry-running the pump; stops
+    if the temp sensor is unavailable 5 min; stops at a max-runtime cap.
+
+
+    **Requires two toggle helpers** (Settings → Devices → Helpers → Toggle):
+    one as the enable/master switch, one as the internal "active" flag —
+    leave the active flag alone, the blueprint owns it.
+  domain: automation
+  input:
+    tank_temp_sensor:
+      name: Tank temperature sensor
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: temperature
+    target_temp:
+      name: Target temperature (minimum)
+      description: Circulate until the tank reaches this temperature.
+      default: 18
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: "°C"
+    hysteresis:
+      name: Restart hysteresis
+      description: >-
+        Warmup only restarts once the tank drops this far below target,
+        so the pump doesn't flap around the setpoint.
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 0.1
+          unit_of_measurement: "°C"
+    return_valve:
+      name: Tank return valve
+      description: Valve/manifold switch that routes pump output back to the tank.
+      selector:
+        entity:
+          filter:
+            domain: switch
+    pump_switches:
+      name: Pump switch(es)
+      description: >-
+        Pump power/master switches, turned on together to circulate. On
+        shutdown the FIRST one listed is turned off first (make it the pump
+        master), then the valve closes, then the rest turn off.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: switch
+    master_helper:
+      name: Master enable helper (toggle)
+      description: Warmup only runs while this is on. Your on/off switch.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+    active_helper:
+      name: Active flag helper (toggle)
+      description: Internal state flag owned by this blueprint — don't toggle it yourself.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+    interruptors:
+      name: Irrigation interruptors
+      default: []
+      description: >-
+        Entities that mean "watering/dosing in progress" while they are on
+        (irrigation scripts, dosing input_booleans…). Warmup yields to them
+        instantly and won't start while any is on.
+      selector:
+        entity:
+          multiple: true
+    tank_status_sensor:
+      name: Tank level/status sensor (optional)
+      default: ""
+      description: Sensor that reports when the tank is empty (dry-run protection).
+      selector:
+        entity: {}
+    tank_empty_state:
+      name: Tank empty state value
+      default: "Empty"
+      description: The state of the sensor above that means "tank is empty".
+      selector:
+        text: {}
+    max_runtime:
+      name: Max continuous runtime
+      default: { hours: 2, minutes: 0, seconds: 0 }
+      description: Give up and stop if the target still isn't reached after this long.
+      selector:
+        duration: {}
+    on_start_actions:
+      name: Actions when warmup starts (optional)
+      default: []
+      selector:
+        action: {}
+    on_stop_actions:
+      name: Actions when warmup stops or yields (optional)
+      default: []
+      selector:
+        action: {}
+
+mode: queued
+max: 5
+
+trigger_variables:
+  tv_temp: !input tank_temp_sensor
+  tv_target: !input target_temp
+  tv_hyst: !input hysteresis
+  tv_tank_status: !input tank_status_sensor
+  tv_empty_state: !input tank_empty_state
+
+triggers:
+  #  ── START ──  tank cold (with hysteresis, held 1 min)
+  - trigger: template
+    id: start
+    value_template: >-
+      {{ states(tv_temp) | float(999) < tv_target | float - tv_hyst | float }}
+    for: "00:01:00"
+  #  Re-check: interruptors clearing, master flipped on, watchdog, HA restart
+  - trigger: state
+    id: recheck
+    entity_id: !input interruptors
+    to: "off"
+  - trigger: state
+    id: recheck
+    entity_id: !input master_helper
+    to: "on"
+  - trigger: time_pattern
+    id: recheck
+    minutes: "/15"
+  - trigger: homeassistant
+    id: recheck
+    event: start
+  #  ── STOP ──
+  - trigger: template
+    id: stop_target
+    value_template: >-
+      {{ states(tv_temp) | float(0) >= tv_target | float }}
+    for: "00:00:30"
+  - trigger: state
+    id: stop_sensor_dead
+    entity_id: !input tank_temp_sensor
+    to:
+      - "unavailable"
+      - "unknown"
+    for: "00:05:00"
+  - trigger: template
+    id: stop_tank_empty
+    value_template: >-
+      {{ tv_tank_status != '' and states(tv_tank_status) == tv_empty_state }}
+  - trigger: state
+    id: stop_master_off
+    entity_id: !input master_helper
+    to: "off"
+  - trigger: state
+    id: stop_runtime_cap
+    entity_id: !input active_helper
+    to: "on"
+    for: !input max_runtime
+  #  ── YIELD ──  irrigation/dose started
+  - trigger: state
+    id: yield
+    entity_id: !input interruptors
+    to: "on"
+
+variables:
+  temp_sensor: !input tank_temp_sensor
+  target: !input target_temp
+  hyst: !input hysteresis
+  active: !input active_helper
+  master: !input master_helper
+  interruptor_list: !input interruptors
+  tank_status: !input tank_status_sensor
+  empty_state: !input tank_empty_state
+  pumps: !input pump_switches
+
+actions:
+  - choose:
+      #  ── START / RESUME ──
+      - conditions:
+          - condition: trigger
+            id:
+              - start
+              - recheck
+          - condition: state
+            entity_id: !input master_helper
+            state: "on"
+          - condition: state
+            entity_id: !input active_helper
+            state: "off"
+          - condition: template
+            value_template: >-
+              {{ states(temp_sensor) | float(999) < target | float - hyst | float }}
+          #  No interruptor running
+          - condition: template
+            value_template: >-
+              {{ expand(interruptor_list) | selectattr('state', 'eq', 'on')
+                 | list | count == 0 }}
+          #  Dry-run protection (skipped when no status sensor configured)
+          - condition: template
+            value_template: >-
+              {{ tank_status == '' or states(tank_status) != empty_state }}
+        sequence:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input active_helper
+          #  Open the return path BEFORE the pump so it never deadheads
+          - action: switch.turn_on
+            target:
+              entity_id: !input return_valve
+          - delay:
+              seconds: 3
+          - action: switch.turn_on
+            target:
+              entity_id: !input pump_switches
+          - sequence: !input on_start_actions
+
+      #  ── STOP ──  staged: pump master off → 2 s → valve closed → rest off
+      - conditions:
+          - condition: trigger
+            id:
+              - stop_target
+              - stop_sensor_dead
+              - stop_tank_empty
+              - stop_master_off
+              - stop_runtime_cap
+          - condition: state
+            entity_id: !input active_helper
+            state: "on"
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input active_helper
+          - action: switch.turn_off
+            continue_on_error: true
+            target:
+              entity_id: "{{ pumps[0] }}"
+          - delay:
+              seconds: 2
+          - action: switch.turn_off
+            continue_on_error: true
+            target:
+              entity_id: !input return_valve
+          - action: switch.turn_off
+            continue_on_error: true
+            target:
+              entity_id: "{{ pumps[1:] }}"
+          - sequence: !input on_stop_actions
+
+      #  ── YIELD TO IRRIGATION ──  close valve, clear flag, DON'T touch
+      #  pumps — the irrigation system owns them from here.
+      - conditions:
+          - condition: trigger
+            id: yield
+          - condition: state
+            entity_id: !input active_helper
+            state: "on"
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input active_helper
+          - action: switch.turn_off
+            continue_on_error: true
+            target:
+              entity_id: !input return_valve
+          - sequence: !input on_stop_actions

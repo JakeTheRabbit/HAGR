@@ -1,4 +1,5 @@
-# DEPRECATED: New version here: https://github.com/JakeTheRabbit/TDR-Sensor
+> [!IMPORTANT]
+> **Deprecated:** use the maintained [TDR-Sensor repository](https://github.com/JakeTheRabbit/TDR-Sensor) for new installs. Compare TEROS-12 and lower-cost probes in [Awesome Grow Room Parts](https://jaketherabbit.github.io/awesome-grow-room-parts/). This page remains for existing links and legacy MQTT installations.
 
 # TEROS-12 Soil Moisture Sensor with ESP32 and MQTT
 
@@ -507,5 +508,5 @@ If you find any issues or have suggestions for improvements, please open an issu
 
 ## License
 
-This project is open-source and available under the [MIT License](LICENSE).
+This project is open-source and available under the [MIT License](../LICENSE).
 

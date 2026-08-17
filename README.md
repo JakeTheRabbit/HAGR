@@ -516,3 +516,5 @@ If you're forking this for your own build, rotate any credential you inherit fro
 Still a work in progress. [Issues](https://github.com/JakeTheRabbit/HAGR/issues) and [pull requests](https://github.com/JakeTheRabbit/HAGR/pulls) are welcome.
 
 [MIT licensed](LICENSE).
+
+> **This repo is free. My 2am dryback debugging is not.** If it saved you a crop, a weekend, or a nervous breakdown — [buy the rabbit a bag of nutes](https://github.com/sponsors/JakeTheRabbit). If it didn't, keep your money. I respect a tight nutrient budget.

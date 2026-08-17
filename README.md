@@ -1,5 +1,7 @@
 # HAGR — Home Assistant Grow Room
 
+> **This repo is free. My 2am dryback debugging is not.** If it saved you a crop, a weekend, or a nervous breakdown — [buy the rabbit a bag of nutes](https://github.com/sponsors/JakeTheRabbit). If it didn't, keep your money. I respect a tight nutrient budget.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.10+-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io)
 [![ESPHome](https://img.shields.io/badge/ESPHome-Compatible-black?logo=esphome&logoColor=white)](https://esphome.io)
@@ -516,5 +518,3 @@ If you're forking this for your own build, rotate any credential you inherit fro
 Still a work in progress. [Issues](https://github.com/JakeTheRabbit/HAGR/issues) and [pull requests](https://github.com/JakeTheRabbit/HAGR/pulls) are welcome.
 
 [MIT licensed](LICENSE).
-
-> **This repo is free. My 2am dryback debugging is not.** If it saved you a crop, a weekend, or a nervous breakdown — [buy the rabbit a bag of nutes](https://github.com/sponsors/JakeTheRabbit). If it didn't, keep your money. I respect a tight nutrient budget.

@@ -10,6 +10,16 @@
 
 A running, lived-in Home Assistant build for cannabis grow rooms. VPD-aware climate control, four-phase crop steering, automated batch-tank dosing, PWM-dimmable LEDs, ESPHome sensors everywhere, and consolidated alerting. It's also the front door to a wider set of related repos — controllers, calculators, sensor firmware, training material, infrastructure bits.
 
+> [!IMPORTANT]
+> **HAGR is the ecosystem entry point and implementation archive.** Start with the maintained project for the job, then use the configs here as field-tested reference material.
+
+| What you need | Current home |
+|---|---|
+| Parts, prices, compatibility, wiring notes, and complete BOMs | **[Awesome Grow Room Parts](https://jaketherabbit.github.io/awesome-grow-room-parts/)** |
+| Crop-steering control for Home Assistant | **[HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy)** + **[f2-control](https://github.com/JakeTheRabbit/f2-control)** |
+| Athena feed, foliar, stock-tank, and pH calculations | **[Athena Grow Calculator](https://jaketherabbit.github.io/Athena-Batch-Tank-Nutrient-Calculator/)** |
+| Evidence-linked cultivation guides | **[The Cannabis White Papers](https://jaketherabbit.github.io/cannabis-white-papers/)** |
+
 <img width="825" alt="Fertigation control dashboard" src="https://github.com/user-attachments/assets/773845f0-8afe-4255-b620-9c46b1f75d23" />
 
 ---
@@ -109,7 +119,7 @@ homeassistant:
 
 | Folder | What's inside |
 |---|---|
-| [`Packages/CropSteering/`](Packages/CropSteering/) | A four-phase (P0/P1/P2/P3) crop-steering package — input helpers, template sensors, automations, and a long user guide. Start with [`Packages/ReadMe.MD`](Packages/ReadMe.MD) and [`crop_steering_installation_guide_improved.md`](Packages/CropSteering/crop_steering_installation_guide_improved.md). |
+| [`Packages/CropSteering/`](Packages/CropSteering/) | Legacy four-phase (P0/P1/P2/P3) crop-steering package, retained for existing installs and reference. **For new installs use [HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy) with the [f2-control add-on](https://github.com/JakeTheRabbit/f2-control).** |
 
 Two standalone YAMLs sit at the repo root and can be `!include`d into your own setup:
 
@@ -125,7 +135,7 @@ Device YAMLs for the sensor and actuator nodes used in the build. Each file's he
 | Config | Device | What it does |
 |---|---|---|
 | [`CO2_Sensor_espatoms3.yaml`](esphome/CO2_Sensor_espatoms3.yaml) | [M5Stack Atom S3 Lite](https://shop.m5stack.com/products/atoms3-lite-esp32s3-dev-kit) + [SCD41](https://shop.m5stack.com/products/co2l-unit-with-temperature-and-humidity-sensor-scd41) (Grove) | Roaming CO₂, temp, RH, VPD. |
-| [`SCD4x_m5stack_ESPOE.yaml`](esphome/SCD4x_m5stack_ESPOE.yaml) | [M5Stack ESPPoE](https://shop.m5stack.com/products/m5stack-atom-poe-kit-with-w5500-hy601742e) + [SCD41](https://shop.m5stack.com/products/co2l-unit-with-temperature-and-humidity-sensor-scd41) | PoE-powered CO₂ sensor with VPD, daily min/max, and CO₂ alerts as template sensors. |
+| [`SCD4x_m5stack_ESPOE_WiFi.yaml`](esphome/SCD4x_m5stack_ESPOE_WiFi.yaml) | [M5Stack ESPPoE](https://shop.m5stack.com/products/m5stack-atom-poe-kit-with-w5500-hy601742e) + [SCD41](https://shop.m5stack.com/products/co2l-unit-with-temperature-and-humidity-sensor-scd41) | PoE-powered CO₂ sensor with VPD, daily min/max, and CO₂ alerts as template sensors. |
 | [`esphome_m5stack_scd41.yaml`](esphome/esphome_m5stack_scd41.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [SCD41](https://shop.m5stack.com/products/co2l-unit-with-temperature-and-humidity-sensor-scd41) | Compact CO₂ + environment monitor. |
 | [`m5Stack_AirQ.yaml`](esphome/m5Stack_AirQ.yaml) | [M5Stack AirQ](https://shop.m5stack.com/products/atomic-airq-kit-w-co2-tvoc-eco2) | Dual CO₂ sensors with auto-calibration, PM, RH, temperature. |
 | [`m5stack-dial-tank-monitor.yaml`](esphome/m5stack-dial-tank-monitor.yaml) ([README](esphome/m5stack-dial-tank-monitor-README.md)) | [M5Stack Dial](https://shop.m5stack.com/products/m5stack-dial-esp32-s3-smart-rotary-knob-w-1-28-round-touch-screen) + [ultrasonic](https://shop.m5stack.com/products/i2c-ultrasonic-distance-unit-rcwl-9620) | Tank water level — distance and percentage, displayed on the dial mounted outside the tank. |
@@ -136,8 +146,8 @@ Device YAMLs for the sensor and actuator nodes used in the build. Each file's he
 | [`atlas_wifi_hydroponics_kit.yaml`](esphome/atlas_wifi_hydroponics_kit.yaml) | [Atlas Scientific EZO](https://atlas-scientific.com/embedded-solutions/) hydroponics kit on [ESP32](https://www.espressif.com/en/products/socs/esp32) | pH, EC, and RTD (temperature) from [Atlas Scientific EZO modules](https://atlas-scientific.com/probes/). |
 | [`espoe_peristaltic_pumps.yaml`](esphome/espoe_peristaltic_pumps.yaml) | [M5Stack ESPPoE](https://shop.m5stack.com/products/m5stack-atom-poe-kit-with-w5500-hy601742e) + relay/PWM | Peristaltic pump control for automated dosing. |
 | [`m5Stack ESPPOE PB HUB 2CH-DualButton-BLEproxy.yaml`](esphome/m5Stack%20ESPPOE%20PB%20HUB%202CH-DualButton-BLEproxy.yaml) | [M5Stack ESPPoE](https://shop.m5stack.com/products/m5stack-atom-poe-kit-with-w5500-hy601742e) + [PB Hub](https://shop.m5stack.com/products/pbhub-unit-v1-1) | Two-channel switch / dual-button with BLE proxy. |
-| [`pwm_led_lights.yaml`](esphome/pwm_led_lights.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [PWM unit](https://shop.m5stack.com/products/pwm-unit) | Dim a 0-10 V or PWM LED driver as a native HA `light` entity. Wired in place of the potentiometer. |
-| [`espatom_mlx90640.yaml`](esphome/espatom_mlx90640.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [MLX90640](https://shop.m5stack.com/products/thermal2-unit-mlx90640) | 32 × 24 thermal IR array for canopy temperature mapping. |
+| [`pwm_led_lights.yaml`](esphome/pwm_led_lights.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [Atom PWM](https://docs.m5stack.com/en/atom/atom_pwm) | Legacy low-voltage PWM example. Verify that the exact LED driver accepts non-isolated, common-ground PWM before connecting it; the M5Stack unit is not an isolated 0-10 V interface. |
+| [`espatom_mlx90640.yaml`](esphome/espatom_mlx90640.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [MLX90640](https://shop.m5stack.com/products/thermal2-unit-mlx90640) | Legacy 32 × 24 thermal IR config. New installs should use the maintained [esphome-m5-thermal2 component](https://github.com/JakeTheRabbit/esphome-m5-thermal2). |
 | [`thermal_camera_leaf_temp.yaml`](esphome/thermal_camera_leaf_temp.yaml) | [M5Stack Atom Lite](https://shop.m5stack.com/products/atom-lite-esp32-development-kit) + [MLX90614](https://shop.m5stack.com/products/mini-temperature-unit-mlx90614) | Single-pixel IR for direct leaf-surface temperature. Feeds the leaf-VPD calculation. |
 | [`THC-S Home Assistant Template Sensors calibrated for Coco coir`](esphome/THC-S%20Home%20Assistant%20Template%20Sensors%20calibrated%20for%20Coco%20coir) | HA template (not ESPHome) | Coco-coir-calibrated pwEC formula for the [THC-S soil sensor](https://github.com/kromadg/soil-sensor). |
 | [`secrets.yaml.example`](esphome/secrets.yaml.example) | — | Template for `secrets.yaml`. Copy and fill in WiFi credentials, API encryption key, and OTA password. |
@@ -179,42 +189,51 @@ Path: [`growingSOPs/`](growingSOPs/)
 | File | What it does |
 |---|---|
 | [`automated_batch_tank.md`](automated_batch_tank.md) | System diagram and the full automation for batch-tank fill and dose. |
-| [`athena.html`](athena.html) | Standalone single-file Athena Pro Line batch-tank calculator. The hosted version lives at [`batch_tank_calculator`](https://github.com/JakeTheRabbit/batch_tank_calculator). |
-| [`crop_steering_package.yaml`](crop_steering_package.yaml) | Earlier single-file crop-steering snapshot. For new installs use [`Packages/CropSteering/`](Packages/CropSteering/). |
+| [`athena.html`](athena.html) | Legacy standalone Athena Pro Line calculator. Use the current [Athena Grow Calculator](https://jaketherabbit.github.io/Athena-Batch-Tank-Nutrient-Calculator/) or its [source repository](https://github.com/JakeTheRabbit/Athena-Batch-Tank-Nutrient-Calculator). |
+| [`crop_steering_package.yaml`](crop_steering_package.yaml) | Earlier single-file crop-steering snapshot. For new installs use [HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy) with [f2-control](https://github.com/JakeTheRabbit/f2-control). |
 | [`vpd_configuration.yaml`](vpd_configuration.yaml) | Leaf and air VPD template sensors. |
-| [`PARTS_LIST.md`](PARTS_LIST.md) | Bill of materials — sensors, valves, plugs, microcontrollers, drivers. |
+| [`PARTS_LIST.md`](PARTS_LIST.md) | Permanent signpost to the maintained [Awesome Grow Room Parts catalogue](https://jaketherabbit.github.io/awesome-grow-room-parts/). |
 
 ---
 
 ## Related repositories
 
-The wider system, broken into focused repos. Some are reference implementations, some are the production code, some are companion tools.
+The wider system, broken into focused repos. These are the maintained destinations; HAGR keeps older configs in place so existing links and installations do not break.
+
+### Hardware catalogue and device firmware
+
+| Repo | What it is |
+|---|---|
+| **[Awesome Grow Room Parts](https://github.com/JakeTheRabbit/awesome-grow-room-parts)** · **[live catalogue](https://jaketherabbit.github.io/awesome-grow-room-parts/)** | The canonical hardware catalogue. Searchable parts, observed prices, evidence tiers, I²C collision planning, ESPHome examples, safety notes, and complete build recipes. Supersedes the hand-maintained `PARTS_LIST.md`. |
+| **[TDR-Sensor](https://github.com/JakeTheRabbit/TDR-Sensor)** | Maintained TEROS-12 and compatible SDI-12 substrate-sensor firmware, calibration, analytics, dashboards, and ready-to-flash ESPHome configs. Supersedes `teros-12/` for new installs. |
+| **[Growlink TerraLink for ESPHome](https://github.com/JakeTheRabbit/Grownlink-Terralink-Substrate-Sensor-for-ESP-Home)** | Dedicated TerraLink wiring, calibration, deployment notes, and ESPHome configuration. Supersedes the standalone `esphome/terralink.yaml` guide. |
+| **[esphome-m5-thermal2](https://github.com/JakeTheRabbit/esphome-m5-thermal2)** | Maintained external component and ready-to-flash configs for the M5Stack Unit Thermal2. Use this instead of the legacy generic MLX90640 config for that packaged unit. |
 
 ### Crop steering and irrigation
 
 | Repo | What it is |
 |---|---|
-| **[HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy)** | A proper multi-zone (1-6) crop-steering controller for Home Assistant. Custom integration plus AppDaemon modules. Phase state machine, VWC/EC-driven irrigation, full dashboards. The most actively developed crop-steering setup in this ecosystem. |
+| **[HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy)** | The maintained multi-room, multi-zone crop-steering controller for Home Assistant. Its custom integration handles configuration and sensor fusion; f2-control owns phase logic, hardware sequencing, safety gates, and operator dashboards. |
+| **[f2-control](https://github.com/JakeTheRabbit/f2-control)** | One-click Home Assistant add-on repository for the controller engine used with HA-Irrigation-Strategy. Install the integration first, then add this URL to the Home Assistant Add-on Store. |
 | **[open-crop-steering](https://github.com/JakeTheRabbit/open-crop-steering)** | A Home Assistant add-on (with a Docker fallback) that turns cultivation recipes into versioned, immutable plans. Adds an AI runtime layer bounded by hard guardrails, and produces tamper-evident audit records suitable for regulated facilities. v0.1, in development. |
-| **[irrigation_unlimited](https://github.com/JakeTheRabbit/irrigation_unlimited)** | Fork of the Irrigation Unlimited HA integration (rgc99), pinned for the irrigation stack. |
 
 ### Calculators and tools
 
 | Repo | What it is |
 |---|---|
-| **[batch_tank_calculator](https://github.com/JakeTheRabbit/batch_tank_calculator)** | Athena Pro Line batch-tank nutrient calculator — metric and imperial, scales to any reservoir volume, persists calculations to local storage, exports to CSV. **[Live site](https://jaketherabbit.github.io/Athena-Batch-Tank-Nutrient-Calculator/)**. |
+| **[Athena-Batch-Tank-Nutrient-Calculator](https://github.com/JakeTheRabbit/Athena-Batch-Tank-Nutrient-Calculator)** | Current Athena calculator for feed reservoirs, foliar sprays, stock concentrates, tank life, and pH correction. Self-hosted and phone-friendly. **[Live site](https://jaketherabbit.github.io/Athena-Batch-Tank-Nutrient-Calculator/)**. |
+| **[cannabis-white-papers](https://github.com/JakeTheRabbit/cannabis-white-papers)** | Maintained evidence-linked cultivation library covering propagation, crop steering, environment, plant health, irrigation, and facility quality. **[Read online](https://jaketherabbit.github.io/cannabis-white-papers/)**. |
 | **[cannabis-grow-room-levers](https://github.com/JakeTheRabbit/cannabis-grow-room-levers)** | A systems-thinking field guide — the grow room treated as a coupled energy / moisture / carbon / salt / biology system. Eleven control levers, four balances, a lever-interaction matrix, a diagnostic chain, six common failure modes. Single self-contained HTML. **[Live site](https://jaketherabbit.github.io/cannabis-grow-room-levers/)**. |
 | **[Grow Room Training](https://github.com/JakeTheRabbit/grow-room-training)** | Training material distilled from the levers framework — a visual manual, a 15-chapter textbook with auto-scored MCQs, printable field cards, and an LLM-agent playbook for autonomous HA control. |
-| **[cultivation-intelligence](https://github.com/JakeTheRabbit/cultivation-intelligence)** | AI cultivation intelligence platform — keeps every sensor reading and irrigation event in a time-series history, with an LLM advisory layer on top. |
 
-### Infrastructure and integrations
+### Dashboards and grow records
 
 | Repo | What it is |
 |---|---|
-| **[mosquitto-bridge-setup](https://github.com/JakeTheRabbit/mosquitto-bridge-setup)** | Mosquitto bridge configuration for dual-boot Windows/Linux relaying. Useful when a no-auth nutrient doser has to talk to authenticated HA MQTT. |
-| **[visitors_repo](https://github.com/JakeTheRabbit/visitors_repo)** | A small visitor sign-in / sign-out tracker for HA. Built to be quick and to not get tangled up when visitors forget to sign out. |
-| **[rosinlab](https://github.com/JakeTheRabbit/rosinlab)** | Local-first rosin press and sift logging web app. Embeds inside Home Assistant via an iframe card. Compare mode plays up to three press videos side by side with parameters. |
-| **[TDR-Sensor](https://github.com/JakeTheRabbit/TDR-Sensor)** | The newer dedicated repo for TEROS-12 and compatible SDI-12 substrate sensor builds. Supersedes the [`teros-12/`](teros-12/) folder here. |
+| **[plant-state-dashboard](https://github.com/JakeTheRabbit/plant-state-dashboard)** | Field guide, interactive demo, and reusable spec for dashboards that lead with plant state, leading indicators, and bounded advisories instead of raw graphs. |
+| **[GrowScope](https://github.com/JakeTheRabbit/growscope)** | Home Assistant grow registry, automatic timelapse, full-resolution sensor history, recipe overlays, journals, and side-by-side grow replay. |
+| **[grow-sensor-card](https://github.com/JakeTheRabbit/grow-sensor-card)** | Compact Home Assistant card for displaying grow-room sensor state and thresholds. |
+| **[cultivation-intelligence](https://github.com/JakeTheRabbit/cultivation-intelligence)** | AI cultivation intelligence platform — keeps every sensor reading and irrigation event in a time-series history, with an LLM advisory layer on top. |
 
 ---
 
@@ -225,15 +244,15 @@ The stack covers:
 - **CO₂ control** — day/night setpoints, hysteresis, safety auto-off, low and high alerting, and an option to auto-dim lights when CO₂ is sustained low. See [`blueprints/co2_control_and_alerts.yaml`](blueprints/co2_control_and_alerts.yaml).
 - **VPD calculations** — live air VPD and leaf VPD via [`vpd_configuration.yaml`](vpd_configuration.yaml). Leaf VPD uses an [MLX90614](https://shop.m5stack.com/products/mini-temperature-unit-mlx90614) IR temperature reading.
 - **Automatic VPD control** — drives a humidifier or dehumidifier to hold leaf VPD steady through temperature and RH drift.
-- **Crop steering and irrigation** — full four-phase (P0/P1/P2/P3) package in [`Packages/CropSteering/`](Packages/CropSteering/). For larger multi-zone setups use [HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy).
-- **Substrate sensing** — [TEROS-12](https://www.metergroup.com/en/meter-environment/products/teros-12) and [SDI-12](https://sdi-12.org/) sensors talking to an [ESP32](https://www.espressif.com/en/products/socs/esp32), giving you VWC and pore-water EC. See [`teros-12/`](teros-12/) and [`esphome/teros-12-sdi-12.yaml`](esphome/teros-12-sdi-12.yaml). If you want something that just works, use [Chill-Division/sdi12-substrate-sensor](https://github.com/Chill-Division/sdi12-substrate-sensor) — calibrated and auto-discovers over MQTT.
+- **Crop steering and irrigation** — the original four-phase (P0/P1/P2/P3) package remains in [`Packages/CropSteering/`](Packages/CropSteering/) for existing installs. New installs should use [HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy) with [f2-control](https://github.com/JakeTheRabbit/f2-control).
+- **Substrate sensing** — HAGR retains its original TEROS-12, TerraLink, and SDI-12 configs. For current firmware use [TDR-Sensor](https://github.com/JakeTheRabbit/TDR-Sensor) or the dedicated [TerraLink ESPHome repository](https://github.com/JakeTheRabbit/Grownlink-Terralink-Substrate-Sensor-for-ESP-Home), and compare probe options in [Awesome Grow Room Parts](https://jaketherabbit.github.io/awesome-grow-room-parts/).
 - **Nutrient dosing** — peristaltic pumps run from an [M5Stack ESPPoE](https://shop.m5stack.com/products/m5stack-atom-poe-kit-with-w5500-hy601742e), automated batch-tank fill, multi-part [Athena Pro Line](https://athenaag.com/) dosing, then a post-dose pH/EC verification through [Atlas Scientific EZO](https://atlas-scientific.com/probes/) probes. See [`automated_batch_tank.md`](automated_batch_tank.md) and [`automations/refill_tank_triggered_by_low_level.yaml`](automations/refill_tank_triggered_by_low_level.yaml).
-- **Lighting** — 0-10 V or PWM-dimmable LED drivers exposed as native HA `light` entities through the [M5Stack PWM unit](https://shop.m5stack.com/products/pwm-unit). See [`esphome/pwm_led_lights.yaml`](esphome/pwm_led_lights.yaml). A linear PPFD acclimation ramp lives in [`automations/light_acclimation.yaml`](automations/light_acclimation.yaml).
+- **Lighting** — compatible low-voltage PWM drivers exposed as native HA `light` entities through the [M5Stack Atom PWM](https://docs.m5stack.com/en/atom/atom_pwm). This is not an isolated 0-10 V interface; verify the exact driver's control input first. See [`esphome/pwm_led_lights.yaml`](esphome/pwm_led_lights.yaml). A linear PPFD acclimation ramp lives in [`automations/light_acclimation.yaml`](automations/light_acclimation.yaml).
 - **Tank level monitoring** — ultrasonic distance sensor on the tank lid with the readout on an [M5Stack Dial](https://shop.m5stack.com/products/m5stack-dial-esp32-s3-smart-rotary-knob-w-1-28-round-touch-screen) mounted outside the tank. See [`esphome/m5stack-dial-tank-monitor.yaml`](esphome/m5stack-dial-tank-monitor.yaml).
 - **Notifications** — consolidated environmental alerts with day/night thresholds, mute and pause actions, and an optional AI summary line. See [`addons/appdaemon/grow_monitor/`](addons/appdaemon/grow_monitor/).
 - **Fan speed control** — [AC Infinity](https://acinfinity.com/) fans driven from an external temp sensor. See [`automations/Adjust ACI Fan Speed External Sensor.md`](automations/Adjust%20ACI%20Fan%20Speed%20External%20Sensor.md).
 - **AC control** — IR-blaster control of a wall-mount split AC with PID, holding the room to about ±0.2 °C with regular hardware. See HA's [Broadlink](https://www.home-assistant.io/integrations/broadlink) and [SmartIR](https://github.com/smartHomeHub/SmartIR) integrations.
-- **Thermal canopy temperature** — [ESP32](https://www.espressif.com/en/products/socs/esp32) with an [MLX90640](https://shop.m5stack.com/products/thermal2-unit-mlx90640) 32 × 24 thermal array, or an [MLX90614](https://shop.m5stack.com/products/mini-temperature-unit-mlx90614) single-pixel for spot leaf temp. See [`esphome/espatom_mlx90640.yaml`](esphome/espatom_mlx90640.yaml) and [`esphome/thermal_camera_leaf_temp.yaml`](esphome/thermal_camera_leaf_temp.yaml).
+- **Thermal canopy temperature** — [ESP32](https://www.espressif.com/en/products/socs/esp32) with an [MLX90640](https://shop.m5stack.com/products/thermal2-unit-mlx90640) 32 × 24 thermal array, or an [MLX90614](https://shop.m5stack.com/products/mini-temperature-unit-mlx90614) single-pixel for spot leaf temp. For the packaged M5Stack Unit Thermal2 use [esphome-m5-thermal2](https://github.com/JakeTheRabbit/esphome-m5-thermal2); the older configs remain under [`esphome/`](esphome/).
 
 ---
 
@@ -462,6 +481,7 @@ Integrations you actually have to set up — `default_config` auto-loaders aren'
 
 ### Sensors and firmware
 
+- [Awesome Grow Room Parts](https://jaketherabbit.github.io/awesome-grow-room-parts/) — maintained catalogue, compatibility data, evidence tiers, build recipes, and current purchasing links.
 - [Chill-Division/M5Stack-ESPHome](https://github.com/Chill-Division/M5Stack-ESPHome) — M5Stack ESPHome configurations for indoor gardening.
 - [Chill-Division/sdi12-substrate-sensor](https://github.com/Chill-Division/sdi12-substrate-sensor) — Calibrated SDI-12 substrate sensor with MQTT auto-discovery. Use this rather than rolling your own TEROS-12.
 - [kromadg/soil-sensor](https://github.com/kromadg/soil-sensor) — THC-S soil-sensor reference.

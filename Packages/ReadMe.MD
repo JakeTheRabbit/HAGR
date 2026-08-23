@@ -1,5 +1,8 @@
 # Home Assistant Advanced Crop Steering Package
 
+> [!IMPORTANT]
+> **Legacy package:** retained for existing HAGR installations and reference. For new installs use [HA-Irrigation-Strategy](https://github.com/JakeTheRabbit/HA-Irrigation-Strategy) with the one-click [f2-control Home Assistant add-on](https://github.com/JakeTheRabbit/f2-control). The maintained controller adds multi-zone isolation, sensor fusion, fail-closed hardware checks, UI setup, and current dashboards.
+
 This package implements a dynamic, four-phase crop steering system for hydroponic setups within Home Assistant. It aims to optimize irrigation based on Volumetric Water Content (VWC), Electrical Conductivity (EC), time, and user-defined growth strategies (Vegetative vs. Generative).
 
 ## Core Principles

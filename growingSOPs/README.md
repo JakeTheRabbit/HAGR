@@ -2,6 +2,9 @@
 
 Standard operating procedures and reference material for indoor cannabis cultivation. Plain markdown, written for working growers.
 
+> [!NOTE]
+> These original notes remain for stable inbound links. The maintained, evidence-linked library is **[The Cannabis White Papers](https://jaketherabbit.github.io/cannabis-white-papers/)**, with current guides covering the same topics and a broader curriculum.
+
 | Document | Topic |
 |---|---|
 | [`cloning.md`](cloning.md) | Cloning / propagation — substrate prep, cut handling, rooting conditions, transplant timing. |

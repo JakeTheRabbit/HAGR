@@ -70,11 +70,11 @@ esp32:
 # Make sure to put your actual keys/passwords back in.
 api:
   encryption:
-    key: "v8hh3TFd5L+dtAW7YNG607QMbW9Rx6TWbjZ0QgU4/Ik="
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
-    password: "2f0c69cb67b7ea81836727bceee211a0"
+    password: !secret ota_password
 
 ethernet:
   type: IP101

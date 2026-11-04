@@ -28,7 +28,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Espatom-480W-Pwm"
-    password: "2tOY0t1e4kz1"
+    password: !secret ap_password
 
 captive_portal:
 

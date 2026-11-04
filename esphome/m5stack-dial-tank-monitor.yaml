@@ -37,11 +37,11 @@ wifi:
   
   ap:
     ssid: "Tank Monitor Fallback"
-    password: "FTi0dalz2qff"
+    password: !secret ap_password
 
 api:
   encryption:
-    key: "z57E3mGa/SZalax8NYYbKxkOlGGwbPEEBLYPPsbl0yw="
+    key: !secret api_encryption_key
   reboot_timeout: 0s
   port: 6053
 
@@ -52,7 +52,7 @@ captive_portal:
 
 ota:
   - platform: esphome
-    password: "1d6991268c08924319dc9b67403c5415"
+    password: !secret ota_password
 
 logger:
   level: DEBUG

@@ -31,7 +31,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Espatom-Mlx90640"
-    password: "Tz7rmsB41aMv"
+    password: !secret ap_password
 
 captive_portal:
 

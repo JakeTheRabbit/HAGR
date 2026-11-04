@@ -16,8 +16,8 @@
 // MQTT Configuration
 const char* mqtt_server = "192.168.73.250";
 const char* mqtt_port = "1883";
-const char* mqtt_user = "mqtt";
-const char* mqtt_password = "ttqm";
+const char* mqtt_user = "YOUR_MQTT_USER";
+const char* mqtt_password = "YOUR_MQTT_PASSWORD";
 const char* device_name = "tc-veg-2";
 const char* mqtt_topic = "homeassistant/sdi12/tc-veg-2";
 

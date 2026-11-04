@@ -80,11 +80,11 @@ logger:
 
 api:
   encryption:
-    key: "${api_encryption_key}"
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
-    password: "${ota_password}"
+    password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
@@ -93,7 +93,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Roaming-Co2-2-Sensor"
-    password: "4Cz7jygbCZOU"
+    password: !secret ap_password
 
 captive_portal:
 

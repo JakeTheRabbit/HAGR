@@ -6,12 +6,12 @@
 #include <time.h>
 
 // Configuration
-const char* ssid = "Wifi AP Name";                      
-const char* password = "Wifi AP Pass";                      
+const char* ssid = "YOUR_WIFI_SSID";                      
+const char* password = "YOUR_WIFI_PASSWORD";                      
 const char* mqtt_server = "192.168.x.xx";             
 const int mqtt_port = 1883;                             
-const char* mqtt_user = "user";                         
-const char* mqtt_password = "pass";                     
+const char* mqtt_user = "YOUR_MQTT_USER";                         
+const char* mqtt_password = "YOUR_MQTT_PASSWORD";                     
 const char* device_name = "F1-Zone-1";              
 const char* MQTT_TOPIC_BASE = "homeassistant/sensor/sdi12";
 const uint8_t DEVICE_ADDRESS = 0;                       

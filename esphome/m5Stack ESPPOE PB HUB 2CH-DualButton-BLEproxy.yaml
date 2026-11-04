@@ -31,7 +31,7 @@ ethernet:
 
 api:
   encryption:
-    key: "rpb7ti0n2FXj/8aJZaRLkGd+kjpADMQ7jcYi8rsrNnM="
+    key: !secret api_encryption_key
 
 external_components:
   - source: github://dentra/esphome-components

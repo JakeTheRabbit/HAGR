@@ -1,0 +1,4 @@
+# Real values live in secrets.yaml, never in git.
+esphome/secrets.yaml
+secrets.yaml
+.env

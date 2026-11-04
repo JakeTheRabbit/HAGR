@@ -35,11 +35,11 @@ wifi:
   # Fallback hotspot
   ap:
     ssid: "m5 scales Fallback Hotspot"
-    password: "42069blazeit"
+    password: !secret ap_password
 
 api:
   encryption:
-    key: "encyption key"
+    key: !secret api_encryption_key
   reboot_timeout: 0s  # Disable reboot on connection failure
   port: 6053  # Set explicit port
 
@@ -50,7 +50,7 @@ captive_portal:
 
 ota:
   - platform: esphome
-    password: "42069420"
+    password: !secret ota_password
 
 logger:
   level: DEBUG

@@ -50,7 +50,7 @@ substitutions:
   # Generate with `esphome rand` or the dashboard wizard.
   api_key: "REPLACE_ME_WITH_BASE64_API_KEY"
   # REPLACE BEFORE FLASHING — any random string.
-  ota_password: "REPLACE_ME_WITH_OTA_PASSWORD"
+  ota_password: !secret ota_password
   # Set "false" to disable Automatic Self-Calibration (then re-flash).
   # ASC assumes the sensor sees fresh outdoor air (~420 ppm) at least
   # once a week — disable for sealed grow rooms or CO2-enriched spaces.
@@ -133,11 +133,11 @@ web_server:
 
 api:
   encryption:
-    key: ${api_key}
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
-    password: ${ota_password}
+    password: !secret ota_password
 
 # Home Assistant time — drives daily min/max reset
 time:

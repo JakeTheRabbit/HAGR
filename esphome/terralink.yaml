@@ -17,14 +17,14 @@ api:
 
 ota:
   - platform: esphome
-    password: "REPLACE_ME"
+    password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
     ssid: "Terralink-Fallback"
-    password: "12345678"
+    password: !secret ap_password
 
 web_server:
   port: 80
